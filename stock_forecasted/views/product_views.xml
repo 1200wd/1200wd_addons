@@ -2,8 +2,8 @@
 <openerp>
     <data>
 
-        <record id="view_stock_product_forecasted_tree" model="ir.ui.view">
-            <field name="name">product.stock.forecasted.tree.inherit</field>
+        <record id="stock_view_tree_inherit_forecasted" model="ir.ui.view">
+            <field name="name">stock.forecasted.tree.inherit</field>
             <field name="model">product.product</field>
             <field name="inherit_id" ref="stock.view_stock_product_tree"/>
             <field name="arch" type="xml">
@@ -16,8 +16,8 @@
             </field>
         </record>
 
-        <record id="view_stock_product_template_forecasted_tree" model="ir.ui.view">
-            <field name="name">product.template.forecasted.tree</field>
+        <record id="stock_template_view_tree_inherit_forecasted" model="ir.ui.view">
+            <field name="name">stock.forecasted.template.tree.inherit</field>
             <field name="model">product.template</field>
             <field name="inherit_id" ref="stock.view_stock_product_template_tree"/>
             <field name="arch" type="xml">
@@ -32,8 +32,8 @@
 
         <!-- TODO: Add/update search views, ie product_template_search_form_view_stock -->
 
-        <record id="view_product_template_property_forecasted_form" model="ir.ui.view">
-            <field name="name">product.template.property.forecasted.form</field>
+        <record id="stock_template_property_view_form_inherit_forecasted" model="ir.ui.view">
+            <field name="name">stock.forecasted.property.form.inherit</field>
             <field name="model">product.template</field>
             <field name="inherit_id" ref="stock.view_template_property_form"/>
             <field name="arch" type="xml">
@@ -43,8 +43,8 @@
             </field>
         </record>
 
-        <record id="product_template_kanban_stock_view" model="ir.ui.view">
-            <field name="name">product.template.stock.forecasted.kanban</field>
+        <record id="stock_template_view_kanban_inherit_forecasted" model="ir.ui.view">
+            <field name="name">stock.forecasted.template.kanban.inherit</field>
             <field name="model">product.template</field>
             <field name="inherit_id" ref="stock.product_template_kanban_stock_view"/>
             <field name="arch" type="xml">

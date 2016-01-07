@@ -21,25 +21,4 @@
 #
 ##############################################################################
 
-{
-    'name': "Stock Forecasted",
-    'summary': """Add a forecasted stock field with expected stock levels""",
-    'description': """
-
-    """,
-    'author': "1200 Web Development",
-    'website': "http://www.1200wd.com",
-    'category': 'Projects & Services',
-    'version': '8.0.1.0',
-    'depends': [
-        'product',
-        'stock',
-    ],
-    'data': [
-        'views/product_views.xml',
-    ],
-    'demo': [],
-    'installable': True,
-    'auto_install': False,
-    'application': False,
-}
+from . import product

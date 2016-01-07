@@ -2,9 +2,9 @@
 ##############################################################################
 #
 #    Stock Forecasted
-#    Copyright (C) 2015 November
-#    1200 WebDevelopment
+#    1200 Web Development
 #    http://1200wd.com/
+#    Copyright (C) 2016 January
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -21,4 +21,4 @@
 #
 ##############################################################################
 
-import product
+from . import models

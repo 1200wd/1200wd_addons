@@ -2,9 +2,9 @@
 ##############################################################################
 #
 #    Stock Forecasted
-#    Copyright (C) 2015 November
 #    1200 Web Development
 #    http://1200wd.com/
+#    Copyright (C) 2016 January
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -29,7 +29,7 @@ import logging
 _logger = logging.getLogger(__name__)
 
 
-class product_template(models.Model):
+class ProductTemplate(models.Model):
     _inherit = "product.template"
 
     qty_forecasted = fields.Float(string="Forecasted Stock", digits=dp.get_precision('Product Unit of Measure'),
@@ -49,14 +49,14 @@ class product_template(models.Model):
             self.qty_forecasted += variant_available[p.id]["qty_forecasted"]
 
 
-class product_product(models.Model):
+class ProductProduct(models.Model):
     _inherit = "product.product"
 
     qty_forecasted = fields.Float(string="Forecasted Stock", digits=dp.get_precision('Product Unit of Measure'),
-                                  compute="_product_available_wrapper",
+                                  compute="_compute_qty_forecasted",
                                   help="Forecasted quantity of products after delivery of orders.")
 
-    def _product_available_wrapper(self):
+    def _compute_qty_forecasted(self):
         res = self._product_available()
         for record in self:
             record.qty_forecasted = res[record.id]['qty_forecasted']
@@ -64,7 +64,6 @@ class product_product(models.Model):
 
     def _product_available(self, cr, uid, ids, field_names=None, arg=False, context=None):
         context = context or {}
-        _logger.debug("1200wd - Calculate forecasted stock")
 
         domain_products = [('product_id', 'in', ids)]
         domain_quant, domain_move_in, domain_move_out = [], [], []
