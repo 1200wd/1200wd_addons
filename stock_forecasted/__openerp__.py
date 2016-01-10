@@ -22,22 +22,23 @@
 ##############################################################################
 
 {
-    'name': "Stock Forecasted",
-    'summary': """Add a forecasted stock field with expected stock levels""",
+    'name': "Stock Forecast",
+    'summary': """Stock forecast based on stock moves and sale orders""",
     'description': """
 
     """,
     'author': "1200 Web Development",
-    'website': "http://www.1200wd.com",
-    'category': 'Projects & Services',
+    'website': "http://1200wd.com/",
+    'category': 'Warehouse Management',
     'version': '8.0.1.0',
     'depends': [
-        'product',
         'stock',
     ],
     'data': [
         'views/product_views.xml',
     ],
+    'price': 0.00,
+    'currency': 'EUR',
     'demo': [],
     'installable': True,
     'auto_install': False,
