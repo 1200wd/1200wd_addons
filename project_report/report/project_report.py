@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
-#    Project Extended
-#    Copyright (C) 2015 December 
+#    Project Reports
+#    Copyright (C) 2016 January
 #    1200 Web Development
 #    http://1200wd.com/
 #

@@ -21,6 +21,4 @@
 #
 ##############################################################################
 
-import project
-import project_issue
-import report
+import models

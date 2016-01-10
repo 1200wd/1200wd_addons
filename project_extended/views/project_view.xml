@@ -2,9 +2,9 @@
 <openerp>
     <data>
 
-        <record id="view_project_issue_filter_ext" model="ir.ui.view">
-            <field name="model">project.issue</field>
-            <field name="inherit_id" ref="project_issue.view_project_issue_filter"/>
+        <record id="view_task_search_form_ext" model="ir.ui.view">
+            <field name="model">project.task</field>
+            <field name="inherit_id" ref="project.view_task_search_form"/>
             <field name="arch" type="xml">
                 <xpath expr="//filter[@string='New Mail']" position="after">
                     <seperator/>

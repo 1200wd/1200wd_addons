@@ -39,9 +39,8 @@
         'project_issue',
     ],
     'data': [
-        'project_view.xml',
-        'project_issue_view.xml',
-        'report/project_report.xml',
+        'views/project_view.xml',
+        'views/project_issue_view.xml',
     ],
     'demo': [],
     'installable': True,

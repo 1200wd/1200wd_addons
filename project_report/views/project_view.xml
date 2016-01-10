@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+
+        <report id="report_project_overview_action"
+                string="Project Tasks &amp; Issues"
+                model="project.project"
+                report_type="qweb-pdf"
+                name="project_extended.report_project_overview"
+        />
+
+    </data>
+</openerp>

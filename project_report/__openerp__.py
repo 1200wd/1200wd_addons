@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 ##############################################################################
 #
-#    Project Extended
-#    Copyright (C) 2015 November
+#    Project Reports
+#    Copyright (C) 2016 January
 #    1200 Web Development
 #    http://1200wd.com/
 #
@@ -22,13 +22,10 @@
 ##############################################################################
 
 {
-    'name': "Project Extended",
-    'summary': """Extensions for Project module""",
+    'name': "Project Reports",
+    'summary': """Create reports of Projects Tasks and Issues""",
     'description': """
-    Modification to improve the Odoo project module:
-        * Add filter to hide Done, Cancelled and other folder stages
-        * Prevents removal of projects with open tasks or issues
-        * Prevents removal of project stages with tasks or issues
+        Create reports of Projects Tasks and Issues
     """,
     'author': "1200 Web Development",
     'website': "http://www.1200wd.com",
@@ -36,11 +33,9 @@
     'version': '8.0.1.0',
     'depends': [
         'project',
-        'project_issue',
     ],
     'data': [
-        'project_view.xml',
-        'project_issue_view.xml',
+        'views/project_view.xml',
         'report/project_report.xml',
     ],
     'demo': [],
