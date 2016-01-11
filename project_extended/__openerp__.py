@@ -31,7 +31,7 @@
         * Prevents removal of project stages with tasks or issues
     """,
     'author': "1200 Web Development",
-    'website': "http://www.1200wd.com",
+    'website': "http://1200wd.com",
     'category': 'Projects & Services',
     'version': '8.0.1.0',
     'depends': [

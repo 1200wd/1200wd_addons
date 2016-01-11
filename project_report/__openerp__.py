@@ -28,7 +28,7 @@
         Create reports of Projects Tasks and Issues
     """,
     'author': "1200 Web Development",
-    'website': "http://www.1200wd.com",
+    'website': "http://1200wd.com",
     'category': 'Projects & Services',
     'version': '8.0.1.0',
     'depends': [
@@ -36,7 +36,9 @@
     ],
     'data': [
         'views/project_view.xml',
-        'report/project_report.xml',
+        'reports/project_report.xml',
+        'reports/project_task_report.xml',
+        'reports/project_issue_report.xml',
     ],
     'demo': [],
     'installable': True,
