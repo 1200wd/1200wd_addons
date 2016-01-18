@@ -29,10 +29,11 @@
     """,
     'author': "1200 Web Development",
     'website': "http://1200wd.com",
-    'category': 'Projects & Services',
-    'version': '8.0.1.0',
+    'category': 'Project',
+    'version': '8.0.1.1',
     'depends': [
         'project',
+        'project_issue',
     ],
     'data': [
         'views/project_view.xml',
@@ -40,6 +41,8 @@
         'reports/project_task_report.xml',
         'reports/project_issue_report.xml',
     ],
+    'price': 10.00,
+    'currency': 'EUR',
     'demo': [],
     'installable': True,
     'auto_install': False,

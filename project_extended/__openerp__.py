@@ -25,15 +25,15 @@
     'name': "Project Extended",
     'summary': """Extensions for Project module""",
     'description': """
-    Modification to improve the Odoo project module:
+    Modification to improve security and usuability of the Odoo project module:
         * Add filter to hide Done, Cancelled and other folder stages
         * Prevents removal of projects with open tasks or issues
         * Prevents removal of project stages with tasks or issues
     """,
     'author': "1200 Web Development",
     'website': "http://1200wd.com",
-    'category': 'Projects & Services',
-    'version': '8.0.1.0',
+    'category': 'Project',
+    'version': '8.0.1.1',
     'depends': [
         'project',
         'project_issue',
