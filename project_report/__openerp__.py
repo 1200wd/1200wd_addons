@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 ##############################################################################
 #
-#    Project Extended
-#    Copyright (C) 2015 November
-#    1200 WebDevelopment
+#    Project Reports
+#    Copyright (C) 2016 January
+#    1200 Web Development
 #    http://1200wd.com/
 #
 #    This program is free software: you can redistribute it and/or modify
@@ -21,4 +21,30 @@
 #
 ##############################################################################
 
-import models
+{
+    'name': "Project Reports",
+    'summary': """Create reports of Projects Tasks and Issues""",
+    'description': """
+        Create reports of Projects Tasks and Issues
+    """,
+    'author': "1200 Web Development",
+    'website': "http://1200wd.com",
+    'category': 'Project',
+    'version': '8.0.1.1',
+    'depends': [
+        'project',
+        'project_issue',
+    ],
+    'data': [
+        'views/project_view.xml',
+        'reports/project_report.xml',
+        'reports/project_task_report.xml',
+        'reports/project_issue_report.xml',
+    ],
+    'price': 10.00,
+    'currency': 'EUR',
+    'demo': [],
+    'installable': True,
+    'auto_install': False,
+    'application': False,
+}

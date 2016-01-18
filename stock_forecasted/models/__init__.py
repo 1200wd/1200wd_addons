@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
+##############################################################################
 #
-#    Project Extended
-#    Copyright (C) 2015 December 
+#    Stock Forecasted
 #    1200 Web Development
 #    http://1200wd.com/
+#    Copyright (C) 2016 January
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -18,4 +19,6 @@
 #    You should have received a copy of the GNU Affero General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
+##############################################################################
 
+from . import product

@@ -21,4 +21,5 @@
 #
 ##############################################################################
 
-import project_report
+from . import project
+from . import project_issue

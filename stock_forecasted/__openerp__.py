@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 ##############################################################################
 #
-#    Project Extended
-#    Copyright (C) 2015 November
-#    1200 WebDevelopment
+#    Stock Forecasted
+#    1200 Web Development
 #    http://1200wd.com/
+#    Copyright (C) 2016 January
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -21,4 +21,26 @@
 #
 ##############################################################################
 
-import models
+{
+    'name': "Stock Forecast",
+    'summary': """Stock forecast based on stock moves and sale orders""",
+    'description': """
+
+    """,
+    'author': "1200 Web Development",
+    'website': "http://1200wd.com/",
+    'category': 'Inventory',
+    'version': '8.0.1.1',
+    'depends': [
+        'stock',
+    ],
+    'data': [
+        'views/product_views.xml',
+    ],
+    'price': 0.00,
+    'currency': 'EUR',
+    'demo': [],
+    'installable': False,
+    'auto_install': False,
+    'application': False,
+}
