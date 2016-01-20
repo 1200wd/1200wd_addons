@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+
+        <record id="action_project_group" model="ir.actions.act_window">
+            <field name="name">Project Groups</field>
+            <field name="res_model">project.group</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+        </record>
+
+        <menuitem name="Project Groups"
+                  id="project_group"
+                  parent="base.menu_definitions"
+                  action="action_project_group"
+                  sequence="5"/>
+
+        <record id="project_group_search" model="ir.ui.view">
+            <field name="name">project_group.search.inherit</field>
+            <field name="model">project.project</field>
+            <field name="inherit_id" ref="project.view_project_project_filter"/>
+            <field name="arch" type="xml">
+                <field name="name" position="after">
+                    <field name="group_id" string="Group"/>
+                </field>
+                <group expand="0">
+                    <filter string="Group" name="group_id" help="Group" context="{'group_by':'group_id'}"/>
+                </group>
+            </field>
+        </record>
+
+        <record id="project_form" model="ir.ui.view">
+            <field name="name">project_group.form.inherit</field>
+            <field name="model">project.project</field>
+            <field name="inherit_id" ref="project.edit_project"/>
+            <field name="arch" type="xml">
+                <field name="partner_id" position="after">
+                    <group colspan="4">
+                        <field name="group_id"/>
+                    </group>
+                </field>
+            </field>
+        </record>
+
+        <record id="project_group_view_form" model="ir.ui.view">
+            <field name="name">project.group.form</field>
+            <field name="model">project.group</field>
+            <field name="arch" type="xml">
+                <form string="Group">
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="sequence"/>
+                        </group>
+                    </group>
+                    <field name="description" placeholder="Add a description..."/>
+                </form>
+            </field>
+        </record>
+
+        <record id="project_group_view_tree" model="ir.ui.view">
+            <field name="name">project.group.tree</field>
+            <field name="model">project.group</field>
+            <field name="arch" type="xml">
+                <tree string="Group">
+                    <field name="name"/>
+                    <field name="description"/>
+                    <field name="sequence"/>
+                </tree>
+            </field>
+        </record>
+
+        <!--Why is this?-->
+        <!--<record id="project_group_project_filter" model="ir.ui.view">-->
+            <!--<field name="name">project.project.select.inherited</field>-->
+            <!--<field name="model">project.project</field>-->
+            <!--<field name="inherit_id" ref="project.view_project_project_filter"/>-->
+            <!--<field name="arch" type="xml">-->
+                <!--<xpath expr="//filter[@string='Member']" position="replace">-->
+                    <!--<filter string="Member"-->
+                            <!--name="Member"-->
+                            <!--domain="['|',('user_id', '=', uid),('members', '=', uid)]"-->
+                            <!--help="Projects in which I am a member."/>-->
+                <!--</xpath>-->
+            <!--</field>-->
+        <!--</record>-->
+
+        <record id="action_projects_overview" model="ir.actions.act_window">
+            <field name="name">Projects by Group</field>
+            <field name="res_model">project.project</field>
+            <field name="view_type">form</field>
+            <field name="domain">[]</field>
+            <field name="view_mode">kanban,tree,form,gantt</field>
+            <!--<field name="inherit_id" ref="project.open_view_project_all"/>-->
+            <field name="view_id" ref="project.view_project_kanban"/>
+            <field name="search_view_id" ref="project.view_project_project_filter"/>
+            <field name="context">{'search_default_Current': 1, 'group_by':'group_id'}</field>
+            <field name="help" type="html">
+                <p class="oe_view_nocontent_create">
+                    Create a new project
+                </p>
+            </field>
+        </record>
+
+        <menuitem action="action_projects_overview" id="menu_projects_overview" name="Projects by Group"
+                  parent="project.menu_project_management" sequence="0"/>
+
+        <!-- waarom werkt dit niet?
+
+                <record id="project_group_view_project_all" model="ir.actions.act_window">
+                    <field name="name">project.group.view.project.inherit</field>
+                    <field name="model">project.project</field>
+                    <field name="inherit_id" ref="project.open_view_project_all"/>
+                    <field name="arch" type="xml">
+                        <xpath expr="//field[@name='view_id']" position="replace">
+                            <field name="view_id" ref="view_project"/>
+                        </xpath>
+                        <xpath expr="//field[@name='context']" position="replace">
+                            <field name="context">{'search_default_Current': 1, 'group_by':'group_id'}</field>
+                        </xpath>
+                        <field name="context">{'search_default_Current': 1, 'search_default_Member': 1, 'group_by':'group_id'}</field>
+                    </field>
+                </record>-->
+
+        <!--        <record id="project_group_search" model="ir.ui.view">
+            <field name="name">project_group.search.inherit</field>
+            <field name="model">project.project</field>
+            <field name="inherit_id" ref="project.view_project_project_filter"/>
+            <field name="arch" type="xml">
+                <field name="name" position="after">
+                    <field name="group_id" string="Group"/>
+                </field>
+                <group expand="0">
+                    <filter string="Group" name="group_id" help="Group" context="{'group_by':'group_id'}"/>
+                </group>
+            </field>
+        </record>-->
+    </data>
+</openerp>
