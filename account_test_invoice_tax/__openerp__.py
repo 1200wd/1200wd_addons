@@ -38,7 +38,7 @@
     'data': [
         'views/account_test_data.xml',
     ],
-    'price': 25.00,
+    'price': 0.00,
     'currency': 'EUR',
     'demo': [],
     'installable': True,
