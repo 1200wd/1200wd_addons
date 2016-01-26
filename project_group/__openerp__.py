@@ -41,7 +41,7 @@
     'price': 0.00,
     'currency': 'EUR',
     'demo': [],
-    'installable': True,
+    'installable': False,
     'auto_install': False,
     'application': False,
 }
