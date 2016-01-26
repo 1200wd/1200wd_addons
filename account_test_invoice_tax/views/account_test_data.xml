@@ -1,0 +1,91 @@
+<?xml version="1.0"?>
+<openerp>
+<data>
+
+    <record model="accounting.assert.test" id="account_tax_test_01">
+        <field name="sequence">20</field>
+        <field name="name">Tax Test 1: Invoices Tax Check</field>
+        <field name="desc">Check for differences in tax amount between Invoice and Invoice tax lines.</field>
+        <field name="code_exec">column_order=['id','number']
+res = []
+cr.execute("""SELECT account_invoice.id, account_invoice.number, account_invoice.amount_tax AS invoice_tax, sum( account_invoice_tax.tax_amount ) AS account_tax, account_invoice.type
+FROM account_invoice INNER JOIN account_invoice_tax ON account_invoice.id = account_invoice_tax.invoice_id
+WHERE type = 'out_invoice' OR type = 'in_invoice'
+GROUP BY account_invoice.id, account_invoice.number, account_invoice.amount_tax
+HAVING account_invoice.amount_tax != sum( account_invoice_tax.tax_amount )""")
+res = cr.dictfetchall()
+result = res
+if result:
+  result.insert(0,_('* Here is a list of Invoices with a difference in tax on the invoice and invoice tax lines: '))
+        </field>
+    </record>
+
+    <record model="accounting.assert.test" id="account_tax_test_02">
+        <field name="sequence">21</field>
+        <field name="name">Tax Test 2: Refunds Tax Check</field>
+        <field name="desc">Check for differences in tax amount between Refund Invoice and Refund Invoice tax lines.</field>
+        <field name="code_exec">column_order=['id','number']
+res = []
+cr.execute("""SELECT account_invoice.id, account_invoice.number, account_invoice.amount_tax AS invoice_tax, sum( account_invoice_tax.tax_amount ) AS account_tax, account_invoice.type
+FROM account_invoice INNER JOIN account_invoice_tax ON account_invoice.id = account_invoice_tax.invoice_id
+WHERE type = 'out_refund' OR type = 'in_refund'
+GROUP BY account_invoice.id, account_invoice.number, account_invoice.amount_tax HAVING -account_invoice.amount_tax != sum( account_invoice_tax.tax_amount )""")
+res = cr.dictfetchall()
+result = res
+if result:
+  result.insert(0,_('* Here is a list of Refund Invoices with a difference in tax on the invoice and invoice tax lines: '))
+        </field>
+    </record>
+
+    <record model="accounting.assert.test" id="account_tax_test_03">
+        <field name="sequence">22</field>
+        <field name="name">Tax Test 3: Customer Invoices versus Account Moves</field>
+        <field name="desc">Check for differences between Customer Invoice tax and total tax booked in the Account Move Lines.</field>
+        <field name="code_exec">column_order=['id','number','create_date']
+res = []
+cr.execute("""SELECT AML.id, AML.number, to_char(AML.create_date,'yyyy-mm-dd') AS create_date
+FROM (
+SELECT account_invoice.id, account_invoice.number, account_move_line.create_date, account_move_line.account_id, account_invoice_tax.amount AS invoice_amount, account_move_line.credit - account_move_line.debit AS account_move_line_amount
+FROM account_invoice
+INNER JOIN account_invoice_tax ON account_invoice.id = account_invoice_tax.invoice_id
+INNER JOIN account_move ON account_invoice.move_id = account_move.id
+INNER JOIN account_move_line ON account_move.id = account_move_line.move_id AND account_invoice_tax.account_id = account_move_line.account_id
+WHERE account_invoice.type = 'in_refund' OR account_invoice.type = 'out_invoice'
+GROUP BY account_invoice.id, account_invoice.number, account_move_line.create_date, account_move_line.account_id, account_invoice_tax.amount, account_move_line.credit-account_move_line.debit
+HAVING account_move_line.credit-account_move_line.debit != account_invoice_tax.amount) AML
+GROUP BY AML.id, AML.number, AML.create_date
+ORDER BY AML.create_date ASC""")
+res = cr.dictfetchall()
+result = res
+if result:
+  result.insert(0,_('* Here is a list of Customer Invoices (and Purchase Refunds) with a difference in tax on the invoice and account move lines: '))
+        </field>
+    </record>
+
+    <record model="accounting.assert.test" id="account_tax_test_04">
+        <field name="sequence">23</field>
+        <field name="name">Tax Test 4: Supplier Invoices versus Account Moves</field>
+        <field name="desc">Check for differences between Purchase Invoice tax and total tax booked in the Account Move Lines</field>
+        <field name="code_exec">column_order=['id','number','create_date']
+res = []
+cr.execute("""SELECT AML.id, AML.number, to_char(AML.create_date,'yyyy-mm-dd') AS create_date
+FROM (
+SELECT account_invoice.id, account_invoice.number, account_move_line.create_date, account_move_line.account_id, account_invoice_tax.amount AS invoice_amount, account_move_line.credit - account_move_line.debit AS account_move_line_amount
+FROM account_invoice
+INNER JOIN account_invoice_tax ON account_invoice.id = account_invoice_tax.invoice_id
+INNER JOIN account_move ON account_invoice.move_id = account_move.id
+INNER JOIN account_move_line ON account_move.id = account_move_line.move_id AND account_invoice_tax.account_id = account_move_line.account_id
+WHERE account_invoice.type = 'out_refund' OR account_invoice.type = 'in_invoice'
+GROUP BY account_invoice.id, account_invoice.number, account_move_line.create_date, account_move_line.account_id, account_invoice_tax.amount, account_move_line.credit-account_move_line.debit
+HAVING account_move_line.credit-account_move_line.debit != -account_invoice_tax.amount) AML
+GROUP BY AML.id, AML.number, AML.create_date
+ORDER BY AML.create_date ASC""")
+res = cr.dictfetchall()
+result = res
+if result:
+  result.insert(0,_('* Here is a list of Purchase Invoices (and Customer Refunds) with a difference in tax on the invoice and account move lines: '))
+
+        </field>
+    </record>
+</data>
+</openerp>
