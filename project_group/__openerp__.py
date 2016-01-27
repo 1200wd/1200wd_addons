@@ -30,7 +30,7 @@
     'author': "1200 Web Development",
     'website': "http://1200wd.com",
     'category': 'Project',
-    'version': '8.0.1.1',
+    'version': '8.0.1.2',
     'depends': [
         'project',
     ],
@@ -41,7 +41,7 @@
     'price': 0.00,
     'currency': 'EUR',
     'demo': [],
-    'installable': False,
+    'installable': True,
     'auto_install': False,
     'application': False,
 }

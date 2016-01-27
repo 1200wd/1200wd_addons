@@ -29,7 +29,7 @@
     """,
     'author': "1200 Web Development",
     'website': "http://1200wd.com/",
-    'category': 'Inventory',
+    'category': 'Warehouse',
     'version': '8.0.1.1',
     'depends': [
         'stock',
