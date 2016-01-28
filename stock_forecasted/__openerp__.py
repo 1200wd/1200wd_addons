@@ -37,10 +37,10 @@
     'data': [
         'views/product_views.xml',
     ],
-    'price': 0.00,
+    'price': 100.00,
     'currency': 'EUR',
     'demo': [],
-    'installable': False,
+    'installable': True,
     'auto_install': False,
     'application': False,
 }

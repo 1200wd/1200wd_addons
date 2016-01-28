@@ -11,6 +11,8 @@
                     <attribute name="invisible">1</attribute>
                 </field>
                 <field name="virtual_available" position="after">
+                    <field name="outgoing_qty"/>
+                    <field name="outgoing_sales_qty"/>
                     <field name="qty_forecasted"/>
                 </field>
             </field>
@@ -25,6 +27,8 @@
                     <attribute name="invisible">1</attribute>
                 </field>
                 <field name="virtual_available" position="after">
+                    <field name="outgoing_qty"/>
+                    <field name="outgoing_sales_qty"/>
                     <field name="qty_forecasted"/>
                 </field>
             </field>
@@ -37,7 +41,12 @@
             <field name="model">product.template</field>
             <field name="inherit_id" ref="stock.view_template_property_form"/>
             <field name="arch" type="xml">
+                <field name="virtual_available" position="attributes">
+                    <attribute name="invisible">1</attribute>
+                </field>
                 <field name="virtual_available" position="after">
+                    <field name="outgoing_qty"/>
+                    <field name="outgoing_sales_qty"/>
                     <field name="qty_forecasted"/>
                 </field>
             </field>
