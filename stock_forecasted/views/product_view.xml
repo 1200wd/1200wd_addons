@@ -13,6 +13,9 @@
                 <field name="virtual_available" position="after">
                     <field name="outgoing_qty"/>
                     <field name="outgoing_sales_qty"/>
+                    <button name="%(action_order_line_product_tree2)d" string="view"
+                                    type="action"
+                                    class="oe_link"/>
                     <field name="qty_forecasted"/>
                 </field>
             </field>
@@ -29,6 +32,9 @@
                 <field name="virtual_available" position="after">
                     <field name="outgoing_qty"/>
                     <field name="outgoing_sales_qty"/>
+                    <button name="%(action_order_line_product_tree2)d" string="view"
+                                    type="action"
+                                    class="oe_link"/>
                     <field name="qty_forecasted"/>
                 </field>
             </field>

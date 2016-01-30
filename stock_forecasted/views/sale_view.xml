@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<openerp>
+    <data>
+
+        <record id="view_sales_order_line_filter_inherit_forecasted" model="ir.ui.view">
+            <field name="name">stock.forecasted.sales.order.line.filter.inherit</field>
+            <field name="model">sale.order.line</field>
+            <field name="inherit_id" ref="sale.view_sales_order_line_filter"/>
+            <field name="arch" type="xml">
+                <field name="order_id" position="before">
+                    <separator/>
+                    <filter string="Recent Pending Sales"
+                            domain="[('state', 'not in', ('cancel', 'done')),
+                                     ('create_date', '&gt;=', (context_today()-datetime.timedelta(days=14)).strftime('%Y-%m-%d'))]"
+                            help="Recent Sales Order Lines expected to be shipped"/>
+                </field>
+            </field>
+        </record>
+
+        <record id="view_order_line_tree_inherit_forecasted" model="ir.ui.view">
+            <field name="name">stock.forecasted.sales.order.line.tree.inherit</field>
+            <field name="model">sale.order.line</field>
+            <field name="inherit_id" ref="sale.view_order_line_tree"/>
+            <field name="arch" type="xml">
+                <field name="order_id" position="after">
+                    <field name="create_date"/>
+                </field>
+            </field>
+        </record>
+
+        <record id="action_order_line_product_tree2" model="ir.actions.act_window">
+            <!--<field name="context">{}</field>&lt;!&ndash; force empty &ndash;&gt;-->
+            <field name="name">Sales Order Lines</field>
+            <field name="res_model">sale.order.line</field>
+            <field name="view_id" ref="sale.view_order_line_tree"/>
+            <!--<field name="context">{'search_default_confirmed': 1}</field>-->
+        </record>
+                <!--<record id="action_order_line_product_tree" model="ir.actions.act_window">-->
+            <!--<field name="context">{}</field>&lt;!&ndash; force empty &ndash;&gt;-->
+            <!--<field name="name">Sales Order Lines</field>-->
+            <!--<field name="res_model">sale.order.line</field>-->
+            <!--<field name="view_id" ref="view_order_line_tree"/>-->
+            <!--<field name="context">{'search_default_confirmed': 1}</field>-->
+        <!--</record>-->
+
+    </data>
+</openerp>

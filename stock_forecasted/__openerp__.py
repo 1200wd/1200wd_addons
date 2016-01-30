@@ -32,10 +32,12 @@
     'category': 'Warehouse',
     'version': '8.0.1.1',
     'depends': [
+        'sale',
         'stock',
     ],
     'data': [
-        'views/product_views.xml',
+        'views/product_view.xml',
+        'views/sale_view.xml',
     ],
     'price': 100.00,
     'currency': 'EUR',
