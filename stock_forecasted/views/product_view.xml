@@ -13,9 +13,6 @@
                 <field name="virtual_available" position="after">
                     <field name="outgoing_qty"/>
                     <field name="outgoing_sales_qty"/>
-                    <button name="%(action_order_line_product_tree2)d" string="view"
-                                    type="action"
-                                    class="oe_link"/>
                     <field name="qty_forecasted"/>
                 </field>
             </field>
@@ -32,9 +29,6 @@
                 <field name="virtual_available" position="after">
                     <field name="outgoing_qty"/>
                     <field name="outgoing_sales_qty"/>
-                    <button name="%(action_order_line_product_tree2)d" string="view"
-                                    type="action"
-                                    class="oe_link"/>
                     <field name="qty_forecasted"/>
                 </field>
             </field>
@@ -51,8 +45,16 @@
                     <attribute name="invisible">1</attribute>
                 </field>
                 <field name="virtual_available" position="after">
-                    <field name="outgoing_qty"/>
-                    <field name="outgoing_sales_qty"/>
+                    <label for="outgoing_qty"/>
+                    <div>
+                        <field name="outgoing_qty" class="oe_inline"/> -
+                        <button name="action_view_outgoing_stock_moves" string="View" type="object" class="oe_link"/>
+                    </div>
+                    <label for="outgoing_sales_qty"/>
+                    <div>
+                        <field name="outgoing_sales_qty" class="oe_inline"/> -
+                        <button name="action_view_pending_sale_order_lines" string="View" type="object" class="oe_link"/>
+                    </div>
                     <field name="qty_forecasted"/>
                 </field>
             </field>

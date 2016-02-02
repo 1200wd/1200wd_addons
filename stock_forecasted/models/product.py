@@ -54,6 +54,27 @@ class ProductTemplate(models.Model):
             self.qty_forecasted += variant_available[p.id]['qty_forecasted']
             self.outgoing_sales_qty += variant_available[p.id]['outgoing_sales_qty']
 
+    def action_view_pending_sale_order_lines(self, cr, uid, ids, context=None):
+        products = self._get_products(cr, uid, ids, context=context)
+        result = self._get_act_window_dict(cr, uid, 'stock_forecasted.action_order_line_product_tree_forecasted', context=context)
+
+        date_from = ((datetime.datetime.now() - datetime.timedelta(days=17)).strftime('%Y-%m-%d'))
+        result['domain'] = "[('product_id','in',[" + ','.join(map(str, products)) + "])," \
+            "('state', 'not in', ('cancel', 'done')), ('create_date', '>=', '" + date_from + "')]"
+
+        return result
+
+    def action_view_outgoing_stock_moves(self, cr, uid, ids, context=None):
+        products = self._get_products(cr, uid, ids, context=context)
+        result = self._get_act_window_dict(cr, uid, 'stock_forecasted.action_stock_move_outgoing_tree_forecasted', context=context)
+        domain_quant_loc, domain_move_in_loc, domain_move_out_loc = self.pool['product.product']._get_domain_locations(cr, uid, products, context=context)
+
+        result['domain'] = "[('product_id','in',[" + ','.join(map(str, products)) + "])," \
+            "('state', 'not in', ('draft', 'cancel', 'done')), " + str(domain_move_out_loc)[1:][:-1] + "]"
+
+        return result
+
+
 
 class ProductProduct(models.Model):
     _inherit = "product.product"
@@ -105,14 +126,17 @@ class ProductProduct(models.Model):
 
         # Get pending sales
         now = datetime.datetime.now()
-        domain_sales_date = [('create_date', '>=', ((now - datetime.timedelta(days=14)).strftime('%Y-%m-%d')))]
+        domain_sales_date = [('create_date', '>=', ((now - datetime.timedelta(days=17)).strftime('%Y-%m-%d')))]
         domain_sales_out = domain_sales_date + [('state', 'not in', ('cancel', 'done'))] + domain_products
         sales_out = self.pool.get('sale.order.line').read_group(cr, uid, domain_sales_out, ['product_id', 'product_uos_qty'], ['product_id'], context=context)
         sales_out = dict(map(lambda x: (x['product_id'][0], x['product_uos_qty']), sales_out))
         _logger.debug("1200wd - Product %s pending sales %s (total execution time %dms)" % (ids, sales_out, (datetime.datetime.now()-now).total_seconds()*1000))
 
-        # import pdb; pdb.set_trace()
-        # _logger.debug("1200wd - product ids %s and sales out %s" % (ids, sales_out))
+        # Get almost incoming products
+        domain_move_in_expected = domain_move_in + [('date_expected', '<=', ((now + datetime.timedelta(days=2)).strftime('%Y-%m-%d')))]
+        moves_in_expected = self.pool.get('stock.move').read_group(cr, uid, domain_move_in_expected, ['product_id', 'product_qty'], ['product_id'], context=context)
+        moves_in_expected = dict(map(lambda x: (x['product_id'][0], x['product_qty']), moves_in_expected))
+
         res = {}
         for product in self.browse(cr, uid, ids, context=context):
             id = product.id
@@ -120,15 +144,39 @@ class ProductProduct(models.Model):
             incoming_qty = float_round(moves_in.get(id, 0.0), precision_rounding=product.uom_id.rounding)
             outgoing_qty = float_round(moves_out.get(id, 0.0), precision_rounding=product.uom_id.rounding)
             outgoing_sales_qty = float_round(sales_out.get(id, 0.0), precision_rounding=product.uom_id.rounding)
+            in_expected = float_round(moves_in_expected.get(id, 0.0), precision_rounding=product.uom_id.rounding)
+
             virtual_available = float_round(quants.get(id, 0.0) + moves_in.get(id, 0.0) - moves_out.get(id, 0.0), precision_rounding=product.uom_id.rounding)
             res[id] = {
                 'qty_available': qty_available,
                 'incoming_qty': incoming_qty,
                 'outgoing_qty': outgoing_qty,
                 'virtual_available': virtual_available,
-                'qty_forecasted': qty_available - (outgoing_qty + outgoing_sales_qty),
+                'qty_forecasted': qty_available - (outgoing_qty + outgoing_sales_qty) + in_expected,
                 'outgoing_sales_qty': outgoing_sales_qty,
             }
         return res
+
+    def action_view_pending_sale_order_lines(self, cr, uid, ids, context=None):
+        if isinstance(ids, (int, long)):
+            ids = [ids]
+        result = self.pool['product.template']._get_act_window_dict(cr, uid, 'stock_forecasted.action_order_line_product_tree_forecasted', context=context)
+
+        date_from = ((datetime.datetime.now() - datetime.timedelta(days=17)).strftime('%Y-%m-%d'))
+        result['domain'] = "[('product_id','in',[" + ','.join(map(str, ids)) + "])," \
+            "('state', 'not in', ('cancel', 'done')), ('create_date', '>=', '" + date_from + "')]"
+
+        return result
+
+    def action_view_outgoing_stock_moves(self, cr, uid, ids, context=None):
+        if isinstance(ids, (int, long)):
+            ids = [ids]
+        result = self.pool['product.template']._get_act_window_dict(cr, uid, 'stock_forecasted.action_stock_move_outgoing_tree_forecasted', context=context)
+        domain_quant_loc, domain_move_in_loc, domain_move_out_loc = self._get_domain_locations(cr, uid, ids, context=context)
+
+        result['domain'] = "[('product_id','in',[" + ','.join(map(str, ids)) + "])," \
+            "('state', 'not in', ('draft', 'cancel', 'done')), " + str(domain_move_out_loc)[1:][:-1] + "]"
+
+        return result
 
     #TODO: Add index to sale order line on product_id and date_create

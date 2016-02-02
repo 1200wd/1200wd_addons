@@ -36,8 +36,8 @@
         'stock',
     ],
     'data': [
-        'views/product_view.xml',
         'views/sale_view.xml',
+        'views/product_view.xml',
     ],
     'price': 100.00,
     'currency': 'EUR',

@@ -11,7 +11,7 @@
                     <separator/>
                     <filter string="Recent Pending Sales"
                             domain="[('state', 'not in', ('cancel', 'done')),
-                                     ('create_date', '&gt;=', (context_today()-datetime.timedelta(days=14)).strftime('%Y-%m-%d'))]"
+                                     ('create_date', '&gt;=', (context_today()-datetime.timedelta(days=17)).strftime('%Y-%m-%d'))]"
                             help="Recent Sales Order Lines expected to be shipped"/>
                 </field>
             </field>
@@ -28,20 +28,17 @@
             </field>
         </record>
 
-        <record id="action_order_line_product_tree2" model="ir.actions.act_window">
-            <!--<field name="context">{}</field>&lt;!&ndash; force empty &ndash;&gt;-->
+        <record id="action_order_line_product_tree_forecasted" model="ir.actions.act_window">
             <field name="name">Sales Order Lines</field>
             <field name="res_model">sale.order.line</field>
             <field name="view_id" ref="sale.view_order_line_tree"/>
-            <!--<field name="context">{'search_default_confirmed': 1}</field>-->
         </record>
-                <!--<record id="action_order_line_product_tree" model="ir.actions.act_window">-->
-            <!--<field name="context">{}</field>&lt;!&ndash; force empty &ndash;&gt;-->
-            <!--<field name="name">Sales Order Lines</field>-->
-            <!--<field name="res_model">sale.order.line</field>-->
-            <!--<field name="view_id" ref="view_order_line_tree"/>-->
-            <!--<field name="context">{'search_default_confirmed': 1}</field>-->
-        <!--</record>-->
+
+        <record id="action_stock_move_outgoing_tree_forecasted" model="ir.actions.act_window">
+            <field name="name">Outgoing Stock Moves</field>
+            <field name="res_model">stock.move</field>
+            <field name="view_id" ref="stock.view_move_tree"/>
+        </record>
 
     </data>
 </openerp>
