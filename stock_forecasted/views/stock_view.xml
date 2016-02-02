@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<openerp>
+    <data>
+
+        <record id="view_move_search_inherit_forecasted" model="ir.ui.view">
+            <field name="name">view.move.search.filter.inherit</field>
+            <field name="model">stock.move</field>
+            <field name="inherit_id" ref="stock.view_move_search"/>
+            <field name="arch" type="xml">
+                <xpath expr="//filter[@string='Today']" position="after">
+                    <filter string="Expected Soon" name="expected_soon"
+                            domain="[('date_expected', '&lt;=', (context_today()+datetime.timedelta(days=2)).strftime('%Y-%m-%d'))]"
+                            help="Orders expected within 2 days or earlier"/>
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</openerp>

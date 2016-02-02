@@ -34,8 +34,6 @@
             </field>
         </record>
 
-        <!-- TODO: Add/update search views, ie product_template_search_form_view_stock -->
-
         <record id="stock_template_property_view_form_inherit_forecasted" model="ir.ui.view">
             <field name="name">stock.forecasted.property.form.inherit</field>
             <field name="model">product.template</field>
@@ -69,6 +67,28 @@
                     <li t-if="record.type.raw_value != 'service'">On hand: <field name="qty_available"/> <field name="uom_id"/></li>
                     <li t-if="record.type.raw_value != 'service'">Forecasted: <field name="qty_forecasted"/> <field name="uom_id"/></li>
                 </ul>
+            </field>
+        </record>
+
+        <record id="product_template_search_form_view_stock_inherit_forecasted" model="ir.ui.view">
+            <field name="name">product.template.search.stock.form.inherit.forecasted</field>
+            <field name="model">product.template</field>
+            <field name="inherit_id" ref="stock.product_template_search_form_view_stock"/>
+            <field name="arch" type="xml">
+                <xpath expr="//filter[@name='virtual_stock_available']" position="replace"/>
+                <xpath expr="//filter[@name='real_stock_available']" position="after">
+                    <filter name="virtual_stock_available" string="Forecast Available Products" domain="[('qty_forecasted','&gt;',0)]"/>
+                </xpath>
+
+                <xpath expr="//filter[@name='virtual_stock_exhausted']" position="replace"/>
+                <xpath expr="//filter[@name='real_stock_exhausted']" position="after">
+                    <filter name="virtual_stock_exhausted" string="Forecast Exhausted Stock" domain="[('qty_forecasted','&lt;=',0)]"/>
+                </xpath>
+
+                <xpath expr="//filter[@name='virtual_stock_negative']" position="replace"/>
+                <xpath expr="//filter[@name='real_stock_negative']" position="after">
+                    <filter name="virtual_stock_negative" string="Forecast Negative Stock" domain="[('qty_forecasted','&lt;',0)]"/>
+                </xpath>
             </field>
         </record>
 

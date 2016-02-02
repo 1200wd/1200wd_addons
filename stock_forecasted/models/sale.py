@@ -21,5 +21,11 @@
 #
 ##############################################################################
 
-from . import product
-from . import sale
+from openerp import models, fields, api, _
+
+class SaleOrderLine(models.Model):
+    _inherit = 'sale.order.line'
+
+    # Add index to sale order line on product_id and create_date
+    product_id = fields.Many2one('product.product', 'Product', select=1)
+    create_date = fields.Date('Created on', select=1)

@@ -38,11 +38,12 @@
     'data': [
         'views/sale_view.xml',
         'views/product_view.xml',
+        'views/stock_view.xml',
     ],
     'price': 100.00,
     'currency': 'EUR',
     'demo': [],
-    'installable': True,
+    'installable': False,
     'auto_install': False,
     'application': False,
 }
