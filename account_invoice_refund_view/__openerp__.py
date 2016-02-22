@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 ##############################################################################
 #
-#    Accounting Invoice Tax Tests
-#    Copyright (C) 2016 January
+#    Accounting Invoice Refund View
+#    Copyright (C) 2016 February
 #    1200 Web Development
 #    http://1200wd.com/
 #
@@ -22,21 +22,22 @@
 ##############################################################################
 
 {
-    'name': "Accounting Invoice Tax Tests",
-    'summary': """Verify tax bookings of customer and supplier invoices""",
+    'name': "Accounting Invoice Refund View",
+    'summary': """Show refund invoices correctly with negative amounts""",
     'description': """
-        Various extra tests will we added to the account_test module which check for differences
-        in tax used on account invoices and tax booked in the account move lines.
+        * Show Account Invoices of type Refund with a negative amount.
+        * Fixes totals in account invoice overview, to match with outstanding partner balance.
+        * Add Extra group by filter for invoice type (refund in/out, invoice in/out)
     """,
     'author': "1200 Web Development",
     'website': "http://1200wd.com",
     'category': 'Accounting & Finance',
     'version': '8.0.1.0',
     'depends': [
-        'account_test',
+        'account',
     ],
     'data': [
-        'views/account_test_data.xml',
+        'views/account_invoice_view.xml',
     ],
     'price': 10.00,
     'currency': 'EUR',
