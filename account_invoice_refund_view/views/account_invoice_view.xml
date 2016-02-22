@@ -1,0 +1,40 @@
+<openerp>
+    <data>
+
+        <record id="invoice_tree_inherit_refund_view" model="ir.ui.view">
+            <field name="name">account.invoice.tree.inherit.refund.view</field>
+            <field name="inherit_id" ref="account.invoice_tree"/>
+            <field name="model">account.invoice</field>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='reference']" position="attributes">
+                    <attribute name="invisible">0</attribute>
+                </xpath>
+                <xpath expr="//field[@name='amount_untaxed']" position="attributes">
+                    <attribute name="invisible">1</attribute>
+                </xpath>
+                <field name="residual" position="replace">
+                    <field name="residual_refund_view" sum="Residual Amount"/>
+                </field>
+                <field name="amount_untaxed" position="replace">
+                    <field name="amount_untaxed_refund_view" sum="Untaxed Amount"/>
+                </field>
+                <field name="amount_total" position="replace">
+                    <field name="amount_total_refund_view" sum="Total Amount"/>
+                </field>
+            </field>
+        </record>
+
+        <record id="view_account_invoice_filter_inherit_refund_view" model="ir.ui.view">
+            <field name="name">account.invoice.filter.inherit.refund.view</field>
+            <field name="inherit_id" ref="account.view_account_invoice_filter"/>
+            <field name="model">account.invoice</field>
+            <field name="arch" type="xml">
+                <xpath expr="//filter[@string='Due Month']" position="after">
+                    <seperator/>
+                    <filter string="Type" context="{'group_by':'type'}"/>
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</openerp>
