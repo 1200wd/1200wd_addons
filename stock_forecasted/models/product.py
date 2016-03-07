@@ -113,6 +113,7 @@ class ProductProduct(models.Model):
                                   compute='_product_available',
                                   help="Expected outgoing sales. Quantity is based on a certain percentage of recent sales orders.")
 
+    #TODO: Add dependencies to stock moves or find other solution to update Forecasted Stock
     def _product_available(self, cr, uid, ids, field_names=None, arg=False, context=None):
         global days_reserve_sales
         context = context or {}
