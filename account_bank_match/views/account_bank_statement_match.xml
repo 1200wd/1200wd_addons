@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<openerp>
+    <data>
+
+        <record model="ir.ui.view" id="view_account_bank_statement_match_reference_tree">
+            <field name="name">view.account.bank.statement.match.reference.tree</field>
+            <field name="model">account.bank.statement.match.reference</field>
+            <field name="arch" type="xml">
+                <tree>
+                    <field name="reference_pattern"/>
+                    <field name="type"/>
+                    <field name="sequence"/>
+                    <field name="account_bank_id"/>
+                    <field name="account_account_id"/>
+                    <field name="company_id"/>
+                </tree>
+            </field>
+        </record>
+
+        <record model="ir.ui.view" id="view_account_bank_statement_match_reference_form">
+            <field name="name">view.account.bank.statement.match.reference.form</field>
+            <field name="model">account.bank.statement.match.reference</field>
+            <field name="arch" type="xml">
+                <form>
+                    <sheet>
+                        <group name="group_top">
+                            <field name="reference_pattern"/>
+                            <field name="type"/>
+                            <field name="sequence"/>
+                            <field name="account_bank_id"/>
+                            <field name="account_account_id"/>
+                            <field name="company_id"/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_account_bank_statement_match_tree" model="ir.ui.view">
+            <field name="name">view.account.bank.statement.match.tree</field>
+            <field name="model">account.bank.statement.match</field>
+            <field name="arch" type="xml">
+                <tree>
+                    <field name="statement_line_id"/>
+                    <field name="type"/>
+                    <field name="name"/>
+                    <field name="description"/>
+                    <field name="score"/>
+                </tree>
+            </field>
+        </record>
+
+        <record id="view_account_bank_statement_match_form" model="ir.ui.view" >
+            <field name="name">view.account.bank.statement.match.form</field>
+            <field name="model">account.bank.statement.match</field>
+            <field name="arch" type="xml">
+                <form>
+                    <sheet>
+                        <group name="group_top">
+                            <field name="statement_line_id"/>
+                            <field name="type"/>
+                            <field name="name"/>
+                            <field name="description"/>
+                            <field name="score"/>
+                        </group>
+                    </sheet>
+                    <footer>
+                        <button name="match_confirm" string="_Match with Statement Line" type="object" class="oe_highlight"/>
+                        or
+                        <button string="Cancel" class="oe_link" special="cancel"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_account_bank_statement_match_search" model="ir.ui.view">
+            <field name="name">view.account.bank.statement.match.search</field>
+            <field name="model">account.bank.statement.match</field>
+            <field name="arch" type="xml">
+                <search string="statement_line">
+                    <field name="statement_line_id"/>
+                </search>
+            </field>
+        </record>
+
+        <record id="view_account_bank_statement_match_rule_tree" model="ir.ui.view">
+            <field name="name">view.account.bank.statement.match.rule.tree</field>
+            <field name="model">account.bank.statement.match.rule</field>
+            <field name="arch" type="xml">
+                <tree>
+                    <field name="name"/>
+                    <field name="type"/>
+                    <field name="score"/>
+                    <field name="rule"/>
+                </tree>
+            </field>
+        </record>
+
+        <record id="view_account_bank_statement_match_rule_form" model="ir.ui.view">
+            <field name="name">view.account.bank.statement.match.rule.form</field>
+            <field name="model">account.bank.statement.match.rule</field>
+            <field name="arch" type="xml">
+                <form>
+                    <sheet>
+                        <group name="group_top">
+                            <field name="name"/>
+                            <field name="type"/>
+                            <field name="score"/>
+                            <field name="active"/>
+                            <field name="rule"/>
+                            <field name="script"/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <act_window id="action_account_bank_statement_match_view"
+                    name="Bank Statement Lines Matches"
+                    res_model="account.bank.statement.match"
+                    view_type="form"
+                    view_mode="tree,form"/>
+
+        <act_window id="action_account_bank_statement_match_reference_view"
+                    name="Match Reference"
+                    res_model="account.bank.statement.match.reference"
+                    view_type="form"
+                    view_mode="tree,form"/>
+
+        <act_window id="action_account_bank_statement_match_rule_view"
+                    name="Match Rules"
+                    res_model="account.bank.statement.match.rule"
+                    view_type="form"
+                    view_mode="tree,form"/>
+
+        <menuitem id="menu_bank_match"
+                  name="Bank Match"
+                  parent="account.menu_finance_configuration"
+                  sequence="65"/>
+
+        <menuitem id="menu_match_reference"
+                  action="action_account_bank_statement_match_reference_view"
+                  parent="menu_bank_match"
+                  sequence="5"/>
+
+        <menuitem id="menu_match_rule"
+                  action="action_account_bank_statement_match_rule_view"
+                  parent="menu_bank_match"
+                  sequence="15"/>
+
+        <menuitem id="menu_match_list"
+                  action="action_account_bank_statement_match_view"
+                  parent="menu_bank_match"
+                  sequence="15"/>
+
+    </data>
+</openerp>

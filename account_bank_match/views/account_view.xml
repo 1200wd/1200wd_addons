@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<openerp>
+    <data>
+
+        <record id="view_bank_statement_form_invoice" model="ir.ui.view">
+            <field name="name">account.invoice.supplier.form.invoice</field>
+            <field name="model">account.bank.statement</field>
+            <field name="inherit_id" ref="account.view_bank_statement_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='line_ids']/tree/field[@name='ref']"
+                       position="after">
+                    <field name="so_ref"/>
+                </xpath>
+                <xpath expr="//field[@name='line_ids']/tree/field[@name='name']"
+                       position="attributes">
+                    <attribute name="required">0</attribute>
+                </xpath>
+                <xpath expr="//button[@string='Reconcile']" position="before">
+                    <button name="action_statement_match"
+                            states="draft" string="Match" type="object"
+                            help="Match bank statement lines with invoices or sales orders."/>
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</openerp>

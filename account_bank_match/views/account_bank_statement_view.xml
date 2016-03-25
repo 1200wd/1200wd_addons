@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<openerp>
+    <data>
+
+        <record id="view_bank_statement_form_inherit_match" model="ir.ui.view">
+            <field name="name">bank.statement.line.form.match</field>
+            <field name="model">account.bank.statement</field>
+            <field name="inherit_id" ref="account.view_bank_statement_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='line_ids']/tree/field[@name='bank_account_id']" position="after">
+                    <button name="action_statement_line_match" attrs="{'invisible': [('move_state', '!=', False)]}" string="Match" type="object" icon="STOCK_INDEX"/>
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</openerp>

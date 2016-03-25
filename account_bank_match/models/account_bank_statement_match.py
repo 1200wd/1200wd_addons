@@ -1,0 +1,96 @@
+# -*- coding: utf-8 -*-
+##############################################################################
+#
+#    Account Bank Match
+#    Copyright (C) 2016 April
+#    1200 Web Development
+#    http://1200wd.com/
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU Affero General Public License as published
+#    by the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU Affero General Public License for more details.
+#
+#    You should have received a copy of the GNU Affero General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+##############################################################################
+
+import logging
+
+from openerp import models, fields, api
+
+_logger = logging.getLogger(__name__)
+
+
+# Object to store reference patterns of orders and invoices to look for in statement lines
+class account_bank_statement_match_references(models.Model):
+    _name = "account.bank.statement.match.reference"
+    _order = "sequence,reference_pattern"
+
+    reference_pattern = fields.Char(string="Reference Pattern", size=32,
+                                    help="Regular expression pattern to match reference",
+                                    required=True)
+    type = fields.Selection(
+        [
+            ('sale.order', 'Sale Order'),
+            ('account.invoice', 'Invoice'),
+            ('account.account', 'Account'),
+        ], select=True, required=True
+    )
+    sequence = fields.Integer('Sequence')
+    account_bank_id = fields.Many2one('res.partner.bank', string='Bank Account',
+        help='Match only applies to selected bank account. Leave empty to match all bank accounts.',
+        domain="[('journal_id', '<>', False)]")
+    account_account_id = fields.Many2one('account.account', string="Account")
+    company_id = fields.Many2one('res.company', string='Company', required=True)
+
+
+# Object to store found matches to orders/invoices in statement lines
+class account_bank_statement_match(models.Model):
+    _name = "account.bank.statement.match"
+
+    name = fields.Char(string="Reference", size=32, required=True,
+                       help="Reference of match to order, invoice or account")
+    type = fields.Selection(
+        [
+            ('sale.order', 'Sale Order'),
+            ('account.invoice', 'Invoice'),
+            ('account.move.line', 'Account Move'),
+        ], select=True, required=True
+    )
+    statement_line_id = fields.Many2one('account.bank.statement.line', string="Bank Statement Line", required=True)
+    description = fields.Char(string="Description", size=256)
+    score = fields.Integer("Score")
+
+
+# Object to store found matches to orders/invoices in statement lines
+class account_bank_statement_match_rule(models.Model):
+    """
+    Example Rule:
+    {   'name': "Sale Order amount match",
+        'score_per_match': 100,
+        'rule': "[('amount', '>', '@sale_order.amount-0.01@'), ('amount', '<', '@sale_order.amount-0.01@')]"
+        'type': "sale.order"
+    """
+    _name = "account.bank.statement.match.rule"
+
+    name = fields.Char(string="Title", size=256, required=True)
+    type = fields.Selection(
+        [
+            ('sale.order', 'Sale Order'),
+            ('account.invoice', 'Invoice'),
+            ('account.move.line', 'Account Move'),
+        ], select=True, required=True
+    )
+    score = fields.Integer("Total Score", default=0, required=True, help="Total score to share among all matches of this rule.")
+    active = fields.Boolean('Active', default=True, help='Set to inactive to disable rule')
+    rule = fields.Text(string="Match Rule", required=True,
+                       help="Rule to match a bank statement line to a sale order, invoice or account move. The rules should follow the Odoo style domain format.")
+    script = fields.Text(string="Run Script",
+                         help="Run Python code after rule matched. Be carefull what you enter here, wrong code could easily wreck your Odoo database")
