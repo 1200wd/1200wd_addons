@@ -36,7 +36,7 @@ class account_bank_statement_match_references(models.Model):
     reference_pattern = fields.Char(string="Reference Pattern", size=32,
                                     help="Regular expression pattern to match reference",
                                     required=True)
-    type = fields.Selection(
+    model = fields.Selection(
         [
             ('sale.order', 'Sale Order'),
             ('account.invoice', 'Invoice'),
@@ -47,6 +47,8 @@ class account_bank_statement_match_references(models.Model):
     account_bank_id = fields.Many2one('res.partner.bank', string='Bank Account',
         help='Match only applies to selected bank account. Leave empty to match all bank accounts.',
         domain="[('journal_id', '<>', False)]")
+    score = fields.Integer("Score to Share", default=0, required=True, help="Total score to share among all matches of this rule. If 3 matches are found and the score to share is 30 then every match gets a score of 10.")
+    score_item = fields.Integer("Score per Match", default=0, required=True, help="Score for each match. Will be added to the shared score.")
     account_account_id = fields.Many2one('account.account', string="Account")
     company_id = fields.Many2one('res.company', string='Company', required=True)
 
@@ -57,7 +59,7 @@ class account_bank_statement_match(models.Model):
 
     name = fields.Char(string="Reference", size=32, required=True,
                        help="Reference of match to order, invoice or account")
-    type = fields.Selection(
+    model = fields.Selection(
         [
             ('sale.order', 'Sale Order'),
             ('account.invoice', 'Invoice'),
@@ -81,16 +83,23 @@ class account_bank_statement_match_rule(models.Model):
     _name = "account.bank.statement.match.rule"
 
     name = fields.Char(string="Title", size=256, required=True)
-    type = fields.Selection(
+    model = fields.Selection(
         [
             ('sale.order', 'Sale Order'),
             ('account.invoice', 'Invoice'),
             ('account.move.line', 'Account Move'),
         ], select=True, required=True
     )
-    score = fields.Integer("Total Score", default=0, required=True, help="Total score to share among all matches of this rule.")
+    score = fields.Integer("Score to Share", default=0, required=True, help="Total score to share among all matches of this rule. If 3 matches are found and the score to share is 30 then every match gets a score of 10.")
+    score_item = fields.Integer("Score per Match", default=0, required=True, help="Score for each match. Will be added to the shared score.")
     active = fields.Boolean('Active', default=True, help='Set to inactive to disable rule')
+    type = fields.Selection(
+        [
+            ('extraction', 'Extraction'),
+            ('bonus', 'Bonus'),
+        ], select=True, required=True, default='extraction')
     rule = fields.Text(string="Match Rule", required=True,
                        help="Rule to match a bank statement line to a sale order, invoice or account move. The rules should follow the Odoo style domain format.")
     script = fields.Text(string="Run Script",
                          help="Run Python code after rule matched. Be carefull what you enter here, wrong code could easily wreck your Odoo database")
+    company_id = fields.Many2one('res.company', string='Company', required=True)

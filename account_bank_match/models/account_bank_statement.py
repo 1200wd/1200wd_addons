@@ -185,7 +185,16 @@ class account_bank_statement_line(models.Model):
         match_refs = self.env['account.bank.statement.match.reference'].search(['|', ('company_id', '=', False), ('company_id', '=', company_id)])
         for match_ref in match_refs:
             for m in re.finditer(match_ref.reference_pattern, statement_text):
-                matches.append({'name': m.group(0), 'type': match_ref.type, 'description': ''})
+                # import pdb; pdb.set_trace()
+                obj = self.env[match_ref.model].search([(self._match_get_field_name(match_ref.model), '=', m.group(0))])
+                description = self._match_description(obj, match_ref.model)
+                matches.append(
+                    {'name': m.group(0),
+                     'model': match_ref.model,
+                     'description': description,
+                     'score': match_ref.score,
+                     'score_item': match_ref.score_item,
+                     })
                 count += 1
                 if count > 100: break
         return matches
@@ -252,62 +261,115 @@ class account_bank_statement_line(models.Model):
 
     def _update_match_list(self, match, add_score, matches=[]):
         # If match to a sale order and sale order has an invoice then replace match with invoice number
-        if match['type'] == 'sale.order':
+        if match['model'] == 'sale.order':
             invoice = self.env['sale.order'].search([('name', '=', match['name'])]).invoice_ids
             # TODO: Handle situation where 1 sale orders has multiple invoices or other n-m relations
             if len(invoice) == 1:
                 match['description'] += ";" + match['name']
-                match['type'] = 'account.invoice'
+                match['model'] = 'account.invoice'
                 match['name'] = invoice.number or ''
 
         # Remove duplicates and sum up scores
         if match['name'] not in [d['name'] for d in matches]:
-            matches.append({'name': match['name'], 'type': match['type'], 'score': add_score, 'description': match.get('description', '')})
+            matches.append(
+                {'name': match['name'],
+                 'model': match['model'],
+                 'score': add_score,
+                 'description': match.get('description', '')})
         else:
             [d.update({'score': d['score'] + add_score}) for d in matches if d['name'] == match['name']]
 
         return matches
 
+    def _match_description(self, object, model):
+        description = ''
+        try:
+            currency_symbol = object.currency_id.name or ''
+            if model == 'account.invoice':
+                description = object.origin + "; " + object.date_invoice + "; " + object.partner_id.name + "; " + \
+                              object.state + "; " + currency_symbol + " " + str(object.amount_total)
+            elif model == 'account.move.line':
+                description = object.ref + "; " + object.date + "; " + object.partner_id.name + "; " + \
+                              object.state + "; " + currency_symbol + " " + str(object.debit)
+            elif model == 'sale.order':
+                description = object.date_order + "; " + object.partner_id.name + "; " + \
+                              object.state + "; " + currency_symbol + " " + str(object.amount_total)
+        except Exception, e:
+            _logger.warning("1200wd - Could not construct match description. Error %s" % e.args[0])
+        return description
+
+    def _match_get_name(self, object, model):
+        if model == 'account.invoice':
+            return object.number
+        elif model == 'account.move.line':
+            return str(object.id)
+        else:
+            return object.name
+
+    def _match_get_field_name(self, model):
+        if model == 'account.invoice':
+            return 'number'
+        elif model == 'account.move.line':
+            return 'id'
+        else:
+            return 'name'
+
+    def _match_get_datefield_name(self, model):
+        if model == 'account.invoice':
+            return 'date_invoice'
+        elif model == 'account.move.line':
+            return 'date'
+        else:
+            return 'date_order'
+
+    def _match_get_base_domain(self, model):
+        daysback = (datetime.datetime.now() - datetime.timedelta(days=365)).strftime('%Y-%m-%d')
+        domain = []
+        if model == 'sale.order':
+            domain.extend([('date_order', '>', daysback),
+                           ('state', 'in', ['draft', 'wait_for_payment', 'sent'])])
+        elif model == 'account.invoice':
+            domain.extend([('date_invoice', '>', daysback),
+                           ('state', 'in', ['open'])])
+        else:
+            domain.append(('date', '>', daysback))
+
+        return domain
+
     def account_bank_match(self):
         # Delete old match records
-        self._cr.execute("DELETE FROM account_bank_statement_match WHERE statement_line_id=%d" % self.id)
+        # self._cr.execute("DELETE FROM account_bank_statement_match WHERE statement_line_id=%d" % self.id)
+        # TODO: fx this:
+        self._cr.execute("DELETE FROM account_bank_statement_match")
         self.invalidate_cache()
 
         # Search matches with reference pattern
         matches = []
         ref_matches = self._extract_references()
         if ref_matches:
-            add_score = (75 / len(ref_matches)) + 25
+            # import pdb; pdb.set_trace()
+            # add_score = (75 / len(ref_matches)) + 25
+            base_score = sum([d['score'] for d in ref_matches]) / len(ref_matches)
             for ref_match in ref_matches:
-                matches = self._update_match_list(ref_match, add_score, matches)
+                matches = self._update_match_list(ref_match, base_score + ref_match['score_item'], matches)
 
         # Search for amount in invoices, sale orders and account.moves
         for rule in self.env['account.bank.statement.match.rule'].search([]):
             rule_list = self._parse_rule(rule)
-            daysback = (datetime.datetime.now() - datetime.timedelta(days=365)).strftime('%Y-%m-%d')
-            if rule['type'] == 'sale.order': datefield = 'date_order'
-            elif rule['type'] == 'account.invoice': datefield = 'date_invoice'
-            else: datefield = 'date'
-            rule_matches = self.env[rule['type']].search([(datefield, '>', daysback)] + rule_list, order=datefield+' DESC', limit=25)
+            base_domain = self._match_get_base_domain(rule['model'])
+            rule_matches = self.env[rule['model']].search(base_domain + rule_list, limit=25)  # order=self._match_get_datefield_name(rule['type'])+' DESC',
             if rule_matches:
-                add_score = rule['score'] / len(rule_matches)
+                add_score = rule['score_item'] + (rule['score'] / len(rule_matches))
                 for rule_match in rule_matches:
-                    if rule['type'] == 'account.invoice':
-                        name = rule_match.number
-                        description = rule_match.origin + "; " + rule_match.date_invoice + "; " + rule_match.partner_id.name + "; " + str(rule_match.amount_total)
-                    elif rule['type'] == 'account.move.line':
-                        name = rule_match.id
-                        description = rule_match.ref + "; " + rule_match.date + "; " + rule_match.partner_id.name + "; " + str(rule_match.debit)
-                    elif rule['type'] == 'sale.order':
-                        name = rule_match.name
-                        description = rule_match.date_order + "; " + rule_match.partner_id.name + "; " + str(rule_match.amount_total)
-                    matches = self._update_match_list({'name': name, 'type': rule['type'], 'description': description}, add_score, matches)
+                    name = self._match_get_name(rule_match, rule['model'])
+                    description = self._match_description(rule_match, rule['model'])
+                    matches = self._update_match_list({'name': name, 'model': rule['model'], 'description': description}, add_score, matches)
 
-
+        matches = sorted(matches, key=lambda k: k['score'], reverse=True)
         for match in matches:
             data = {
                 'name': match['name'],
-                'type': match['type'],
+                'model': match['model'],
                 'statement_line_id': self.id,
                 'description': match.get('description', False),
                 'score': match['score'] or 0,
@@ -318,8 +380,6 @@ class account_bank_statement_line(models.Model):
         #(3) 1 gevonden met score >100 match automatisch
             # invoice gaat voor sale.order
         return True
-
-
 
 
     @api.multi
