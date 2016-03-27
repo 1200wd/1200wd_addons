@@ -446,6 +446,7 @@ class account_bank_statement_line(models.Model):
                     _logger.debug("1200wd - Bonus found %s %s" % (rule.name, match))
 
         matches = sorted(matches, key=lambda k: k['score'], reverse=True)
+        matches = [m for m in matches if m['score'] > 0]
         for match in matches:
             data = {
                 'name': match['name'],
