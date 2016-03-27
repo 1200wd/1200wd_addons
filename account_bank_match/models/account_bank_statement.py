@@ -21,6 +21,18 @@
 #
 ##############################################################################
 
+# TODO: Check multicompany code
+# TODO: Filter on bank statment line when opening view
+# TODO: Make match button work
+# TODO: Move settings to config file
+# TODO: Security rules
+# TODO: Move match code below to seperate file(?)
+# TODO: Add statement line info on match form
+# TODO: Remove matches score <0
+# TODO: Review and cleanup code
+# TODO: Test on Noorderhaaks
+# TODO: Test on Spieker
+
 from openerp import models, fields, api, _
 from openerp.exceptions import Warning
 import logging
@@ -53,6 +65,13 @@ class account_bank_statement_line(models.Model):
 
     so_ref = fields.Char('Sale Order Reference')
     name = fields.Char('Communication', required=True, default='/')
+
+    def _get_iban_country_code(self):
+        if self.remote_account: self.remote_account_country_code = self.remote_account[:2]
+        else: self.remote_account_country_code = ''
+
+    remote_account_country_code = fields.Char(string="Remote IBAN country code", size=2, compute="_get_iban_country_code", readonly=True)
+
 
     def _domain_reconciliation_proposition(self, cr, uid, st_line, excluded_ids=None, context=None):
         if excluded_ids is None:
@@ -210,8 +229,9 @@ class account_bank_statement_line(models.Model):
         return vals
 
     def _parse_rule(self, rule):
-        _logger.debug("1200wd - Running match rule %s" % rule)
+        _logger.debug("1200wd - Running match rule %s" % rule.name)
 
+        rule_list = []
         try:
             rule_list = ast.literal_eval(rule.rule)
         except Exception, e:
@@ -219,13 +239,12 @@ class account_bank_statement_line(models.Model):
 
         rule_list_new = []
         for field_name, operator, value in rule_list:
-            _logger.debug("1200wd - process {} {} {}".format(field_name, operator, value))
+            # _logger.debug("1200wd - process {} {} {}".format(field_name, operator, value))
             new_value = None
             if isinstance(value, str):
                 matches = re.search("@(.+?)@", value)
                 if matches:
                     found_odoo_expression = matches.group(1)
-                    _logger.debug("1200wd - found_odoo_expression {}".format(found_odoo_expression))
                     if found_odoo_expression == 'None':
                         new_value = None
                     elif 'today' in found_odoo_expression:
@@ -236,6 +255,9 @@ class account_bank_statement_line(models.Model):
                         try:
                             # !!!Please note!!!: This executes the string as python code, set security rules wisely!
                             new_value = eval(odoo_expression)
+                            if not new_value:
+                                # import pdb; pdb.set_trace()
+                                continue
                         except Exception, e:
                             import pdb; pdb.set_trace()
                             _logger.warning("1200wd - Rule '{}'. Error matching odoo expression '{}' {}".
@@ -245,7 +267,7 @@ class account_bank_statement_line(models.Model):
             else:
                 rule_list_new.append((field_name, operator, value))
 
-        _logger.debug("1200wd - rule_list_new %s" % rule_list_new)
+        _logger.debug("1200wd - Parsing rule result %s" % rule_list_new)
         return rule_list_new
 
 
@@ -271,8 +293,6 @@ class account_bank_statement_line(models.Model):
                 sc = add_score / len(open_orders)
                 matches = self._update_match_list({'name': order.name, 'model': 'sale.order',
                                                    'description': description}, sc, matches)
-            _logger.debug("1200wd - Addes invoices/orders %s / %s" % (open_invoices, open_orders))
-            import pdb; pdb.set_trace()
             return matches
 
         # If match to a sale order and sale order has an invoice then replace match with invoice number
@@ -303,14 +323,14 @@ class account_bank_statement_line(models.Model):
             if 'currency_id' in object:
                 currency_symbol = object.currency_id.name or ''
             if model == 'account.invoice':
-                description = object.origin + "; " + object.date_invoice + "; " + object.partner_id.name + "; " + \
-                              object.state + "; " + currency_symbol + " " + str(object.amount_total)
+                description = (object.origin or '') + "; " + (object.date_invoice or '') + "; " + (object.partner_id.name or '') + "; " + \
+                              (object.state or '') + "; " + currency_symbol + " " + str(object.amount_total or '')
             elif model == 'account.move.line':
-                description = object.ref + "; " + object.date + "; " + object.partner_id.name + "; " + \
-                              object.state + "; " + currency_symbol + " " + str(object.debit)
+                description = (object.ref or '') + "; " + (object.date or '') + "; " + (object.partner_id.name or '') + "; " + \
+                              (object.state or '') + "; " + currency_symbol + " " + str(object.debit or '')
             elif model == 'sale.order':
-                description = object.date_order + "; " + object.partner_id.name + "; " + \
-                              object.state + "; " + currency_symbol + " " + str(object.amount_total)
+                description = (object.date_order or '') + "; " + (object.partner_id.name or '') + "; " + \
+                              (object.state or '') + "; " + currency_symbol + " " + str(object.amount_total)
         except Exception, e:
             _logger.warning("1200wd - Could not construct match description. Error %s" % e.args[0])
         return description
@@ -377,6 +397,18 @@ class account_bank_statement_line(models.Model):
         self._cr.execute("DELETE FROM account_bank_statement_match")
         self.invalidate_cache()
 
+        # Try to find partner through bank account number
+        if not self.partner_id and self.remote_account:
+            bank = self.env['res.partner.bank'].search([('search_account_number', '=', self.remote_account)])
+            if bank.partner_id:
+                self.partner_id = bank.partner_id
+            else:
+                # Look for other statement lines from the same remote bank account and see if any of those have partners and invoices linked
+                other_lines = self.env['account.bank.statement.line'].search([
+                    ('remote_account','=',bank.search_account_number), ('id', '!=', self.id)], limit=1)
+                if 'partner_id' in other_lines and other_lines.partner_id:
+                    self.partner_id = other_lines.partner_id
+
         # Search matches with reference pattern
         company_id = self.env.user.company_id.id
         matches = []
@@ -391,50 +423,17 @@ class account_bank_statement_line(models.Model):
                 ['|', ('company_id', '=', False), ('company_id', '=', company_id),
                 ('type', '=', 'extraction')]):
             rule_domain = self._parse_rule(rule)
+            if not rule_domain: # stop running rule if empty domain is returned to avoid useless matches on rule parsing errors
+                continue
             base_domain = self._match_get_base_domain(rule['model'])
             rule_matches = self.env[rule['model']].search(base_domain + rule_domain, limit=25)  # order=self._match_get_datefield_name(rule['type'])+' DESC',
+            _logger.debug("1200wd - %d matches found" % len(rule_matches))
             if rule_matches:
                 add_score = rule['score_item'] + (rule['score'] / len(rule_matches))
                 for rule_match in rule_matches:
                     name = self._match_get_name(rule_match, rule['model'])
                     description = self._match_description(rule_match, rule['model'])
                     matches = self._update_match_list({'name': name, 'model': rule['model'], 'description': description}, add_score, matches)
-
-        # Look up partner with id or account number, then add open orders or invoices to match stack
-        # partner_score_total = int(MATCH_MIN_SUCCESS_SCORE * 0.8)
-        # partners = []
-        # if self.partner_id:
-        #     partners = [self.partner_id.id]
-        # elif not self.partner_id and self.remote_account:
-        #     bank = self.env['res.partner.bank'].search([('search_account_number', '=', self.remote_account)])
-        #     if bank.partner_id:
-        #         partners = [bank.partner_id.id]
-        #     else:
-        #         # Look for other statement lines from the same remote bank account and see if any of those have partners and invoices linked
-        #         other_lines = self.env['account.bank.statement.line'].search([
-        #             ('remote_account','=',bank.search_account_number), ('id', '!=', self.id)], limit=1)
-        #         if 'partner_id' in other_lines:
-        #             partners = [other_lines.partner_id.id]
-        # if self.partner_name:
-        #     pn = self.partner_name
-        #     lastname = max(pn.split(' '), key=len).replace(',','').replace('.','')      # Use for longest string in name, lastname guess
-        #     searchlist = [pn,
-        #                   " ".join([n.strip() for n in pn.split(',')]),                 # Rewrite lastname, firstname name
-        #                   lastname,
-        #                  ]
-        #     for sname in searchlist:
-        #         fres = self.env['res.partner'].search([('name', 'ilike', '%' + sname + '%')])
-        #         if len(fres) < 5:
-        #             for ptnr in fres:
-        #                 partners.append(ptnr.id)
-
-
-        # if partners:
-        #     partner_score = partner_score_total / len(partners)
-        # for p_id in partners:
-        # # TODO: Add more logic: look for partner name, address, city, etc
-
-        # bonus: remote_account iban landcode gelijk aan land order/invoice
 
         # Calculate bonuses for already found matches
         for rule in self.env['account.bank.statement.match.rule'].search(
@@ -444,7 +443,7 @@ class account_bank_statement_line(models.Model):
             for match in [m for m in matches if m['model'] == rule['model']]:
                 if self._match_get_object(match['model'], match['name'], rule_domain):
                     match['score'] += rule['score_item']
-                    _logger.debug("1200wd - Bonus found %s %s" % (rule, match))
+                    _logger.debug("1200wd - Bonus found %s %s" % (rule.name, match))
 
         matches = sorted(matches, key=lambda k: k['score'], reverse=True)
         for match in matches:
@@ -455,8 +454,8 @@ class account_bank_statement_line(models.Model):
                 'description': match.get('description', False),
                 'score': match['score'] or 0,
             }
+            _logger.debug("1200wd - Match found %s: %s, score %d" % (match['name'], match.get('description', False), match['score'] or 0))
             self.env['account.bank.statement.match'].create(data)
-        # _logger.debug("1200wd - Normalized and Weight Matches %s" % matches)
 
         #(3) 1 gevonden met score >100 match automatisch
             # invoice gaat voor sale.order
