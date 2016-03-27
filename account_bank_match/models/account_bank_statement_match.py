@@ -41,6 +41,7 @@ class account_bank_statement_match_references(models.Model):
             ('sale.order', 'Sale Order'),
             ('account.invoice', 'Invoice'),
             ('account.account', 'Account'),
+            ('res.partner', 'Partner'),
         ], select=True, required=True
     )
     sequence = fields.Integer('Sequence')
@@ -63,7 +64,6 @@ class account_bank_statement_match(models.Model):
         [
             ('sale.order', 'Sale Order'),
             ('account.invoice', 'Invoice'),
-            ('account.move.line', 'Account Move'),
         ], select=True, required=True
     )
     statement_line_id = fields.Many2one('account.bank.statement.line', string="Bank Statement Line", required=True)
@@ -88,6 +88,7 @@ class account_bank_statement_match_rule(models.Model):
             ('sale.order', 'Sale Order'),
             ('account.invoice', 'Invoice'),
             ('account.move.line', 'Account Move'),
+            ('res.partner', 'Partner'),
         ], select=True, required=True
     )
     score = fields.Integer("Score to Share", default=0, required=True, help="Total score to share among all matches of this rule. If 3 matches are found and the score to share is 30 then every match gets a score of 10.")
