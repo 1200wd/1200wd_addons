@@ -39,6 +39,7 @@ If one correct match is found automatically link and reconcile the statement lin
         'sale',
     ],
     'data': [
+        'security/ir.model.access.csv',
         'views/account_bank_statement_match.xml',
         'views/account_bank_statement_view.xml',
         'views/account_view.xml',

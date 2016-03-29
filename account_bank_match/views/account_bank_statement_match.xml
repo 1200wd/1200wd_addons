@@ -44,8 +44,8 @@
             <field name="name">view.account.bank.statement.match.tree</field>
             <field name="model">account.bank.statement.match</field>
             <field name="arch" type="xml">
-                <tree>
-                    <field name="statement_line_id"/>
+                <tree create="false" delete="false" edit="false">
+                    <field name="statement_line_id" invisible="1"/>
                     <field name="model"/>
                     <field name="name"/>
                     <field name="description"/>
@@ -54,13 +54,40 @@
             </field>
         </record>
 
+        <record id="view_account_bank_statement_line_matches_form" model="ir.ui.view" >
+            <field name="name">view.account.bank.statement.line.matches.form</field>
+            <field name="model">account.bank.statement.line</field>
+            <field name="priority">50</field>
+            <field name="arch" type="xml">
+                <form string="Statement Line" create="false" delete="false">
+                    <group col="4" readonly="1">
+                        <field name="statement_id" readonly="1"/>
+                        <field name="journal_id" readonly="1" invisible="1"/>
+                        <field name="journal_code" readonly="1"/>
+                        <field name="date" readonly="1"/>
+                        <field name="name" readonly="1"/>
+                        <field name="ref" readonly="1"/>
+                        <field name="partner_name" readonly="1"/>
+                        <field name="remote_account" readonly="1"/>
+                        <field name="bank_account_id" readonly="1"/>
+                        <field name="amount" readonly="1"/>
+                    </group>
+                    <notebook>
+                        <page string="Matches">
+                            <field name="bank_statement_line_match_ids"/>
+                        </page>
+                    </notebook>
+                </form>
+            </field>
+        </record>
+
         <record id="view_account_bank_statement_match_form" model="ir.ui.view" >
             <field name="name">view.account.bank.statement.match.form</field>
             <field name="model">account.bank.statement.match</field>
             <field name="arch" type="xml">
-                <form>
+                <form string="Statement Line Match" create="false" delete="false" edit="false">
                     <sheet>
-                        <group name="group_top">
+                        <group  col="4">
                             <field name="statement_line_id"/>
                             <field name="model"/>
                             <field name="name"/>
@@ -69,9 +96,7 @@
                         </group>
                     </sheet>
                     <footer>
-                        <button name="match_confirm" string="_Match with Statement Line" type="object" class="oe_highlight"/>
-                        or
-                        <button string="Cancel" class="oe_link" special="cancel"/>
+                        <button name="match_confirm" string="Confirm match with statement line" type="object" class="oe_highlight"/>
                     </footer>
                 </form>
             </field>

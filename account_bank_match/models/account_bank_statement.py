@@ -21,14 +21,11 @@
 #
 ##############################################################################
 
-# TODO: Check multicompany code
 # TODO: Filter on bank statment line when opening view
 # TODO: Make match button work
-# TODO: Move settings to config file
-# TODO: Security rules
 # TODO: Move match code below to seperate file(?)
-# TODO: Add statement line info on match form
-# TODO: Remove matches score <0
+# TODO: Multicompany testen, (mn. in Conscious/Shavita)
+# TODO: Check matching with purchase invoices, refunds, etc
 # TODO: Review and cleanup code
 # TODO: Test on Noorderhaaks
 # TODO: Test on Spieker
@@ -362,7 +359,7 @@ class account_bank_statement_line(models.Model):
     def _match_get_base_domain(self, model):
         daysback = (datetime.datetime.now() - datetime.timedelta(days=365)).strftime('%Y-%m-%d')
         company_id = self.env.user.company_id.id
-        domain = [('company_id', '=', company_id)]
+        domain = ['|', ('company_id', '=', False), ('company_id', '=', company_id)]
         if model == 'sale.order':
             domain.extend([('date_order', '>', daysback),
                            ('state', 'in', ['draft', 'wait_payment', 'sent'])])
@@ -397,6 +394,8 @@ class account_bank_statement_line(models.Model):
         self._cr.execute("DELETE FROM account_bank_statement_match")
         self.invalidate_cache()
 
+        company_id = self.env.user.company_id.id
+
         # Try to find partner through bank account number
         if not self.partner_id and self.remote_account:
             bank = self.env['res.partner.bank'].search([('search_account_number', '=', self.remote_account)])
@@ -404,7 +403,7 @@ class account_bank_statement_line(models.Model):
                 self.partner_id = bank.partner_id
             else:
                 # Look for other statement lines from the same remote bank account and see if any of those have partners and invoices linked
-                other_lines = self.env['account.bank.statement.line'].search([
+                other_lines = self.env['account.bank.statement.line'].search(['|', ('company_id', '=', False), ('company_id', '=', company_id),
                     ('remote_account','=',bank.search_account_number), ('id', '!=', self.id)], limit=1)
                 if 'partner_id' in other_lines and other_lines.partner_id:
                     self.partner_id = other_lines.partner_id
@@ -445,6 +444,7 @@ class account_bank_statement_line(models.Model):
                     match['score'] += rule['score_item']
                     _logger.debug("1200wd - Bonus found %s %s" % (rule.name, match))
 
+        # Sort and cleanup and add matches to match table
         matches = sorted(matches, key=lambda k: k['score'], reverse=True)
         matches = [m for m in matches if m['score'] > 0]
         for match in matches:
@@ -473,8 +473,7 @@ class account_bank_statement_line(models.Model):
             'active_ids': [st_line.id],
             'statement_line_id': st_line.id,
             })
-        viewt = self.env.ref('account_bank_match.view_account_bank_statement_match_tree')
-        viewf = self.env.ref('account_bank_match.view_account_bank_statement_match_form')
+        view = self.env.ref('account_bank_match.view_account_bank_statement_line_matches_form')
         act_move = True
         if self.account_bank_match():
             act_move = {
@@ -482,14 +481,13 @@ class account_bank_statement_line(models.Model):
                 'res_id': st_line.id,
                 'view_type': 'form',
                 'view_mode': 'tree,form',
-                'res_model': 'account.bank.statement.match',
+                'res_model': 'account.bank.statement.line',
                 'type': 'ir.actions.act_window',
-                'views': [(viewt.id, 'tree'), (viewf.id, 'form')],
+                'views': [(view.id, 'form')],
                 'target': 'new',
                 }
             act_move['context'] = dict(ctx, wizard_action=pickle.dumps(act_move))
         return act_move
-
 
     def create(self, cr, uid, vals, context=None):
         """Override to look up Invoice Reference based on given Sale Order Reference."""

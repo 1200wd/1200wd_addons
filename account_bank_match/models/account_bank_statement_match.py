@@ -105,4 +105,10 @@ class account_bank_statement_match_rule(models.Model):
                        help="Rule to match a bank statement line to a sale order, invoice or account move. The rules should follow the Odoo style domain format.")
     script = fields.Text(string="Run Script",
                          help="Run Python code after rule matched. Be carefull what you enter here, wrong code could easily wreck your Odoo database")
-    company_id = fields.Many2one('res.company', string='Company', required=True)
+    company_id = fields.Many2one('res.company', string='Company', required=False)
+
+
+class account_bank_statement_line(models.Model):
+    _inherit = 'account.bank.statement.line'
+
+    bank_statement_line_match_ids = fields.One2many('account.bank.statement.match', 'statement_line_id', "Matches")
