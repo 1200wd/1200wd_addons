@@ -71,7 +71,7 @@ class account_bank_statement_match(models.Model):
             ('account.invoice', 'Invoice'),
         ], select=True, required=True
     )
-    statement_line_id = fields.Many2one('account.bank.statement.line', string="Bank Statement Line", required=True)
+    statement_line_id = fields.Many2one('account.bank.statement.line', string="Bank Statement Line", required=True, index=True)
     description = fields.Char(string="Description", size=256)
     score = fields.Integer("Score")
 
