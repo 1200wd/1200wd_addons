@@ -54,6 +54,10 @@ class account_bank_statement_match_references(models.Model):
     account_account_id = fields.Many2one('account.account', string="Account")
     company_id = fields.Many2one('res.company', string='Company', required=True)
 
+    _sql_constraints = [
+        ('reference_pattern_name_company_unique', 'unique (name, model, company_id)', 'Use reference pattern only once for each model and for each Company')
+    ]
+
 
 # Object to store found matches to orders/invoices in statement lines
 class account_bank_statement_match(models.Model):
