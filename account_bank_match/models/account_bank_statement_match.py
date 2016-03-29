@@ -32,10 +32,9 @@ _logger = logging.getLogger(__name__)
 # Object to store reference patterns of orders and invoices to look for in statement lines
 class account_bank_statement_match_references(models.Model):
     _name = "account.bank.statement.match.reference"
-    _order = "sequence,reference_pattern"
+    _order = "sequence,name"
 
-    # TODO: rename reference_pattern to name
-    reference_pattern = fields.Char(string="Reference Pattern", size=32,
+    name = fields.Char(string="Reference Pattern", size=32,
                                     help="Regular expression pattern to match reference",
                                     required=True)
     model = fields.Selection(

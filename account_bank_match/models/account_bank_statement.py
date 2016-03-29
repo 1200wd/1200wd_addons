@@ -201,19 +201,21 @@ class account_bank_statement_line(models.Model):
         count = 0
         match_refs = self.env['account.bank.statement.match.reference'].search(['|', ('company_id', '=', False), ('company_id', '=', company_id)])
         for match_ref in match_refs:
-            for m in re.finditer(match_ref.reference_pattern, statement_text):
-                # import pdb; pdb.set_trace()
-                obj = self.env[match_ref.model].search([(self._match_get_field_name(match_ref.model), '=', m.group(0))])
-                description = self._match_description(obj, match_ref.model)
-                matches.append(
-                    {'name': m.group(0),
-                     'model': match_ref.model,
-                     'description': description,
-                     'score': match_ref.score,
-                     'score_item': match_ref.score_item,
-                     })
-                count += 1
-                if count > 100: break
+            try:
+                for m in re.finditer(match_ref.name, statement_text):
+                    obj = self.env[match_ref.model].search([(self._match_get_field_name(match_ref.model), '=', m.group(0))])
+                    description = self._match_description(obj, match_ref.model)
+                    matches.append(
+                        {'name': m.group(0),
+                         'model': match_ref.model,
+                         'description': description,
+                         'score': match_ref.score,
+                         'score_item': match_ref.score_item,
+                         })
+                    count += 1
+                    if count > 100: break
+            except TypeError, e:
+                raise Warning(_("TypeError: Please check Bank Match Reference patterns an error occured while parsing '%s'. Error: %s" % (match_ref.name, e.args[0])))
         return matches
 
     def _statement_line_match(self, cr, uid, vals, context=None):

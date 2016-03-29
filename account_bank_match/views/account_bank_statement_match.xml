@@ -7,7 +7,7 @@
             <field name="model">account.bank.statement.match.reference</field>
             <field name="arch" type="xml">
                 <tree>
-                    <field name="reference_pattern"/>
+                    <field name="name"/>
                     <field name="model"/>
                     <field name="sequence"/>
                     <field name="account_bank_id"/>
@@ -26,7 +26,7 @@
                 <form>
                     <sheet>
                         <group name="group_top">
-                            <field name="reference_pattern"/>
+                            <field name="name"/>
                             <field name="model"/>
                             <field name="sequence"/>
                             <field name="account_bank_id"/>
