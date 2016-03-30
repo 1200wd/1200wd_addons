@@ -27,7 +27,6 @@ from openerp import models, fields, api
 
 _logger = logging.getLogger(__name__)
 
-# TODO: Add constraints and indexes
 
 # Object to store reference patterns of orders and invoices to look for in statement lines
 class account_bank_statement_match_references(models.Model):
@@ -74,6 +73,20 @@ class account_bank_statement_match(models.Model):
     statement_line_id = fields.Many2one('account.bank.statement.line', string="Bank Statement Line", required=True, index=True)
     description = fields.Char(string="Description", size=256)
     score = fields.Integer("Score")
+
+    @api.one
+    def action_match_confirm(self):
+        # self.statement_line_id.self._statement_line_match()
+        vals = {'match_id': self.id}
+        if self.model == 'sale.order':
+            vals['so_ref'] = self.name
+            vals['name'] = '/'
+        elif self.model == 'account.invoice':
+            vals['name'] = self.name or '/'
+
+        self.statement_line_id.write(vals)
+        self.statement_line_id.auto_reconcile()
+
 
 
 # Object to store found matches to orders/invoices in statement lines

@@ -21,9 +21,9 @@
 #
 ##############################################################################
 
-# TODO: Filter on bank statment line when opening view
-# TODO: Make match button work
-# TODO: Move match code below to seperate file(?)
+# TODO: Auto-matching fixen
+# TODO: Matchen met accounts fixen
+# TODO: Rare matches loggen (score <100 en hogere score beschikbaar)
 # TODO: Multicompany testen, (mn. in Conscious/Shavita)
 # TODO: Check matching with purchase invoices, refunds, etc
 # TODO: Review and cleanup code
@@ -218,15 +218,6 @@ class account_bank_statement_line(models.Model):
                 raise Warning(_("TypeError: Please check Bank Match Reference patterns an error occured while parsing '%s'. Error: %s" % (match_ref.name, e.args[0])))
         return matches
 
-    def _statement_line_match(self, cr, uid, vals, context=None):
-        if 'name' not in vals:
-            return vals
-        if (not vals.get('name', False)) or vals.get('name', False) == '/':
-            if not vals.get('so_ref', False):
-                vals = self._extract_references(cr, uid, vals, context=context)
-            vals = self.order_invoice_lookup(cr, uid, vals, context)
-        return vals
-
     def _parse_rule(self, rule):
         _logger.debug("1200wd - Running match rule %s" % rule.name)
 
@@ -255,7 +246,6 @@ class account_bank_statement_line(models.Model):
                             # !!!Please note!!!: This executes the string as python code, set security rules wisely!
                             new_value = eval(odoo_expression)
                             if not new_value:
-                                # import pdb; pdb.set_trace()
                                 continue
                         except Exception, e:
                             import pdb; pdb.set_trace()
@@ -297,7 +287,7 @@ class account_bank_statement_line(models.Model):
         # If match to a sale order and sale order has an invoice then replace match with invoice number
         if match['model'] == 'sale.order':
             invoice = self._match_get_object('sale.order', match['name']).invoice_ids
-            # TODO: Handle situation where 1 sale orders has multiple invoices or other n-m relations
+            # TODO: Handle situation where 1 sale order has multiple invoices or other n-m relations
             if len(invoice) == 1:
                 match['description'] += ";" + match['name']
                 match['model'] = 'account.invoice'
@@ -364,7 +354,7 @@ class account_bank_statement_line(models.Model):
         domain = ['|', ('company_id', '=', False), ('company_id', '=', company_id)]
         if model == 'sale.order':
             domain.extend([('date_order', '>', daysback),
-                           ('state', 'in', ['draft', 'wait_payment', 'sent'])])
+                           ('state', 'in', ['draft', 'wait_payment', 'sent', 'done'])])
         elif model == 'account.invoice':
             domain.extend([('date_invoice', '>', daysback),
                            ('state', 'in', ['open'])])
@@ -389,12 +379,13 @@ class account_bank_statement_line(models.Model):
             _logger.error("1200wd - Could not open model %s with reference %s. Error %s" % (model, ref, e.args[0]))
         return False
 
-    def account_bank_match(self):
+    def match_search(self):
         # Delete old match records
-        # self._cr.execute("DELETE FROM account_bank_statement_match WHERE statement_line_id=%d" % self.id)
-        # TODO: fx this:
-        self._cr.execute("DELETE FROM account_bank_statement_match")
-        self.invalidate_cache()
+        try:
+            self._cr.execute("DELETE FROM account_bank_statement_match WHERE statement_line_id=%d" % self.id)
+            self.invalidate_cache()
+        except AttributeError:
+            return False
 
         company_id = self.env.user.company_id.id
 
@@ -446,24 +437,43 @@ class account_bank_statement_line(models.Model):
                     match['score'] += rule['score_item']
                     _logger.debug("1200wd - Bonus found %s %s" % (rule.name, match))
 
-        # Sort and cleanup and add matches to match table
+        # Sort and cleanup and return results
         matches = sorted(matches, key=lambda k: k['score'], reverse=True)
         matches = [m for m in matches if m['score'] > 0]
-        for match in matches:
-            data = {
-                'name': match['name'],
-                'model': match['model'],
-                'statement_line_id': self.id,
-                'description': match.get('description', False),
-                'score': match['score'] or 0,
-            }
-            _logger.debug("1200wd - Match found %s: %s, score %d" % (match['name'], match.get('description', False), match['score'] or 0))
-            self.env['account.bank.statement.match'].create(data)
 
-        #(3) 1 gevonden met score >100 match automatisch
-            # invoice gaat voor sale.order
-        return True
+        return matches
 
+
+    def account_bank_match(self):
+        matches = self.match_search()
+
+        matches_found = 0
+        found_name = ''
+        so_ref = ''
+
+        if matches:
+            matches_found = len(matches)
+            if matches[0]['score'] > 100 and \
+                    (len(matches) == 1 or matches[1]['score'] <=100 or matches[1]['score'] < (matches[0]['score']-50)):
+                # Found 1 correct match. Match bankstatement line with order or invoice
+                # TODO: match one match automatically?
+                # self._do_match(matches[0]['model'], matches[0]['ref'])
+                # matches_found = -1
+                so_ref = 'saleorder'
+                found_name = 'gevondenaam'
+
+            for match in matches:
+                data = {
+                    'name': match['name'],
+                    'model': match['model'],
+                    'statement_line_id': self.id,
+                    'description': match.get('description', False),
+                    'score': match['score'] or 0,
+                }
+                _logger.debug("1200wd - Match found %s: %s, score %d" % (match['name'], match.get('description', False), match['score'] or 0))
+                self.env['account.bank.statement.match'].create(data)
+
+        return {'matches_found': matches_found, 'so_ref': so_ref, 'name': found_name}
 
     @api.multi
     def action_statement_line_match(self):
@@ -477,7 +487,8 @@ class account_bank_statement_line(models.Model):
             })
         view = self.env.ref('account_bank_match.view_account_bank_statement_line_matches_form')
         act_move = True
-        if self.account_bank_match():
+        match_result = self.account_bank_match()
+        if match_result['matches_found']:
             act_move = {
                 'name': _('Match Bank Statement Line'),
                 'res_id': st_line.id,
@@ -489,7 +500,24 @@ class account_bank_statement_line(models.Model):
                 'target': 'new',
                 }
             act_move['context'] = dict(ctx, wizard_action=pickle.dumps(act_move))
+        else:
+            # TODO: nothing found popup
+            pass
         return act_move
+
+    def _statement_line_match(self, cr, uid, vals, context=None):
+        import pdb; pdb.set_trace()
+        if 'name' not in vals:
+            return vals
+        if (not vals.get('name', False)) or vals.get('name', False) == '/':
+            match = {}
+            if not ('match_id' in vals and vals['match_id']) and not vals.get('so_ref', False):
+                match = self.account_bank_match()
+                vals['so_ref'] = match['so_ref']
+                vals['name'] = match['name'] or '/'
+            _logger.debug("1200wd - matching %s with vals %s" % (match, vals))
+            vals = self.order_invoice_lookup(cr, uid, vals, context)
+        return vals
 
     def create(self, cr, uid, vals, context=None):
         """Override to look up Invoice Reference based on given Sale Order Reference."""
@@ -518,4 +546,3 @@ class account_bank_statement(models.Model):
                 _logger.debug("1200wd - Match bank statement line with values %s" % vals_new)
                 line.write(vals_new)
             line.auto_reconcile()
-

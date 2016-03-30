@@ -96,7 +96,7 @@
                         </group>
                     </sheet>
                     <footer>
-                        <button name="match_confirm" string="Confirm match with statement line" type="object" class="oe_highlight"/>
+                        <button name="action_match_confirm" string="Confirm match with statement line" type="object" class="oe_highlight"/>
                     </footer>
                 </form>
             </field>
