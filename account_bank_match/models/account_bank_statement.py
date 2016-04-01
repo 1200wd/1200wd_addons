@@ -21,11 +21,7 @@
 #
 ##############################################################################
 
-# TODO: Auto-matching fixen
 # TODO: Matchen met accounts fixen
-# TODO: Rare matches loggen (score <100 en hogere score beschikbaar)
-# TODO: Warning als match van andere partner is dan in statement line
-# TODO: Zoek niet naar matches als dit afgelopen 24h al is gebeurt, anders druk op refresh
 # TODO: Let create function work (self is empty, values are only in vals...)
 # TODO: Automatisch wegboeken betalingsverschillen
 # TODO: Multicompany testen, (mn. in Conscious/Shavita)
@@ -44,8 +40,12 @@ import pickle
 
 _logger = logging.getLogger(__name__)
 
+# Match module settings, normally there should be no need to change them...
 MATCH_MIN_SUCCESS_SCORE = 100
 MATCH_RULES_CACHE_MINUTES = 24*60
+MATCH_AUTO_RECONCILE = True
+
+
 
 class sale_advance_payment_inv(models.TransientModel):
     _inherit = "sale.advance.payment.inv"
@@ -62,11 +62,13 @@ class sale_advance_payment_inv(models.TransientModel):
         return res
 
 
+
 class account_bank_statement_line(models.Model):
     _inherit = "account.bank.statement.line"
 
     so_ref = fields.Char('Sale Order Reference')
     name = fields.Char('Communication', required=True, default='/')
+
 
     def _get_iban_country_code(self):
         if self.remote_account: self.remote_account_country_code = self.remote_account[:2]
@@ -86,10 +88,12 @@ class account_bank_statement_line(models.Model):
                   ('id', 'not in', excluded_ids)]
         return domain
 
+
     def lookup_invoice(self, cr, uid, so_id, context):
         so_obj = self.pool.get('sale.order')
         so = so_obj.browse(cr, uid, so_id, context=context)
         return so.invoice_ids
+
 
     def prepare_bs_line(self, cr, uid, invoice, vals, context=None):
         _logger.debug("1200wd - account_bank_statement_line prepare_bs_line, invoice {}".format(invoice.number))
@@ -101,6 +105,7 @@ class account_bank_statement_line(models.Model):
         else:
             _logger.error("1200wd - account_bank_statement - Could not create or validate invoice for sale order {}!".format(vals['so_ref']))
         return vals
+
 
     def create_invoice(self, cr, uid, context=None):
         _logger.debug("1200wd - account_bank_statement_line create_invoice")
@@ -114,11 +119,13 @@ class account_bank_statement_line(models.Model):
         invoice.signal_workflow('invoice_open')
         return invoice
 
+
     def _prepare_create_invoice(self, cr, uid, order, vals, context=None):
         context.update({"order_ids": order.ids})
         invoice = self.create_invoice(cr, uid, context=context)
         # Add invoice reference to bank statement line
         return self.prepare_bs_line(cr, uid, invoice, vals, context=context)
+
 
     def order_invoice_lookup(self, cr, uid, vals, context=None):
         """Find the invoice reference for the given order reference. Create an invoice if applicable."""
@@ -165,8 +172,11 @@ class account_bank_statement_line(models.Model):
                     raise Warning(_("%s sale orders found for reference: %s" % (len(so_ids), vals['so_ref'])))
         return vals
 
+
     @api.one
     def auto_reconcile(self):
+        if not MATCH_AUTO_RECONCILE:
+            return True
         _logger.debug("1200wd - auto-reconcile journal id %s, name %s" % (self.journal_entry_id.id, self.name))
         if not self.journal_entry_id and self.name and self.name != "/":
             ret = self.get_reconciliation_proposition(self)
@@ -180,6 +190,7 @@ class account_bank_statement_line(models.Model):
                     }]
                     self.process_reconciliation(move_dicts)
         return True
+
 
     def _make_transfer(self, cr, uid, vals, account_name, context=None):
         journal_id = account_name
@@ -197,6 +208,7 @@ class account_bank_statement_line(models.Model):
         # move_line_pool = self.pool.get('account.move.line')
         # move_pool = self.pool.get('account.move')
         # return move_pool.account_move_prepare(cr, uid, journal_id, context=context)
+
 
     def _extract_references(self):
         statement_text = self.name or '' + self.partner_id.name or ''  + self.ref or '' + self.so_ref or ''
@@ -226,6 +238,7 @@ class account_bank_statement_line(models.Model):
             except TypeError, e:
                 raise Warning(_("TypeError: Please check Bank Match Reference patterns an error occured while parsing '%s'. Error: %s" % (match_ref.name, e.args[0])))
         return matches
+
 
     def _parse_rule(self, rule):
         _logger.debug("1200wd - Running match rule %s" % rule.name)
@@ -325,6 +338,7 @@ class account_bank_statement_line(models.Model):
 
         return matches
 
+
     def _match_description(self, object, model):
         description = ''
         try:
@@ -344,6 +358,7 @@ class account_bank_statement_line(models.Model):
             _logger.warning("1200wd - Could not construct match description. Error %s" % e.args[0])
         return description
 
+
     def _match_get_name(self, object, model):
         if model == 'account.invoice':
             return object.number
@@ -351,6 +366,7 @@ class account_bank_statement_line(models.Model):
             return object.name
         else:
             return str(object.id)
+
 
     def _match_get_field_name(self, model):
         if model == 'account.invoice':
@@ -360,6 +376,7 @@ class account_bank_statement_line(models.Model):
         else:
             return 'id'
 
+
     def _match_get_datefield_name(self, model):
         if model == 'account.invoice':
             return 'date_invoice'
@@ -367,6 +384,7 @@ class account_bank_statement_line(models.Model):
             return 'date'
         else:
             return 'date_order'
+
 
     def _match_get_base_domain(self, model):
         daysback = (datetime.datetime.now() - datetime.timedelta(days=365)).strftime('%Y-%m-%d')
@@ -383,6 +401,7 @@ class account_bank_statement_line(models.Model):
 
         return domain
 
+
     def _match_get_object(self, model, ref, domain = None):
         if domain is None:
             domain = []
@@ -398,6 +417,7 @@ class account_bank_statement_line(models.Model):
         except Exception, e:
             _logger.error("1200wd - Could not open model %s with reference %s. Error %s" % (model, ref, e.args[0]))
         return False
+
 
     def match_search(self):
         # Delete old match records
@@ -471,9 +491,10 @@ class account_bank_statement_line(models.Model):
 
         return matches
 
+
     # Check if there is a winning match. Assumes sorted list on descending score
     def _get_winning_match(self, matches):
-        if matches[0]['score'] > MATCH_MIN_SUCCESS_SCORE and \
+        if matches and matches[0]['score'] > MATCH_MIN_SUCCESS_SCORE and \
                 (len(matches) == 1 or matches[1]['score'] <=MATCH_MIN_SUCCESS_SCORE or
                 matches[1]['score'] < (matches[0]['score']-(MATCH_MIN_SUCCESS_SCORE / 2))):
             return (matches[0]['so_ref'], matches[0]['name'])
@@ -508,8 +529,8 @@ class account_bank_statement_line(models.Model):
                     self.env['account.bank.statement.match'].create(data)
 
         so_ref, invoice_ref = self._get_winning_match(matches)
-        # TODO: match winning match automatically?
         return {'matches_found': matches_found, 'so_ref': so_ref, 'name': invoice_ref}
+
 
     @api.multi
     def action_statement_line_match(self):
@@ -522,24 +543,23 @@ class account_bank_statement_line(models.Model):
             'statement_line_id': st_line.id,
             })
         view = self.env.ref('account_bank_match.view_account_bank_statement_line_matches_form')
-        act_move = True
         match_result = self.account_bank_match(False)
-        if match_result['matches_found']:
-            act_move = {
-                'name': _('Match Bank Statement Line'),
-                'res_id': st_line.id,
-                'view_type': 'form',
-                'view_mode': 'tree,form',
-                'res_model': 'account.bank.statement.line',
-                'type': 'ir.actions.act_window',
-                'views': [(view.id, 'form')],
-                'target': 'new',
-                }
-            act_move['context'] = dict(ctx, wizard_action=pickle.dumps(act_move))
-        else:
-            # TODO: nothing found popup
-            pass
+
+        # TODO: match winning match automatically?
+        # if match_result['matches_found']:
+        act_move = {
+            'name': _('Match Bank Statement Line'),
+            'res_id': st_line.id,
+            'view_type': 'form',
+            'view_mode': 'tree,form',
+            'res_model': 'account.bank.statement.line',
+            'type': 'ir.actions.act_window',
+            'views': [(view.id, 'form')],
+            'target': 'new',
+            }
+        act_move['context'] = dict(ctx, wizard_action=pickle.dumps(act_move))
         return act_move
+
 
     def _statement_line_match(self, cr, uid, vals, context=None):
         if 'name' not in vals:
@@ -555,10 +575,12 @@ class account_bank_statement_line(models.Model):
             vals = self.order_invoice_lookup(cr, uid, vals, context)
         return vals
 
+
     def create(self, cr, uid, vals, context=None):
         """Override to look up Invoice Reference based on given Sale Order Reference."""
         vals = self._statement_line_match(cr, uid, vals, context)
         return super(account_bank_statement_line, self).create(cr, uid, vals, context=context)
+
 
     def write(self, cr, uid, ids, vals, context=None):
         """Override to look up Invoice Reference based on given Sale Order Reference."""
@@ -567,9 +589,9 @@ class account_bank_statement_line(models.Model):
 
 
 
-
 class account_bank_statement(models.Model):
     _inherit = "account.bank.statement"
+
 
     @api.one
     def action_statement_match(self):
