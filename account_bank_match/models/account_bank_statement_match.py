@@ -64,6 +64,7 @@ class account_bank_statement_match(models.Model):
 
     name = fields.Char(string="Reference", size=32, required=True,
                        help="Reference of match to order, invoice or account")
+    so_ref = fields.Char('Sale Order Reference')
     model = fields.Selection(
         [
             ('sale.order', 'Sale Order'),

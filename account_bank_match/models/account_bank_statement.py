@@ -24,6 +24,10 @@
 # TODO: Auto-matching fixen
 # TODO: Matchen met accounts fixen
 # TODO: Rare matches loggen (score <100 en hogere score beschikbaar)
+# TODO: Warning als match van andere partner is dan in statement line
+# TODO: Zoek niet naar matches als dit afgelopen 24h al is gebeurt, anders druk op refresh
+# TODO: Let create function work (self is empty, values are only in vals...)
+# TODO: Automatisch wegboeken betalingsverschillen
 # TODO: Multicompany testen, (mn. in Conscious/Shavita)
 # TODO: Check matching with purchase invoices, refunds, etc
 # TODO: Review and cleanup code
@@ -41,6 +45,7 @@ import pickle
 _logger = logging.getLogger(__name__)
 
 MATCH_MIN_SUCCESS_SCORE = 100
+MATCH_RULES_CACHE_MINUTES = 24*60
 
 class sale_advance_payment_inv(models.TransientModel):
     _inherit = "sale.advance.payment.inv"
@@ -443,37 +448,44 @@ class account_bank_statement_line(models.Model):
 
         return matches
 
+    # Check if there is a winning match. Assumes sorted list on descending score
+    def _get_winning_match(self, matches):
+        if matches[0]['score'] > MATCH_MIN_SUCCESS_SCORE and \
+                (len(matches) == 1 or matches[1]['score'] <=MATCH_MIN_SUCCESS_SCORE or
+                matches[1]['score'] < (matches[0]['score']-(MATCH_MIN_SUCCESS_SCORE / 2))):
+            return (matches[0]['so_ref'], matches[0]['name'])
+        else:
+            return ('', '')
 
-    def account_bank_match(self):
-        matches = self.match_search()
 
-        matches_found = 0
-        found_name = ''
-        so_ref = ''
+    @api.multi
+    def account_bank_match(self, always_refresh=True):
+        # First check if any recent matches are still in cache ...
+        to_old =  ((datetime.datetime.now() - datetime.timedelta(minutes=MATCH_RULES_CACHE_MINUTES)).strftime('%Y-%m-%d %H:%M'))
+        matches_found = self.env['account.bank.statement.match'].search_count([('statement_line_id', '=', self.id), ('create_date', '>', to_old)])
+        if matches_found and not always_refresh:
+            matches = self.env['account.bank.statement.match'].search_read([('statement_line_id', '=', self.id)], order='score DESC', limit=2)
 
-        if matches:
-            matches_found = len(matches)
-            if matches[0]['score'] > 100 and \
-                    (len(matches) == 1 or matches[1]['score'] <=100 or matches[1]['score'] < (matches[0]['score']-50)):
-                # Found 1 correct match. Match bankstatement line with order or invoice
-                # TODO: match one match automatically?
-                # self._do_match(matches[0]['model'], matches[0]['ref'])
-                # matches_found = -1
-                so_ref = 'saleorder'
-                found_name = 'gevondenaam'
+        # ... otherwise search for matches add them to database
+        else:
+            matches = self.match_search()
+            matches_found = 0
+            if matches:
+                matches_found = len(matches)
+                for match in matches:
+                    data = {
+                        'name': match['name'],
+                        'model': match['model'],
+                        'statement_line_id': self.id,
+                        'description': match.get('description', False),
+                        'score': match['score'] or 0,
+                    }
+                    _logger.debug("1200wd - Match found %s: %s, score %d" % (match['name'], match.get('description', False), match['score'] or 0))
+                    self.env['account.bank.statement.match'].create(data)
 
-            for match in matches:
-                data = {
-                    'name': match['name'],
-                    'model': match['model'],
-                    'statement_line_id': self.id,
-                    'description': match.get('description', False),
-                    'score': match['score'] or 0,
-                }
-                _logger.debug("1200wd - Match found %s: %s, score %d" % (match['name'], match.get('description', False), match['score'] or 0))
-                self.env['account.bank.statement.match'].create(data)
-
-        return {'matches_found': matches_found, 'so_ref': so_ref, 'name': found_name}
+        so_ref, invoice_ref = self._get_winning_match(matches)
+        # TODO: match winning match automatically?
+        return {'matches_found': matches_found, 'so_ref': so_ref, 'name': invoice_ref}
 
     @api.multi
     def action_statement_line_match(self):
@@ -487,7 +499,7 @@ class account_bank_statement_line(models.Model):
             })
         view = self.env.ref('account_bank_match.view_account_bank_statement_line_matches_form')
         act_move = True
-        match_result = self.account_bank_match()
+        match_result = self.account_bank_match(False)
         if match_result['matches_found']:
             act_move = {
                 'name': _('Match Bank Statement Line'),
@@ -506,13 +518,13 @@ class account_bank_statement_line(models.Model):
         return act_move
 
     def _statement_line_match(self, cr, uid, vals, context=None):
-        import pdb; pdb.set_trace()
         if 'name' not in vals:
             return vals
         if (not vals.get('name', False)) or vals.get('name', False) == '/':
             match = {}
+            # Only search for matches if match_id not set and if no sales order reference is known
             if not ('match_id' in vals and vals['match_id']) and not vals.get('so_ref', False):
-                match = self.account_bank_match()
+                match = self.account_bank_match(False)
                 vals['so_ref'] = match['so_ref']
                 vals['name'] = match['name'] or '/'
             _logger.debug("1200wd - matching %s with vals %s" % (match, vals))
