@@ -48,6 +48,7 @@
                     <field name="statement_line_id" invisible="1"/>
                     <field name="model"/>
                     <field name="name"/>
+                    <field name="so_ref"/>
                     <field name="description"/>
                     <field name="score"/>
                 </tree>

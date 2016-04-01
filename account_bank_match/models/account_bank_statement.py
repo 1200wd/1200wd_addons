@@ -210,8 +210,12 @@ class account_bank_statement_line(models.Model):
                 for m in re.finditer(match_ref.name, statement_text):
                     obj = self.env[match_ref.model].search([(self._match_get_field_name(match_ref.model), '=', m.group(0))])
                     description = self._match_description(obj, match_ref.model)
+                    if match_ref.model == 'account.invoice': so_ref = obj.origin or ''
+                    elif match_ref.model == 'sale.order': so_ref = m.group(0)
+                    else: so_ref = ''
                     matches.append(
                         {'name': m.group(0),
+                         'so_ref': so_ref,
                          'model': match_ref.model,
                          'description': description,
                          'score': match_ref.score,
@@ -272,6 +276,9 @@ class account_bank_statement_line(models.Model):
             # TODO: Search related sales order / mathes
             return matches
 
+        if not 'so_ref' in match:
+            import pdb; pdb.set_trace()
+
         # If match is a partner replace match with open invoices of this partner
         if match['model'] == 'res.partner':
             partner = self._match_get_object('res.partner', match['name'])
@@ -280,13 +287,13 @@ class account_bank_statement_line(models.Model):
                 description = self._match_description(invoice, 'account.invoice')
                 sc = add_score / len(open_invoices)
                 matches = self._update_match_list({'name': invoice.number, 'model': 'account.invoice',
-                                                   'description': description}, sc, matches)
+                                                   'description': description, 'so_ref': invoice.origin or ''}, sc, matches)
             open_orders = [o for o in partner.sale_order_ids if o.state in ['draft', 'wait_payment', 'sent']]
             for order in open_orders:
                 description = self._match_description(order, 'sale.order')
                 sc = add_score / len(open_orders)
                 matches = self._update_match_list({'name': order.name, 'model': 'sale.order',
-                                                   'description': description}, sc, matches)
+                                                   'description': description, 'so_ref': order.name}, sc, matches)
             return matches
 
         # If match to a sale order and sale order has an invoice then replace match with invoice number
@@ -296,6 +303,7 @@ class account_bank_statement_line(models.Model):
             if len(invoice) == 1:
                 match['description'] += ";" + match['name']
                 match['model'] = 'account.invoice'
+                match['so_ref'] = match['name']
                 match['name'] = invoice.number or ''
 
         # Remove duplicates and sum up scores
@@ -304,9 +312,16 @@ class account_bank_statement_line(models.Model):
                 {'name': match['name'],
                  'model': match['model'],
                  'score': add_score,
-                 'description': match.get('description', '')})
+                 'description': match.get('description', ''),
+                 'so_ref': match.get('so_ref', '')})
         else:
-            [d.update({'score': d['score'] + add_score}) for d in matches if d['name'] == match['name']]
+            [
+                d.update(
+                    {'score': d['score'] + add_score,
+                     'so_ref': d['so_ref'] or '',
+                     'description': d['description']})
+                for d in matches if d['name'] == match['name']
+            ]
 
         return matches
 
@@ -429,8 +444,16 @@ class account_bank_statement_line(models.Model):
                 add_score = rule['score_item'] + (rule['score'] / len(rule_matches))
                 for rule_match in rule_matches:
                     name = self._match_get_name(rule_match, rule['model'])
+                    if rule['model'] == 'account.invoice': so_ref = rule_match.origin or ''
+                    elif rule['model'] == 'sale.order': so_ref = rule_match.name
+                    else: so_ref = ''
                     description = self._match_description(rule_match, rule['model'])
-                    matches = self._update_match_list({'name': name, 'model': rule['model'], 'description': description}, add_score, matches)
+                    matches = self._update_match_list(
+                        {'name': name,
+                         'model': rule['model'],
+                         'description': description,
+                         'so_ref': so_ref},
+                        add_score, matches)
 
         # Calculate bonuses for already found matches
         for rule in self.env['account.bank.statement.match.rule'].search(
@@ -478,6 +501,7 @@ class account_bank_statement_line(models.Model):
                         'model': match['model'],
                         'statement_line_id': self.id,
                         'description': match.get('description', False),
+                        'so_ref': match['so_ref'],
                         'score': match['score'] or 0,
                     }
                     _logger.debug("1200wd - Match found %s: %s, score %d" % (match['name'], match.get('description', False), match['score'] or 0))
