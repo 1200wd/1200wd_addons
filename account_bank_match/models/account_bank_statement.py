@@ -21,8 +21,8 @@
 #
 ##############################################################################
 
-# TODO: Matchen met accounts fixen
 # TODO: Let create function work (self is empty, values are only in vals...)
+# TODO: Match winning match automatically (only on auto-import/create)?
 # TODO: Multicompany testen, (mn. in Conscious/Shavita)
 # TODO: Check matching with purchase invoices, refunds, etc
 # TODO: Check if generated account move lines are correct
@@ -175,21 +175,20 @@ class account_bank_statement_line(models.Model):
 
     @api.one
     def auto_reconcile(self):
-        # TODO check with pay_and_reconcile
-        # lennart: plus see this:  SIGN = {'out_invoice': -1, 'in_invoice': 1, 'out_refund': 1, 'in_refund': -1}
-        if not MATCH_AUTO_RECONCILE:
+        if not MATCH_AUTO_RECONCILE or self.journal_entry_id:
             return True
         _logger.debug("1200wd - auto-reconcile journal id %s, name %s" % (self.journal_entry_id.id, self.name))
-        if not self.journal_entry_id and self.name and self.name != "/":
+        if self.name and self.name != "/":
             ret = self.get_reconciliation_proposition(self)
             if ret:
                 move_line = ret[0]
                 payment_difference = (move_line['debit'] - move_line['credit']) - self.amount
                 if payment_difference:
-                    _logger.warning("1200wd - Payment difference of %d for bank statement line %s. Cannot auto-reconcile" % (payment_difference, self.id))
-                    return True
+                    _logger.warning(_("1200wd - Payment difference of %d for bank statement line %s. Cannot auto-reconcile" % (payment_difference, self.id)))
+                    raise Warning("Payment difference of %d. Cannot reconcile" % payment_difference)
                     # TODO: Create function to write-off payment difference. The process_reconciliation function does
                     #   not have any functionality to do this, so we need to create an own function to do this
+                    #   see pay_and_reconcile method
                     # if payment_difference < 0: debit = 0; credit = payment_difference
                     # else: debit = payment_difference; credit = 0
                     # move_writeoff = {
@@ -201,8 +200,11 @@ class account_bank_statement_line(models.Model):
                     'debit': move_line['credit'],
                     'credit': move_line['debit'],
                 }]
-                import pdb; pdb.set_trace()
                 self.process_reconciliation(move_dicts)
+            else:
+                raise Warning(_("Unknown reference %s, no reconciliation proposition found" % self.name))
+        else:
+            raise Warning(_("No reference name specified, cannot reconcile" % self.name))
         return True
 
 
@@ -297,17 +299,17 @@ class account_bank_statement_line(models.Model):
 
 
     def _update_match_list(self, match, add_score, matches=[]):
-        # If match is an account move line replace with open invoice or sale orders
-        if match['model'] == 'account.move.line':
-            ref = self._match_get_object('account.move.line', match['name']).ref
-            # TODO: Search related sales order / mathes
-            return matches
-
         if not 'so_ref' in match:
             import pdb; pdb.set_trace()
 
+        # If match is an account move line ...
+        if match['model'] == 'account.move.line':
+            # aml = self._match_get_object('account.move.line', match['name'])
+            # Add extra code for matching with move lines here, for now thou shall
+            pass
+
         # If match is a partner replace match with open invoices of this partner
-        if match['model'] == 'res.partner':
+        elif match['model'] == 'res.partner':
             partner = self._match_get_object('res.partner', match['name'])
             open_invoices = [i for i in partner.invoice_ids if i.state == 'open']
             for invoice in open_invoices:
@@ -324,7 +326,7 @@ class account_bank_statement_line(models.Model):
             return matches
 
         # If match to a sale order and sale order has an invoice then replace match with invoice number
-        if match['model'] == 'sale.order':
+        elif match['model'] == 'sale.order':
             invoice = self._match_get_object('sale.order', match['name']).invoice_ids
             # TODO: Handle situation where 1 sale order has multiple invoices or other n-m relations
             if len(invoice) == 1:
@@ -411,7 +413,7 @@ class account_bank_statement_line(models.Model):
             domain.extend([('date_invoice', '>', daysback),
                            ('state', 'in', ['open'])])
         elif model == 'account.move.line':
-            domain.append(('date', '>', daysback))
+            domain.extend([('date', '>', daysback), ('reconcile_ref', '=', False)])
 
         return domain
 
@@ -559,7 +561,6 @@ class account_bank_statement_line(models.Model):
         view = self.env.ref('account_bank_match.view_account_bank_statement_line_matches_form')
         match_result = self.account_bank_match(False)
 
-        # TODO: match winning match automatically?
         # if match_result['matches_found']:
         act_move = {
             'name': _('Match Bank Statement Line'),
@@ -592,8 +593,10 @@ class account_bank_statement_line(models.Model):
 
     def create(self, cr, uid, vals, context=None):
         """Override to look up Invoice Reference based on given Sale Order Reference."""
+        res = super(account_bank_statement_line, self).create(cr, uid, vals, context=context)
+        import pdb; pdb.set_trace()
         vals = self._statement_line_match(cr, uid, vals, context)
-        return super(account_bank_statement_line, self).create(cr, uid, vals, context=context)
+        return res
 
 
     def write(self, cr, uid, ids, vals, context=None):

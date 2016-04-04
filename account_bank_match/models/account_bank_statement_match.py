@@ -69,6 +69,7 @@ class account_bank_statement_match(models.Model):
         [
             ('sale.order', 'Sale Order'),
             ('account.invoice', 'Invoice'),
+            ('account.move.line', 'Account Move Line')
         ], select=True, required=True
     )
     statement_line_id = fields.Many2one('account.bank.statement.line', string="Bank Statement Line", required=True, index=True)
@@ -77,12 +78,14 @@ class account_bank_statement_match(models.Model):
 
     @api.one
     def action_match_confirm(self):
-        # self.statement_line_id.self._statement_line_match()
         vals = {'match_id': self.id}
         if self.model == 'sale.order':
             vals['so_ref'] = self.name
             vals['name'] = '/'
         elif self.model == 'account.invoice':
+            vals['name'] = self.name or '/'
+        elif self.model == 'account.move.line':
+            vals['so_ref'] = ''
             vals['name'] = self.name or '/'
 
         self.statement_line_id.write(vals)
