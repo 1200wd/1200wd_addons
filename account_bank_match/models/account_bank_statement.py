@@ -21,7 +21,6 @@
 #
 ##############################################################################
 
-# TODO: Let create function work (self is empty, values are only in vals...)
 # TODO: Match winning match automatically (only on auto-import/create)?
 # TODO: Multicompany testen, (mn. in Conscious/Shavita)
 # TODO: Check matching with purchase invoices, refunds, etc
@@ -227,7 +226,10 @@ class account_bank_statement_line(models.Model):
 
 
     def _extract_references(self):
-        statement_text = self.name or '' + self.partner_id.name or ''  + self.ref or '' + self.so_ref or ''
+        try:
+            statement_text = (self.name or '') + (self.partner_id.name or '')  + (self.ref or '') + (self.so_ref or '')
+        except Exception, e:
+            import pdb; pdb.set_trace()
         statement_text = re.sub(r"\W", "", statement_text).upper()
         company_id = self.env.user.company_id.id
         matches = []
@@ -255,7 +257,7 @@ class account_bank_statement_line(models.Model):
                 raise Warning(_("TypeError: Please check Bank Match Reference patterns an error occured while parsing '%s'. Error: %s" % (match_ref.name, e.args[0])))
         return matches
 
-
+    @api.model
     def _parse_rule(self, rule):
         _logger.debug("1200wd - Running match rule %s" % rule.name)
 
@@ -286,7 +288,7 @@ class account_bank_statement_line(models.Model):
                             if not new_value:
                                 continue
                         except Exception, e:
-                            import pdb; pdb.set_trace()
+                            # import pdb; pdb.set_trace()
                             _logger.warning("1200wd - Rule '{}'. Error matching odoo expression '{}' {}".
                                             format(rule.rule, odoo_expression, e.message))
             if new_value:
@@ -435,6 +437,7 @@ class account_bank_statement_line(models.Model):
         return False
 
 
+    @api.model
     def match_search(self):
         # Delete old match records
         try:
@@ -474,7 +477,10 @@ class account_bank_statement_line(models.Model):
             if not rule_domain: # stop running rule if empty domain is returned to avoid useless matches on rule parsing errors
                 continue
             base_domain = self._match_get_base_domain(rule['model'])
-            rule_matches = self.env[rule['model']].search(base_domain + rule_domain, limit=25)  # order=self._match_get_datefield_name(rule['type'])+' DESC',
+            try:
+                rule_matches = self.env[rule['model']].search(base_domain + rule_domain, limit=25)  #TODO: order=self._match_get_datefield_name(rule['type'])+' DESC',
+            except Exception, e:
+                import pdb; pdb.set_trace()
             _logger.debug("1200wd - %d matches found" % len(rule_matches))
             if rule_matches:
                 add_score = rule['score_item'] + (rule['score'] / len(rule_matches))
@@ -518,33 +524,36 @@ class account_bank_statement_line(models.Model):
             return ('', '')
 
 
-    @api.multi
+    @api.model
     def account_bank_match(self, always_refresh=True):
-        # First check if any recent matches are still in cache ...
-        to_old =  ((datetime.datetime.now() - datetime.timedelta(minutes=MATCH_RULES_CACHE_MINUTES)).strftime('%Y-%m-%d %H:%M'))
-        matches_found = self.env['account.bank.statement.match'].search_count([('statement_line_id', '=', self.id), ('create_date', '>', to_old)])
-        if matches_found and not always_refresh:
-            matches = self.env['account.bank.statement.match'].search_read([('statement_line_id', '=', self.id)], order='score DESC', limit=2)
+        matches_found = 0
+        so_ref = ''
+        invoice_ref = ''
+        if self:
+            # First check if any recent matches are still in cache ...
+            to_old =  ((datetime.datetime.now() - datetime.timedelta(minutes=MATCH_RULES_CACHE_MINUTES)).strftime('%Y-%m-%d %H:%M'))
+            matches_found = self.env['account.bank.statement.match'].search_count([('statement_line_id', '=', self.id), ('create_date', '>', to_old)])
+            if matches_found and not always_refresh:
+                matches = self.env['account.bank.statement.match'].search_read([('statement_line_id', '=', self.id)], order='score DESC', limit=2)
 
-        # ... otherwise search for matches add them to database
-        else:
-            matches = self.match_search()
-            matches_found = 0
-            if matches:
-                matches_found = len(matches)
-                for match in matches:
-                    data = {
-                        'name': match['name'],
-                        'model': match['model'],
-                        'statement_line_id': self.id,
-                        'description': match.get('description', False),
-                        'so_ref': match['so_ref'],
-                        'score': match['score'] or 0,
-                    }
-                    _logger.debug("1200wd - Match found %s: %s, score %d" % (match['name'], match.get('description', False), match['score'] or 0))
-                    self.env['account.bank.statement.match'].create(data)
+            # ... otherwise search for matches add them to database
+            else:
+                matches = self.match_search()
+                if matches:
+                    matches_found = len(matches)
+                    for match in matches:
+                        data = {
+                            'name': match['name'],
+                            'model': match['model'],
+                            'statement_line_id': self.id,
+                            'description': match.get('description', False),
+                            'so_ref': match['so_ref'],
+                            'score': match['score'] or 0,
+                        }
+                        _logger.debug("1200wd - Match found %s: %s, score %d" % (match['name'], match.get('description', False), match['score'] or 0))
+                        self.env['account.bank.statement.match'].create(data)
 
-        so_ref, invoice_ref = self._get_winning_match(matches)
+            so_ref, invoice_ref = self._get_winning_match(matches)
         return {'matches_found': matches_found, 'so_ref': so_ref, 'name': invoice_ref}
 
 
@@ -575,28 +584,33 @@ class account_bank_statement_line(models.Model):
         act_move['context'] = dict(ctx, wizard_action=pickle.dumps(act_move))
         return act_move
 
-
-    def _statement_line_match(self, cr, uid, vals, context=None):
-        if 'name' not in vals:
-            return vals
+    @api.model
+    def _statement_line_match(self, vals):
         if (not vals.get('name', False)) or vals.get('name', False) == '/':
-            match = {}
             # Only search for matches if match_id not set and if no sales order reference is known
             if not ('match_id' in vals and vals['match_id']) and not vals.get('so_ref', False):
                 match = self.account_bank_match(False)
-                vals['so_ref'] = match['so_ref']
-                vals['name'] = match['name'] or '/'
-            _logger.debug("1200wd - matching %s with vals %s" % (match, vals))
-            vals = self.order_invoice_lookup(cr, uid, vals, context)
+                if match:
+                    vals['so_ref'] = match['so_ref']
+                    vals['name'] = match['name'] or '/'
+                _logger.debug("1200wd - matching %s with vals %s" % (match, vals))
+                # vals = self.order_invoice_lookup(cr, uid, vals, context)
         return vals
 
 
-    def create(self, cr, uid, vals, context=None):
+    # def create(self, cr, uid, vals, context=None):
+    @api.model
+    def create(self, vals):
         """Override to look up Invoice Reference based on given Sale Order Reference."""
-        res = super(account_bank_statement_line, self).create(cr, uid, vals, context=context)
-        import pdb; pdb.set_trace()
-        vals = self._statement_line_match(cr, uid, vals, context)
-        return res
+
+        statement_line = super(account_bank_statement_line, self).create(vals)
+        vals_new = statement_line._statement_line_match(vals)
+        if vals != vals_new:
+            import pdb; pdb.set_trace()
+            self.write(vals_new)
+
+        return statement_line
+        # return super(account_bank_statement_line, self).write(cr, uid, statement_line_id, vals, context=context)
 
 
     def write(self, cr, uid, ids, vals, context=None):
