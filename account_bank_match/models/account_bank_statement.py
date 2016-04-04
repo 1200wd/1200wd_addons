@@ -23,9 +23,9 @@
 
 # TODO: Matchen met accounts fixen
 # TODO: Let create function work (self is empty, values are only in vals...)
-# TODO: Automatisch wegboeken betalingsverschillen
 # TODO: Multicompany testen, (mn. in Conscious/Shavita)
 # TODO: Check matching with purchase invoices, refunds, etc
+# TODO: Check if generated account move lines are correct
 # TODO: Review and cleanup code
 # TODO: Test on Noorderhaaks
 # TODO: Test on Spieker
@@ -175,6 +175,8 @@ class account_bank_statement_line(models.Model):
 
     @api.one
     def auto_reconcile(self):
+        # TODO check with pay_and_reconcile
+        # lennart: plus see this:  SIGN = {'out_invoice': -1, 'in_invoice': 1, 'out_refund': 1, 'in_refund': -1}
         if not MATCH_AUTO_RECONCILE:
             return True
         _logger.debug("1200wd - auto-reconcile journal id %s, name %s" % (self.journal_entry_id.id, self.name))
@@ -182,13 +184,25 @@ class account_bank_statement_line(models.Model):
             ret = self.get_reconciliation_proposition(self)
             if ret:
                 move_line = ret[0]
-                if move_line['debit'] == self.amount or move_line['credit'] == -self.amount:
-                    move_dicts = [{
-                        'counterpart_move_line_id': move_line['id'],
-                        'debit': move_line['credit'],
-                        'credit': move_line['debit'],
-                    }]
-                    self.process_reconciliation(move_dicts)
+                payment_difference = (move_line['debit'] - move_line['credit']) - self.amount
+                if payment_difference:
+                    _logger.warning("1200wd - Payment difference of %d for bank statement line %s. Cannot auto-reconcile" % (payment_difference, self.id))
+                    return True
+                    # TODO: Create function to write-off payment difference. The process_reconciliation function does
+                    #   not have any functionality to do this, so we need to create an own function to do this
+                    # if payment_difference < 0: debit = 0; credit = payment_difference
+                    # else: debit = payment_difference; credit = 0
+                    # move_writeoff = {
+                    #     'debit': debit,
+                    #     'credit': credit,
+                    # }
+                move_dicts = [{
+                    'counterpart_move_line_id': move_line['id'],
+                    'debit': move_line['credit'],
+                    'credit': move_line['debit'],
+                }]
+                import pdb; pdb.set_trace()
+                self.process_reconciliation(move_dicts)
         return True
 
 
