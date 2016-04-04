@@ -46,29 +46,31 @@ MATCH_AUTO_RECONCILE = True
 
 
 
-class sale_advance_payment_inv(models.TransientModel):
+class SaleAdvancePaymentInv(models.TransientModel):
     _inherit = "sale.advance.payment.inv"
 
-    def create_invoices(self, cr, uid, ids=[], context=None):
+    @api.model
+    def create_invoices(self, ids):
         """ Override to skip the wizard and invoice the whole sales order"""
         if not context.get('override', False):
-            return super(sale_advance_payment_inv, self).create_invoices(cr, uid, ids, context=context)
+            return super(SaleAdvancePaymentInv, self).create_invoices(ids)
         res = []
         sale_obj = self.pool.get('sale.order')
         sale_ids = context.get('order_ids', [])
         if sale_ids:
-            res = sale_obj.manual_invoice(cr, uid, sale_ids, context)['res_id'] or []
+            res = sale_obj.manual_invoice(sale_ids)['res_id'] or []
         return res
 
 
 
-class account_bank_statement_line(models.Model):
+class AccountBankStatementLine(models.Model):
     _inherit = "account.bank.statement.line"
 
     so_ref = fields.Char('Sale Order Reference')
     name = fields.Char('Communication', required=True, default='/')
 
 
+    @api.model
     def _get_iban_country_code(self):
         if self.remote_account: self.remote_account_country_code = self.remote_account[:2]
         else: self.remote_account_country_code = ''
@@ -76,7 +78,8 @@ class account_bank_statement_line(models.Model):
     remote_account_country_code = fields.Char(string="Remote IBAN country code", size=2, compute="_get_iban_country_code", readonly=True)
 
 
-    def _domain_reconciliation_proposition(self, cr, uid, st_line, excluded_ids=None, context=None):
+    @api.model
+    def _domain_reconciliation_proposition(self, st_line, excluded_ids=None):
         if excluded_ids is None:
             excluded_ids = []
         domain = ['|', ('ref', '=', st_line.name),
@@ -88,13 +91,15 @@ class account_bank_statement_line(models.Model):
         return domain
 
 
-    def lookup_invoice(self, cr, uid, so_id, context):
+    @api.model
+    def lookup_invoice(self, so_id):
         so_obj = self.pool.get('sale.order')
-        so = so_obj.browse(cr, uid, so_id, context=context)
+        so = so_obj.browse(so_id)
         return so.invoice_ids
 
 
-    def prepare_bs_line(self, cr, uid, invoice, vals, context=None):
+    @api.model
+    def prepare_bs_line(self, invoice, vals):
         _logger.debug("1200wd - account_bank_statement_line prepare_bs_line, invoice {}".format(invoice.number))
         if invoice.number:
             vals['name'] = invoice.number
@@ -106,37 +111,40 @@ class account_bank_statement_line(models.Model):
         return vals
 
 
-    def create_invoice(self, cr, uid, context=None):
+    @api.model
+    def create_invoice(self):
         _logger.debug("1200wd - account_bank_statement_line create_invoice")
-        adv_inv_obj = self.pool.get('sale.advance.payment.inv')
-        inv_obj = self.pool.get('account.invoice')
+        adv_inv_obj = self.env['sale.advance.payment.inv']
+        inv_obj = self.env['account.invoice']
         # Create invoice
-        context['override'] = True
-        invoice_id = adv_inv_obj.create_invoices(cr, uid, context=context)
-        invoice = inv_obj.browse(cr, uid, invoice_id, context=context)
+        self._context['override'] = True
+        invoice_id = adv_inv_obj.create_invoices()
+        invoice = inv_obj.browse(invoice_id)
         # Validate invoice
         invoice.signal_workflow('invoice_open')
         return invoice
 
 
-    def _prepare_create_invoice(self, cr, uid, order, vals, context=None):
-        context.update({"order_ids": order.ids})
-        invoice = self.create_invoice(cr, uid, context=context)
+    @api.model
+    def _prepare_create_invoice(self, order, vals):
+        self._context.update({"order_ids": order.ids})
+        invoice = self.create_invoice()
         # Add invoice reference to bank statement line
-        return self.prepare_bs_line(cr, uid, invoice, vals, context=context)
+        return self.prepare_bs_line(invoice, vals)
 
 
-    def order_invoice_lookup(self, cr, uid, vals, context=None):
+    @api.model
+    def order_invoice_lookup(self, vals):
         """Find the invoice reference for the given order reference. Create an invoice if applicable."""
         if vals.get('so_ref', None):
-            so_obj = self.pool.get('sale.order')
-            so_ids = so_obj.search(cr, uid, [('name', '=', vals['so_ref'])], context=context)
+            so_obj = self.env['sale.order']
+            so_ids = so_obj.search([('name', '=', vals['so_ref'])])
             if len(so_ids) == 1:
-                order = so_obj.browse(cr, uid, so_ids[0], context=context)
-                invoices = self.lookup_invoice(cr, uid, so_ids[0], context=context)
+                order = so_obj.browse(so_ids[0])
+                invoices = self.lookup_invoice(so_ids[0])
 
                 if len(invoices) == 1:
-                    vals = self.prepare_bs_line(cr, uid, invoices[0], vals, context=context)
+                    vals = self.prepare_bs_line(invoices[0], vals)
                 elif len(invoices) > 1:
                     _logger.error("1200wd - account_bank_statement - %s invoices found for orders: %s (ids)" % (len(invoices), so_ids))
                 else:
@@ -145,7 +153,7 @@ class account_bank_statement_line(models.Model):
                             and order.state == 'wait_payment':
                         if order.signal_workflow('order_confirm'):
                             if order.order_policy == 'manual':
-                                vals = self._prepare_create_invoice(cr, uid, order, vals, context=context)
+                                vals = self._prepare_create_invoice(order, vals)
                             elif order.order_policy == 'prepaid':
                                 # Invoice has just been created and is still in draft, confirm it to lookup its name.
                                 for invoice in order.invoice_ids:
@@ -159,7 +167,7 @@ class account_bank_statement_line(models.Model):
                                     except KeyError:
                                         vals['name'] = invoice.number
                     elif (order.order_policy == 'manual' and order.state == 'manual'):
-                        vals = self._prepare_create_invoice(cr, uid, order, vals, context=context)
+                        vals = self._prepare_create_invoice(order, vals)
                     elif (order.order_policy == 'prepaid' and order.state != 'wait_payment'):
                         _logger.debug("1200wd - account_bank_statement - Trying to pay for Sale Order {} when its state is not 'Wait for Payment'.".format(vals['so_ref']))
                     else:
@@ -172,13 +180,15 @@ class account_bank_statement_line(models.Model):
         return vals
 
 
-    @api.one
+    @api.model
     def auto_reconcile(self):
         if not MATCH_AUTO_RECONCILE or self.journal_entry_id:
             return True
         _logger.debug("1200wd - auto-reconcile journal id %s, name %s" % (self.journal_entry_id.id, self.name))
         if self.name and self.name != "/":
-            ret = self.get_reconciliation_proposition(self)
+            st_line = self.browse(self.id)
+            import pdb; pdb.set_trace()
+            ret = self.get_reconciliation_proposition(st_line)
             if ret:
                 move_line = ret[0]
                 payment_difference = (move_line['debit'] - move_line['credit']) - self.amount
@@ -207,7 +217,8 @@ class account_bank_statement_line(models.Model):
         return True
 
 
-    def _make_transfer(self, cr, uid, vals, account_name, context=None):
+    @api.model
+    def _make_transfer(self, vals, account_name):
         journal_id = account_name
         move_vals = {
             'journal_id': journal_id,
@@ -225,6 +236,7 @@ class account_bank_statement_line(models.Model):
         # return move_pool.account_move_prepare(cr, uid, journal_id, context=context)
 
 
+    @api.model
     def _extract_references(self):
         try:
             statement_text = (self.name or '') + (self.partner_id.name or '')  + (self.ref or '') + (self.so_ref or '')
@@ -256,6 +268,7 @@ class account_bank_statement_line(models.Model):
             except TypeError, e:
                 raise Warning(_("TypeError: Please check Bank Match Reference patterns an error occured while parsing '%s'. Error: %s" % (match_ref.name, e.args[0])))
         return matches
+
 
     @api.model
     def _parse_rule(self, rule):
@@ -300,6 +313,7 @@ class account_bank_statement_line(models.Model):
         return rule_list_new
 
 
+    @api.model
     def _update_match_list(self, match, add_score, matches=[]):
         if not 'so_ref' in match:
             import pdb; pdb.set_trace()
@@ -357,6 +371,7 @@ class account_bank_statement_line(models.Model):
         return matches
 
 
+    @api.model
     def _match_description(self, object, model):
         description = ''
         try:
@@ -377,6 +392,7 @@ class account_bank_statement_line(models.Model):
         return description
 
 
+    @api.model
     def _match_get_name(self, object, model):
         if model == 'account.invoice':
             return object.number
@@ -386,6 +402,7 @@ class account_bank_statement_line(models.Model):
             return str(object.id)
 
 
+    @api.model
     def _match_get_field_name(self, model):
         if model == 'account.invoice':
             return 'number'
@@ -395,6 +412,7 @@ class account_bank_statement_line(models.Model):
             return 'id'
 
 
+    @api.model
     def _match_get_datefield_name(self, model):
         if model == 'account.invoice':
             return 'date_invoice'
@@ -404,6 +422,7 @@ class account_bank_statement_line(models.Model):
             return 'date_order'
 
 
+    @api.model
     def _match_get_base_domain(self, model):
         daysback = (datetime.datetime.now() - datetime.timedelta(days=365)).strftime('%Y-%m-%d')
         company_id = self.env.user.company_id.id
@@ -420,6 +439,7 @@ class account_bank_statement_line(models.Model):
         return domain
 
 
+    @api.model
     def _match_get_object(self, model, ref, domain = None):
         if domain is None:
             domain = []
@@ -515,6 +535,7 @@ class account_bank_statement_line(models.Model):
 
 
     # Check if there is a winning match. Assumes sorted list on descending score
+    @api.model
     def _get_winning_match(self, matches):
         if matches and matches[0]['score'] > MATCH_MIN_SUCCESS_SCORE and \
                 (len(matches) == 1 or matches[1]['score'] <=MATCH_MIN_SUCCESS_SCORE or
@@ -584,6 +605,7 @@ class account_bank_statement_line(models.Model):
         act_move['context'] = dict(ctx, wizard_action=pickle.dumps(act_move))
         return act_move
 
+
     @api.model
     def _statement_line_match(self, vals):
         if (not vals.get('name', False)) or vals.get('name', False) == '/':
@@ -594,16 +616,15 @@ class account_bank_statement_line(models.Model):
                     vals['so_ref'] = match['so_ref']
                     vals['name'] = match['name'] or '/'
                 _logger.debug("1200wd - matching %s with vals %s" % (match, vals))
-                # vals = self.order_invoice_lookup(cr, uid, vals, context)
+                vals = self.order_invoice_lookup(vals)
         return vals
 
 
-    # def create(self, cr, uid, vals, context=None):
     @api.model
     def create(self, vals):
         """Override to look up Invoice Reference based on given Sale Order Reference."""
 
-        statement_line = super(account_bank_statement_line, self).create(vals)
+        statement_line = super(AccountBankStatementLine, self).create(vals)
         vals_new = statement_line._statement_line_match(vals)
         if vals != vals_new:
             import pdb; pdb.set_trace()
@@ -613,16 +634,16 @@ class account_bank_statement_line(models.Model):
         # return super(account_bank_statement_line, self).write(cr, uid, statement_line_id, vals, context=context)
 
 
-    def write(self, cr, uid, ids, vals, context=None):
+    @api.multi
+    def write(self, vals):
         """Override to look up Invoice Reference based on given Sale Order Reference."""
-        vals = self._statement_line_match(cr, uid, vals, context)
-        return super(account_bank_statement_line, self).write(cr, uid, ids, vals, context=context)
+        vals = self._statement_line_match(vals)
+        return super(AccountBankStatementLine, self).write(vals)
 
 
 
-class account_bank_statement(models.Model):
+class AccountBankStatement(models.Model):
     _inherit = "account.bank.statement"
-
 
     @api.one
     def action_statement_match(self):
