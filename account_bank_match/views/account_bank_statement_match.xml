@@ -72,7 +72,7 @@
                         <field name="remote_account" readonly="1"/>
                         <field name="bank_account_id" readonly="1"/>
                         <field name="amount" readonly="1"/>
-                        <button name="account_bank_match" string="Refresh Matches" type="object" class="oe_highlight"/>
+                        <button name="account_bank_match" string="_Refresh Matches" type="object" class="oe_highlight"/>
                     </group>
                     <notebook>
                         <page string="Matches">

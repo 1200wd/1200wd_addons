@@ -21,11 +21,11 @@
 #
 ##############################################################################
 
-# TODO: Match winning match automatically (only on auto-import/create)?
-# TODO: Multicompany testen, (mn. in Conscious/Shavita)
-# TODO: Check matching with purchase invoices, refunds, etc
+# TODO: Match with correct amount (sign = - for purchase invoice, refund invoices, etc)
+# TODO: Check matching with refunds
 # TODO: Check if generated account move lines are correct
 # TODO: Review and cleanup code
+# TODO: Make installable: Create data files with rules
 # TODO: Test on Noorderhaaks
 # TODO: Test on Spieker
 
@@ -229,7 +229,7 @@ class AccountBankStatementLine(models.Model):
     @api.model
     def _extract_references(self):
         try:
-            statement_text = (self.name or '') + (self.partner_id.name or '')  + (self.ref or '') + (self.so_ref or '')
+            statement_text = (self.name or '') + '_' + (self.partner_id.name or '') + '_' + (self.ref or '') + '_' + (self.so_ref or '')
         except Exception, e:
             import pdb; pdb.set_trace()
         statement_text = re.sub(r"\W", "", statement_text).upper()
@@ -369,13 +369,13 @@ class AccountBankStatementLine(models.Model):
             if 'currency_id' in object:
                 currency_symbol = object.currency_id.name or ''
             if model == 'account.invoice':
-                description = (object.origin or '') + "; " + (object.date_invoice or '') + "; " + (object.partner_id.name or '') + "; " + \
+                description = (object.number or 'Not found') + "; " + (object.origin or '') + "; " + (object.date_invoice or '') + "; " + (object.partner_id.name or '') + "; " + \
                               (object.state or '') + "; " + currency_symbol + " " + str(object.amount_total or '')
             elif model == 'account.move.line':
-                description = (object.ref or '') + "; " + (object.date or '') + "; " + (object.partner_id.name or '') + "; " + \
+                description = (object.ref or 'Not found') + "; " + (object.date or '') + "; " + (object.partner_id.name or '') + "; " + \
                               (object.state or '') + "; " + currency_symbol + " " + str(object.debit or '')
             elif model == 'sale.order':
-                description = (object.date_order or '') + "; " + (object.partner_id.name or '') + "; " + \
+                description = (object.date_order or 'Not found') + "; " + (object.partner_id.name or '') + "; " + \
                               (object.state or '') + "; " + currency_symbol + " " + str(object.amount_total)
         except Exception, e:
             _logger.warning("1200wd - Could not construct match description. Error %s" % e.args[0])
@@ -535,28 +535,28 @@ class AccountBankStatementLine(models.Model):
             return ('', '')
 
 
-    @api.model
+    @api.multi
     def account_bank_match(self, always_refresh=True):
         matches_found = 0
         so_ref = ''
         invoice_ref = ''
-        if self:
+        for sl in self:
             # First check if any recent matches are still in cache ...
             to_old =  ((datetime.datetime.now() - datetime.timedelta(minutes=MATCH_RULES_CACHE_MINUTES)).strftime('%Y-%m-%d %H:%M'))
-            matches_found = self.env['account.bank.statement.match'].search_count([('statement_line_id', '=', self.id), ('create_date', '>', to_old)])
+            matches_found = self.env['account.bank.statement.match'].search_count([('statement_line_id', '=', sl.id), ('create_date', '>', to_old)])
             if matches_found and not always_refresh:
-                matches = self.env['account.bank.statement.match'].search_read([('statement_line_id', '=', self.id)], order='score DESC', limit=2)
+                matches = self.env['account.bank.statement.match'].search_read([('statement_line_id', '=', sl.id)], order='score DESC', limit=2)
 
             # ... otherwise search for matches add them to database
             else:
-                matches = self.match_search()
+                matches = sl.match_search()
                 if matches:
                     matches_found = len(matches)
                     for match in matches:
                         data = {
                             'name': match['name'],
                             'model': match['model'],
-                            'statement_line_id': self.id,
+                            'statement_line_id': sl.id,
                             'description': match.get('description', False),
                             'so_ref': match['so_ref'],
                             'score': match['score'] or 0,
@@ -564,7 +564,7 @@ class AccountBankStatementLine(models.Model):
                         _logger.debug("1200wd - Match found %s: %s, score %d" % (match['name'], match.get('description', False), match['score'] or 0))
                         self.env['account.bank.statement.match'].create(data)
 
-            so_ref, invoice_ref = self._get_winning_match(matches)
+            so_ref, invoice_ref = sl._get_winning_match(matches)
         return {'matches_found': matches_found, 'so_ref': so_ref, 'name': invoice_ref}
 
 
