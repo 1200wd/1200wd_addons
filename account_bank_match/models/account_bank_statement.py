@@ -21,9 +21,8 @@
 #
 ##############################################################################
 
-# TODO: Match with correct amount (sign = - for purchase invoice, refund invoices, etc)
-# TODO: Check matching with refunds
-# TODO: Check if generated account move lines are correct
+# TODO: Create function to write-off payment difference
+# TODO: Filters on rule view
 # TODO: Review and cleanup code
 # TODO: Make installable: Create data files with rules
 # TODO: Test on Noorderhaaks
@@ -69,7 +68,7 @@ class AccountBankStatementLine(models.Model):
     name = fields.Char('Communication', required=True, default='/')
 
 
-    @api.model
+    @api.one
     def _get_iban_country_code(self):
         if self.remote_account: self.remote_account_country_code = self.remote_account[:2]
         else: self.remote_account_country_code = ''
@@ -185,7 +184,7 @@ class AccountBankStatementLine(models.Model):
                 if payment_difference > 0.005:
                     _logger.warning(_("1200wd - Payment difference of %d for bank statement line %s. Cannot auto-reconcile" % (payment_difference, self.id)))
                     raise Warning("Payment difference of %.2f. Cannot reconcile" % payment_difference)
-                    # TODO: Create function to write-off payment difference. The process_reconciliation function does
+                    # ----- Create function to write-off payment difference. The process_reconciliation function does
                     #   not have any functionality to do this, so we need to create an own function to do this
                     #   see pay_and_reconcile method
                     # if payment_difference < 0: debit = 0; credit = payment_difference
@@ -253,9 +252,12 @@ class AccountBankStatementLine(models.Model):
                          'score': match_ref.score,
                          'score_item': match_ref.score_item,
                          })
+                    _logger.debug("1200wd - Match %s found" % m.group(0))
                     count += 1
                     if count > 100: break
-            except TypeError, e:
+            # except TypeError, e:
+            except Exception, e:
+                import pdb; pdb.set_trace()
                 raise Warning(_("TypeError: Please check Bank Match Reference patterns an error occured while parsing '%s'. Error: %s" % (match_ref.name, e.args[0])))
         return matches
 
@@ -408,8 +410,9 @@ class AccountBankStatementLine(models.Model):
             return 'date_invoice'
         elif model == 'account.move.line':
             return 'date'
-        else:
+        elif model == 'sale.order':
             return 'date_order'
+        else: return ''
 
 
     @api.model
@@ -479,7 +482,7 @@ class AccountBankStatementLine(models.Model):
             for ref_match in ref_matches:
                 matches = self._update_match_list(ref_match, base_score + ref_match['score_item'], matches)
 
-        # Search for amount in invoices, sale orders and account.moves
+        # Run match rules on invoices, sale orders and account.moves
         for rule in self.env['account.bank.statement.match.rule'].search(
                 ['|', ('company_id', '=', False), ('company_id', '=', company_id),
                 ('type', '=', 'extraction')]):
@@ -487,10 +490,9 @@ class AccountBankStatementLine(models.Model):
             if not rule_domain: # stop running rule if empty domain is returned to avoid useless matches on rule parsing errors
                 continue
             base_domain = self._match_get_base_domain(rule['model'])
-            try:
-                rule_matches = self.env[rule['model']].search(base_domain + rule_domain, limit=25)  #TODO: order=self._match_get_datefield_name(rule['type'])+' DESC',
-            except Exception, e:
-                import pdb; pdb.set_trace()
+            orderby_field = self._match_get_datefield_name(rule['model'])
+            if orderby_field: orderby_field += ' DESC'
+            rule_matches = self.env[rule['model']].search(base_domain + rule_domain, limit=25, order=orderby_field)
             _logger.debug("1200wd - %d matches found" % len(rule_matches))
             if rule_matches:
                 add_score = rule['score_item'] + (rule['score'] / len(rule_matches))
