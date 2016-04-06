@@ -52,13 +52,12 @@ class SaleAdvancePaymentInv(models.TransientModel):
     @api.model
     def create_invoices(self, ids):
         """ Override to skip the wizard and invoice the whole sales order"""
-        if not context.get('override', False):
+        if not self._context.get('override', False):
             return super(SaleAdvancePaymentInv, self).create_invoices(ids)
         res = []
-        sale_obj = self.pool.get('sale.order')
-        sale_ids = context.get('order_ids', [])
+        sale_ids = self._context.get('order_ids', [])
         if sale_ids:
-            res = sale_obj.manual_invoice(sale_ids)['res_id'] or []
+            res = self.env['sale.order'].manual_invoice(sale_ids)['res_id'] or []
         return res
 
 
@@ -89,13 +88,6 @@ class AccountBankStatementLine(models.Model):
                   ('account_id.reconcile', '=', True),
                   ('id', 'not in', excluded_ids)]
         return domain
-
-
-    @api.model
-    def lookup_invoice(self, so_id):
-        so_obj = self.pool.get('sale.order')
-        so = so_obj.browse(so_id)
-        return so.invoice_ids
 
 
     @api.model
@@ -138,10 +130,9 @@ class AccountBankStatementLine(models.Model):
         """Find the invoice reference for the given order reference. Create an invoice if applicable."""
         if vals.get('so_ref', None):
             so_obj = self.env['sale.order']
-            so_ids = so_obj.search([('name', '=', vals['so_ref'])])
-            if len(so_ids) == 1:
-                order = so_obj.browse(so_ids[0])
-                invoices = self.lookup_invoice(so_ids[0])
+            order = so_obj.search([('name', '=', vals['so_ref'])])
+            if len(order) == 1:
+                invoices = order.invoice_ids
 
                 if len(invoices) == 1:
                     vals = self.prepare_bs_line(invoices[0], vals)
@@ -174,9 +165,9 @@ class AccountBankStatementLine(models.Model):
                         _logger.debug("1200wd - account_bank_statement - Create invoice skipped, order policy and state \
                          are {} and {} resp.".format(order.order_policy, order.state))
             else:
-                _logger.error("%s sale orders found for reference: %s" % (len(so_ids), vals['so_ref']))
-                if len(so_ids) > 1:
-                    raise Warning(_("%s sale orders found for reference: %s" % (len(so_ids), vals['so_ref'])))
+                _logger.error("%s sale orders found for reference: %s" % (len(order), vals['so_ref']))
+                if len(order) > 1:
+                    raise Warning(_("%s sale orders found for reference: %s" % (len(order), vals['so_ref'])))
         return vals
 
 
@@ -186,15 +177,14 @@ class AccountBankStatementLine(models.Model):
             return True
         _logger.debug("1200wd - auto-reconcile journal id %s, name %s" % (self.journal_entry_id.id, self.name))
         if self.name and self.name != "/":
-            st_line = self.browse(self.id)
-            import pdb; pdb.set_trace()
-            ret = self.get_reconciliation_proposition(st_line)
+            # import pdb; pdb.set_trace()
+            ret = self.get_reconciliation_proposition(self)
             if ret:
                 move_line = ret[0]
                 payment_difference = (move_line['debit'] - move_line['credit']) - self.amount
-                if payment_difference:
+                if payment_difference > 0.005:
                     _logger.warning(_("1200wd - Payment difference of %d for bank statement line %s. Cannot auto-reconcile" % (payment_difference, self.id)))
-                    raise Warning("Payment difference of %d. Cannot reconcile" % payment_difference)
+                    raise Warning("Payment difference of %.2f. Cannot reconcile" % payment_difference)
                     # TODO: Create function to write-off payment difference. The process_reconciliation function does
                     #   not have any functionality to do this, so we need to create an own function to do this
                     #   see pay_and_reconcile method
@@ -623,15 +613,11 @@ class AccountBankStatementLine(models.Model):
     @api.model
     def create(self, vals):
         """Override to look up Invoice Reference based on given Sale Order Reference."""
-
         statement_line = super(AccountBankStatementLine, self).create(vals)
         vals_new = statement_line._statement_line_match(vals)
         if vals != vals_new:
-            import pdb; pdb.set_trace()
-            self.write(vals_new)
-
+            super(AccountBankStatementLine, self).write(vals_new)
         return statement_line
-        # return super(account_bank_statement_line, self).write(cr, uid, statement_line_id, vals, context=context)
 
 
     @api.multi
