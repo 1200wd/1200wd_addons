@@ -175,34 +175,42 @@ class AccountBankStatementLine(models.Model):
         if not MATCH_AUTO_RECONCILE or self.journal_entry_id:
             return True
         _logger.debug("1200wd - auto-reconcile journal id %s, name %s" % (self.journal_entry_id.id, self.name))
-        if self.name and self.name != "/":
-            # import pdb; pdb.set_trace()
+        if self.name:
             ret = self.get_reconciliation_proposition(self)
             if ret:
                 move_line = ret[0]
                 payment_difference = (move_line['debit'] - move_line['credit']) - self.amount
-                if payment_difference > 0.005:
-                    _logger.warning(_("1200wd - Payment difference of %d for bank statement line %s. Cannot auto-reconcile" % (payment_difference, self.id)))
-                    raise Warning("Payment difference of %.2f. Cannot reconcile" % payment_difference)
-                    # ----- Create function to write-off payment difference. The process_reconciliation function does
-                    #   not have any functionality to do this, so we need to create an own function to do this
-                    #   see pay_and_reconcile method
-                    # if payment_difference < 0: debit = 0; credit = payment_difference
-                    # else: debit = payment_difference; credit = 0
-                    # move_writeoff = {
-                    #     'debit': debit,
-                    #     'credit': credit,
-                    # }
                 move_dicts = [{
                     'counterpart_move_line_id': move_line['id'],
                     'debit': move_line['credit'],
                     'credit': move_line['debit'],
                 }]
-                self.process_reconciliation(move_dicts)
+
+                if round(payment_difference, self.env['decimal.precision'].precision_get('Account')):
+                    invoice = self._match_get_object('account.invoice', move_line['name'])
+                    if len(invoice) == 1:
+                        period_id = self.statement_id.period_id.id
+                        writeoff_period_id = period_id
+                        pay_account_id = self.account_id.id or self.statement_id.account_id.id or 0
+                        pay_journal_id = self.journal_id.id or self.statement_id.journal_id.id or 0
+                        writeoff_acc_id = 405
+                        writeoff_journal_id = self.journal_id.id or 0
+                        invoice.pay_and_reconcile(self.amount, pay_account_id, period_id, pay_journal_id,
+                                                  writeoff_acc_id, writeoff_period_id, writeoff_journal_id)
+
+                        for line in invoice.payment_ids:
+                            if self.amount == (line.credit or 0.0) - (line.debit or 0.0):
+                                self.write({'journal_entry_id': line.move_id.id})
+                    else:
+                        _logger.warning(_("1200wd - Payment difference of %d for bank statement line %s. Invoice %s not found. Cannot auto-reconcile" % (payment_difference, self.id, move_line['name'])))
+                        raise Warning("Payment difference of %.2f. Cannot reconcile" % payment_difference)
+                else:
+                    self.process_reconciliation(move_dicts)
             else:
+                import pdb; pdb.set_trace()
                 raise Warning(_("Unknown reference %s, no reconciliation proposition found" % self.name))
         else:
-            raise Warning(_("No reference name specified, cannot reconcile" % self.name))
+            raise Warning(_("No reference name specified, cannot reconcile"))
         return True
 
 
