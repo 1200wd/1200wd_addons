@@ -24,6 +24,7 @@
 import logging
 
 from openerp import models, fields, api
+import openerp.addons.decimal_precision as dp
 
 _logger = logging.getLogger(__name__)
 
@@ -75,6 +76,21 @@ class account_bank_statement_match(models.Model):
     statement_line_id = fields.Many2one('account.bank.statement.line', string="Bank Statement Line", required=True, index=True)
     description = fields.Char(string="Description", size=256)
     score = fields.Integer("Score")
+
+
+    @api.one
+    def compute_payment_difference(self):
+        if self.model == 'account.invoice':
+            self.payment_difference = self.statement_line_id.amount - \
+                                      self.env[self.model].search([('number', '=', self.name)]).residual
+        else:
+            # TODO: Add difference calculation for sale.order and account.move.line model
+            self.payment_difference = 0
+
+    payment_difference = fields.Float(string="Payment Difference", digits=dp.get_precision('Account'),
+                                      readonly=True, compute='compute_payment_difference')
+
+    writeoff_acc_id = fields.Many2one('account.account', string="Write-off Account")
 
     @api.one
     def action_match_confirm(self):

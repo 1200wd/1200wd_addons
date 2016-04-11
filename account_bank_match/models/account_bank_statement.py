@@ -23,6 +23,7 @@
 
 # TODO: Create function to write-off payment difference
 # TODO: Filters on rule view
+# TODO: Match full bank statement
 # TODO: Review and cleanup code
 # TODO: Make installable: Create data files with rules
 # TODO: Test on Noorderhaaks
@@ -35,6 +36,7 @@ import re
 import ast
 import datetime
 import pickle
+import itertools
 
 _logger = logging.getLogger(__name__)
 
@@ -136,7 +138,7 @@ class AccountBankStatementLine(models.Model):
                 if len(invoices) == 1:
                     vals = self.prepare_bs_line(invoices[0], vals)
                 elif len(invoices) > 1:
-                    _logger.error("1200wd - account_bank_statement - %s invoices found for orders: %s (ids)" % (len(invoices), so_ids))
+                    _logger.error("1200wd - account_bank_statement - %s invoices found for orders: %s (ids)" % (len(invoices), vals['so_ref']))
                 else:
                     # Create invoice
                     if (order.order_policy == 'prepaid' or order.order_policy == 'manual') \
@@ -169,46 +171,130 @@ class AccountBankStatementLine(models.Model):
                     raise Warning(_("%s sale orders found for reference: %s" % (len(order), vals['so_ref'])))
         return vals
 
+    @api.model
+    def pay_invoice_and_reconcile(self, invoice, writeoff_acc_id, writeoff_journal_id):
+        # TODO: What happens with the writeoff_journal_id
+        assert len(invoice)==1, "Can only pay one invoice at a time."
+        SIGN = {'out_invoice': -1, 'in_invoice': 1, 'out_refund': 1, 'in_refund': -1}
+        direction = SIGN[invoice.type]
+        date = self._context.get('date_p') or fields.Date.context_today(self)
+
+        # Take the amount in currency and the currency of the payment
+        if self._context.get('amount_currency') and self._context.get('currency_id'):
+            amount_currency = self._context['amount_currency']
+            currency_id = self._context['currency_id']
+        else:
+            amount_currency = False
+            currency_id = False
+
+        if invoice.type in ('in_invoice', 'in_refund'):
+            ref = invoice.reference
+        else:
+            ref = invoice.number
+
+        partner = invoice.partner_id._find_accounting_partner(self.partner_id)
+        name = invoice.number or invoice.invoice_line[0].name
+        pay_amount = self.amount
+        period_id = self.statement_id.period_id.id
+        writeoff_period_id = period_id
+        total = invoice.residual
+        pay_account_id = self.account_id.id or self.statement_id.account_id.id or 0
+        pay_journal_id = self.journal_id.id or self.statement_id.journal_id.id or 0
+        # debit = direction * pay_amount > 0 and direction * pay_amount
+        # credit = direction * pay_amount < 0 and -direction * pay_amount
+        payment_difference = round(total + (direction * pay_amount), self.env['decimal.precision'].precision_get('Account'))
+        move_lines = []
+        move_lines.append((0, 0, {
+            'name': name,
+            'debit': direction * pay_amount > 0 and direction * pay_amount,
+            'credit': direction * pay_amount < 0 and -direction * pay_amount,
+            'account_id': invoice.account_id.id,
+            'partner_id': partner.id,
+            'ref': ref,
+            'date': date,
+            'currency_id': currency_id,
+            'amount_currency': direction * (amount_currency or 0.0),
+            'company_id': invoice.company_id.id,
+        }))
+        if payment_difference and writeoff_acc_id:
+            move_lines.append((0, 0, {
+                'name': name,
+                'debit': payment_difference < 0 and -payment_difference,
+                'credit': payment_difference > 0 and payment_difference,
+                'account_id': writeoff_acc_id,
+                'partner_id': partner.id,
+                'ref': ref,
+                'date': date,
+                'currency_id': currency_id,
+                'amount_currency': -direction * (amount_currency or 0.0),
+                'company_id': invoice.company_id.id,
+            }))
+            mv2_debit = total > 0 and total
+            mv2_credit = total < 0 and -total
+        else:
+            mv2_debit = direction * pay_amount < 0 and -direction * pay_amount
+            mv2_credit = direction * pay_amount > 0 and direction * pay_amount
+        move_lines.append((0, 0, {
+        'name': name,
+        'debit': mv2_debit,
+        'credit': mv2_credit,
+        'account_id': pay_account_id,
+        'partner_id': partner.id,
+        'ref': ref,
+        'date': date,
+        'currency_id': currency_id,
+        'amount_currency': -direction * (amount_currency or 0.0),
+        'company_id': invoice.company_id.id,
+        }))
+        move = self.env['account.move'].create({
+            'ref': ref,
+            'line_id': move_lines,
+            'journal_id': pay_journal_id,
+            'period_id': period_id,
+            'date': date,
+        })
+
+        move_ids = (move | invoice.move_id).ids
+        self._cr.execute("SELECT id FROM account_move_line WHERE move_id IN %s",
+                         (tuple(move_ids),))
+        lines = self.env['account.move.line'].browse([r[0] for r in self._cr.fetchall()])
+        lines2rec = lines.browse()
+        for line in itertools.chain(lines, invoice.payment_ids):
+            if line.account_id == invoice.account_id:
+                lines2rec += line
+
+        if not(payment_difference or writeoff_acc_id):
+            lines2rec.reconcile('manual', writeoff_acc_id, writeoff_period_id, writeoff_journal_id)
+        else:
+            code = invoice.currency_id.symbol
+            # TODO: use currency's formatting function
+            msg = _("Invoice partially paid: %s%s of %s%s (%s%s remaining).") % \
+                    (pay_amount, code, invoice.amount_total, code, payment_difference, code)
+            invoice.message_post(body=msg)
+            lines2rec.reconcile_partial('manual')
+
+        # Update the stored value (fields.function), so we write to trigger recompute
+        invoice.write({})
+        return move
+
+
 
     @api.model
     def auto_reconcile(self):
         if not MATCH_AUTO_RECONCILE or self.journal_entry_id:
             return True
-        _logger.debug("1200wd - auto-reconcile journal id %s, name %s" % (self.journal_entry_id.id, self.name))
+        _logger.debug("1200wd - auto-reconcile journal %s" % self.name)
         if self.name:
-            ret = self.get_reconciliation_proposition(self)
-            if ret:
-                move_line = ret[0]
-                payment_difference = (move_line['debit'] - move_line['credit']) - self.amount
-                move_dicts = [{
-                    'counterpart_move_line_id': move_line['id'],
-                    'debit': move_line['credit'],
-                    'credit': move_line['debit'],
-                }]
-
-                if round(payment_difference, self.env['decimal.precision'].precision_get('Account')):
-                    invoice = self._match_get_object('account.invoice', move_line['name'])
-                    if len(invoice) == 1:
-                        period_id = self.statement_id.period_id.id
-                        writeoff_period_id = period_id
-                        pay_account_id = self.account_id.id or self.statement_id.account_id.id or 0
-                        pay_journal_id = self.journal_id.id or self.statement_id.journal_id.id or 0
-                        writeoff_acc_id = 405
-                        writeoff_journal_id = self.journal_id.id or 0
-                        invoice.pay_and_reconcile(self.amount, pay_account_id, period_id, pay_journal_id,
-                                                  writeoff_acc_id, writeoff_period_id, writeoff_journal_id)
-
-                        for line in invoice.payment_ids:
-                            if self.amount == (line.credit or 0.0) - (line.debit or 0.0):
-                                self.write({'journal_entry_id': line.move_id.id})
-                    else:
-                        _logger.warning(_("1200wd - Payment difference of %d for bank statement line %s. Invoice %s not found. Cannot auto-reconcile" % (payment_difference, self.id, move_line['name'])))
-                        raise Warning("Payment difference of %.2f. Cannot reconcile" % payment_difference)
-                else:
-                    self.process_reconciliation(move_dicts)
+            invoice = self._match_get_object('account.invoice', self.name)
+            if len(invoice) == 1:
+                writeoff_acc_id = 405
+                writeoff_journal_id = self.journal_id.id or self.statement_id.journal_id.id or 0
+                move_entry = self.pay_invoice_and_reconcile(invoice, writeoff_acc_id, writeoff_journal_id)
+                # import pdb; pdb.set_trace()
+                self.write({'journal_entry_id': move_entry.id})
             else:
-                import pdb; pdb.set_trace()
-                raise Warning(_("Unknown reference %s, no reconciliation proposition found" % self.name))
+                _logger.warning(_("1200wd - Unique invoice with number %s not found, cannot reconcile" % self.name))
+                raise Warning("Unique invoice with number %s not found. Cannot reconcile" % self.name)
         else:
             raise Warning(_("No reference name specified, cannot reconcile"))
         return True
