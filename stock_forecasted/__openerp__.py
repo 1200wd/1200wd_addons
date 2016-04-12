@@ -25,7 +25,7 @@
     'name': "Stock Forecast",
     'summary': """Stock forecast based on stock moves and sale orders""",
     'description': """
-
+    IN DEVELOPMENT! TEST VERSION ONLY!
     """,
     'author': "1200 Web Development",
     'website': "http://1200wd.com/",
@@ -40,10 +40,10 @@
         'views/product_view.xml',
         'views/stock_view.xml',
     ],
-    'price': 100.00,
+    'price': 500.00,
     'currency': 'EUR',
     'demo': [],
-    'installable': False,
+    'installable': True,
     'auto_install': False,
     'application': False,
 }

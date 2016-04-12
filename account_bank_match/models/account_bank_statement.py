@@ -23,7 +23,6 @@
 
 
 # FIXME: 1 booking instead of 2 when writing off payment differences
-# TODO: Make installable: Create data files with rules
 # TODO: Test on Noorderhaaks
 # TODO: Move settings to config table
 # TODO: Test on Spieker

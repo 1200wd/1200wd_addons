@@ -43,6 +43,7 @@ If one correct match is found automatically link and reconcile the statement lin
         'views/account_bank_statement_match.xml',
         'views/account_bank_statement_view.xml',
         'views/account_view.xml',
+        'data/account.bank.statement.match.rule.csv',
     ],
     'price': 100.00,
     'currency': 'EUR',

@@ -87,11 +87,7 @@ class AccountBankStatementMatch(models.Model):
             SIGN = {'out_invoice': -1, 'in_invoice': 1, 'out_refund': 1, 'in_refund': -1}
             invoice = self.env[self.model].search([('number', '=', self.name)])
             direction = SIGN[invoice.type]
-
-            # round(total + (direction * pay_amount), self.env['decimal.precision'].precision_get('Account'))
             self.payment_difference = invoice.residual + (direction * self.statement_line_id.amount)
-
-
         else:
             # TODO: Add difference calculation for sale.order and account.move.line model
             self.payment_difference = 0
