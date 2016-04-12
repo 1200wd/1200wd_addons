@@ -76,7 +76,8 @@ class account_bank_statement_match(models.Model):
     statement_line_id = fields.Many2one('account.bank.statement.line', string="Bank Statement Line", required=True, index=True)
     description = fields.Char(string="Description", size=256)
     score = fields.Integer("Score")
-
+    writeoff_journal_id = fields.Many2one('account.journal', string="Write-off Journal")
+    writeoff_difference = fields.Boolean("Write-off Payment Difference", default=True)
 
     @api.one
     def compute_payment_difference(self):
@@ -90,11 +91,11 @@ class account_bank_statement_match(models.Model):
     payment_difference = fields.Float(string="Payment Difference", digits=dp.get_precision('Account'),
                                       readonly=True, compute='compute_payment_difference')
 
-    writeoff_acc_id = fields.Many2one('account.account', string="Write-off Account")
 
     @api.one
     def action_match_confirm(self):
-        vals = {'match_id': self.id}
+        # import pdb; pdb.set_trace()
+        vals = {'match_selected': self.id}
         if self.model == 'sale.order':
             vals['so_ref'] = self.name
             vals['name'] = '/'
@@ -147,4 +148,5 @@ class account_bank_statement_match_rule(models.Model):
 class account_bank_statement_line(models.Model):
     _inherit = 'account.bank.statement.line'
 
-    bank_statement_line_match_ids = fields.One2many('account.bank.statement.match', 'statement_line_id', "Matches")
+    match_ids = fields.One2many('account.bank.statement.match', 'statement_line_id', "Matches")
+    match_selected = fields.Many2one('account.bank.statement.match', string="Winning Match")

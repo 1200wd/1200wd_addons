@@ -24,6 +24,7 @@
 # TODO: Create function to write-off payment difference
 # TODO: Filters on rule view
 # TODO: Match full bank statement
+# FIXME: Fully reconcile when writing off payment difference
 # TODO: Review and cleanup code
 # TODO: Make installable: Create data files with rules
 # TODO: Test on Noorderhaaks
@@ -287,8 +288,8 @@ class AccountBankStatementLine(models.Model):
         if self.name:
             invoice = self._match_get_object('account.invoice', self.name)
             if len(invoice) == 1:
-                writeoff_acc_id = 405
-                writeoff_journal_id = self.journal_id.id or self.statement_id.journal_id.id or 0
+                writeoff_journal_id = self.match_selected.writeoff_difference and (self.match_selected.writeoff_journal_id.id or 0)
+                writeoff_acc_id = self.match_selected.writeoff_difference and (self.match_selected.writeoff_journal_id.default_debit_account_id.id or 0)
                 move_entry = self.pay_invoice_and_reconcile(invoice, writeoff_acc_id, writeoff_journal_id)
                 # import pdb; pdb.set_trace()
                 self.write({'journal_entry_id': move_entry.id})
@@ -696,7 +697,7 @@ class AccountBankStatementLine(models.Model):
     def _statement_line_match(self, vals):
         if (not vals.get('name', False)) or vals.get('name', False) == '/':
             # Only search for matches if match_id not set and if no sales order reference is known
-            if not ('match_id' in vals and vals['match_id']) and not vals.get('so_ref', False):
+            if not ('match_selected' in vals and vals['match_selected']) and not vals.get('so_ref', False):
                 match = self.account_bank_match(False)
                 if match:
                     vals['so_ref'] = match['so_ref']
