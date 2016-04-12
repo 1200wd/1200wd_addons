@@ -69,6 +69,7 @@
                         <field name="name" readonly="1"/>
                         <field name="ref" readonly="1"/>
                         <field name="partner_name" readonly="1"/>
+                        <field name="partner_id" readonly="1"/>
                         <field name="remote_account" readonly="1"/>
                         <field name="bank_account_id" readonly="1"/>
                         <field name="amount" readonly="1"/>
@@ -96,11 +97,11 @@
                         <field name="score" readonly="1"/>
                     </group>
                     <group col="2">
-                        <field name="writeoff_difference"/>
+                        <field name="writeoff_difference" attrs="{'invisible':[('payment_difference', '==', 0)]}"/>
                         <field name="payment_difference" widget="monetary" options="{'currency_field': 'currency_id'}"
-                               attrs="{'invisible':[('payment_difference', '==', 0), ('writeoff_difference', '==', False)]}" readonly="0"/>
+                               attrs="{'invisible':['|',('payment_difference', '==', 0), ('writeoff_difference', '==', False)]}" readonly="0"/>
                         <field name="writeoff_journal_id"
-                               attrs="{'invisible':[('payment_difference', '==', 0), ('writeoff_difference', '==', False)]}" readonly="0"/>
+                               attrs="{'invisible':['|',('payment_difference', '==', 0), ('writeoff_difference', '==', False)]}" readonly="0"/>
                     </group>
                     <footer>
                         <button name="action_match_confirm" string="Confirm match with statement line" type="object" class="oe_highlight"/>

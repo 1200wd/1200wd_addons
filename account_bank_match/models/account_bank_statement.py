@@ -23,10 +23,12 @@
 
 # TODO: Filters on rule view
 # TODO: Match full bank statement
-# FIXME: Wrong payment difference when writing off purchase invoices
+# FIXME: 1 booking instead of 2 when writing off payment differences
+# TODO: Check for supplier_invoice_number in reference
 # TODO: Review and cleanup code
 # TODO: Make installable: Create data files with rules
 # TODO: Test on Noorderhaaks
+# TODO: Move settings to config table
 # TODO: Test on Spieker
 
 from openerp import models, fields, api, _
@@ -379,8 +381,11 @@ class AccountBankStatementLine(models.Model):
                         odoo_expression = re.sub("@(.+?)@", "self." + found_odoo_expression, value)
                         try:
                             # !!!Please note!!!: This executes the string as python code, set security rules wisely!
+                            # if rule.name == "Partner ID Wrong":
+                            #     import pdb; pdb.set_trace()
                             new_value = eval(odoo_expression)
                             if not new_value:
+                                rule_list_new.append(('id', '=', False))  # Always False
                                 continue
                         except Exception, e:
                             # import pdb; pdb.set_trace()
