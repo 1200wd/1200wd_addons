@@ -21,15 +21,17 @@
 #
 ##############################################################################
 
-# TODO: Filters on rule view
-# TODO: Match full bank statement
+
 # FIXME: 1 booking instead of 2 when writing off payment differences
-# TODO: Check for supplier_invoice_number in reference
-# TODO: Review and cleanup code
 # TODO: Make installable: Create data files with rules
 # TODO: Test on Noorderhaaks
 # TODO: Move settings to config table
 # TODO: Test on Spieker
+#
+# ====  NICE TO HAVE'S:  ====
+# TODO: Check for supplier_invoice_number in reference
+# TODO: Filters on rule view
+#
 
 from openerp import models, fields, api, _
 from openerp.exceptions import Warning
@@ -283,7 +285,7 @@ class AccountBankStatementLine(models.Model):
         if not MATCH_AUTO_RECONCILE or self.journal_entry_id:
             return True
         _logger.debug("1200wd - auto-reconcile journal %s" % self.name)
-        if self.name:
+        if self.name and self.name != '/':
             invoice = self._match_get_object('account.invoice', self.name)
             if len(invoice) == 1:
                 writeoff_journal_id = self.match_selected.writeoff_difference and (self.match_selected.writeoff_journal_id.id or 0)
@@ -291,10 +293,10 @@ class AccountBankStatementLine(models.Model):
                 move_entry = self.pay_invoice_and_reconcile(invoice, writeoff_acc_id, writeoff_journal_id)
                 self.write({'journal_entry_id': move_entry.id})
             else:
-                _logger.warning(_("1200wd - Unique invoice with number %s not found, cannot reconcile" % self.name))
+                _logger.warning("1200wd - Unique invoice with number %s not found, cannot reconcile" % self.name)
                 raise Warning("Unique invoice with number %s not found. Cannot reconcile" % self.name)
         else:
-            raise Warning(_("No reference name specified, cannot reconcile"))
+            _logger.warning("No reference name specified, cannot reconcile")
         return True
 
 
@@ -322,7 +324,8 @@ class AccountBankStatementLine(models.Model):
         try:
             statement_text = (self.name or '') + '_' + (self.partner_id.name or '') + '_' + (self.ref or '') + '_' + (self.so_ref or '')
         except Exception, e:
-            import pdb; pdb.set_trace()
+            # import pdb; pdb.set_trace()
+            _logger.warning("1200wd - Could not parse statement text for %s" % self.name)
         statement_text = re.sub(r"\W", "", statement_text).upper()
         company_id = self.env.user.company_id.id
         matches = []
@@ -347,10 +350,9 @@ class AccountBankStatementLine(models.Model):
                     _logger.debug("1200wd - Match %s found" % m.group(0))
                     count += 1
                     if count > 100: break
-            # except TypeError, e:
             except Exception, e:
-                import pdb; pdb.set_trace()
-                raise Warning(_("TypeError: Please check Bank Match Reference patterns an error occured while parsing '%s'. Error: %s" % (match_ref.name, e.args[0])))
+                # import pdb; pdb.set_trace()
+                raise Warning(_("Please check Bank Match Reference patterns an error occured while parsing '%s'. Error: %s" % (match_ref.name, e.args[0])))
         return matches
 
 
@@ -381,8 +383,6 @@ class AccountBankStatementLine(models.Model):
                         odoo_expression = re.sub("@(.+?)@", "self." + found_odoo_expression, value)
                         try:
                             # !!!Please note!!!: This executes the string as python code, set security rules wisely!
-                            # if rule.name == "Partner ID Wrong":
-                            #     import pdb; pdb.set_trace()
                             new_value = eval(odoo_expression)
                             if not new_value:
                                 rule_list_new.append(('id', '=', False))  # Always False
@@ -403,12 +403,12 @@ class AccountBankStatementLine(models.Model):
     @api.model
     def _update_match_list(self, match, add_score, matches=[]):
         if not 'so_ref' in match:
-            import pdb; pdb.set_trace()
+            _logger.warning("1200wd - _update_match_list: Missing so_ref in match")
 
         # If match is an account move line ...
         if match['model'] == 'account.move.line':
             # aml = self._match_get_object('account.move.line', match['name'])
-            # Add extra code for matching with move lines here, for now thou shall
+            # TODO: Add extra code for matching with move lines here, for now thou shall
             pass
 
         # If match is a partner replace match with open invoices of this partner
