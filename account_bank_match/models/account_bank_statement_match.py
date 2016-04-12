@@ -30,7 +30,7 @@ _logger = logging.getLogger(__name__)
 
 
 # Object to store reference patterns of orders and invoices to look for in statement lines
-class account_bank_statement_match_references(models.Model):
+class AccountBankStatementMatchReference(models.Model):
     _name = "account.bank.statement.match.reference"
     _order = "sequence,name"
 
@@ -59,8 +59,9 @@ class account_bank_statement_match_references(models.Model):
     ]
 
 
+
 # Object to store found matches to orders/invoices in statement lines
-class account_bank_statement_match(models.Model):
+class AccountBankStatementMatch(models.Model):
     _name = "account.bank.statement.match"
 
     name = fields.Char(string="Reference", size=32, required=True,
@@ -79,6 +80,7 @@ class account_bank_statement_match(models.Model):
     writeoff_journal_id = fields.Many2one('account.journal', string="Write-off Journal")
     writeoff_difference = fields.Boolean("Write-off Payment Difference", default=True)
 
+
     @api.one
     def compute_payment_difference(self):
         if self.model == 'account.invoice':
@@ -94,7 +96,6 @@ class account_bank_statement_match(models.Model):
 
     @api.one
     def action_match_confirm(self):
-        # import pdb; pdb.set_trace()
         vals = {'match_selected': self.id}
         if self.model == 'sale.order':
             vals['so_ref'] = self.name
@@ -105,13 +106,14 @@ class account_bank_statement_match(models.Model):
             vals['so_ref'] = ''
             vals['name'] = self.name or '/'
 
+        vals = self.statement_line_id.order_invoice_lookup(vals)
         self.statement_line_id.write(vals)
         self.statement_line_id.auto_reconcile()
 
 
 
 # Object to store found matches to orders/invoices in statement lines
-class account_bank_statement_match_rule(models.Model):
+class AccountBankStatementMatchRule(models.Model):
     """
     Example Rule:
     {   'name': "Sale Order amount match",
@@ -145,7 +147,8 @@ class account_bank_statement_match_rule(models.Model):
     company_id = fields.Many2one('res.company', string='Company', required=False)
 
 
-class account_bank_statement_line(models.Model):
+
+class AccountBankStatementLine(models.Model):
     _inherit = 'account.bank.statement.line'
 
     match_ids = fields.One2many('account.bank.statement.match', 'statement_line_id', "Matches")

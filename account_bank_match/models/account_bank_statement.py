@@ -21,10 +21,9 @@
 #
 ##############################################################################
 
-# TODO: Create function to write-off payment difference
 # TODO: Filters on rule view
 # TODO: Match full bank statement
-# FIXME: Fully reconcile when writing off payment difference
+# FIXME: Wrong payment difference when writing off purchase invoices
 # TODO: Review and cleanup code
 # TODO: Make installable: Create data files with rules
 # TODO: Test on Noorderhaaks
@@ -172,9 +171,9 @@ class AccountBankStatementLine(models.Model):
                     raise Warning(_("%s sale orders found for reference: %s" % (len(order), vals['so_ref'])))
         return vals
 
+
     @api.model
     def pay_invoice_and_reconcile(self, invoice, writeoff_acc_id, writeoff_journal_id):
-        # TODO: What happens with the writeoff_journal_id
         assert len(invoice)==1, "Can only pay one invoice at a time."
         SIGN = {'out_invoice': -1, 'in_invoice': 1, 'out_refund': 1, 'in_refund': -1}
         direction = SIGN[invoice.type]
@@ -201,8 +200,6 @@ class AccountBankStatementLine(models.Model):
         total = invoice.residual
         pay_account_id = self.account_id.id or self.statement_id.account_id.id or 0
         pay_journal_id = self.journal_id.id or self.statement_id.journal_id.id or 0
-        # debit = direction * pay_amount > 0 and direction * pay_amount
-        # credit = direction * pay_amount < 0 and -direction * pay_amount
         payment_difference = round(total + (direction * pay_amount), self.env['decimal.precision'].precision_get('Account'))
         move_lines = []
         move_lines.append((0, 0, {
@@ -264,11 +261,11 @@ class AccountBankStatementLine(models.Model):
             if line.account_id == invoice.account_id:
                 lines2rec += line
 
-        if not(payment_difference or writeoff_acc_id):
+        # import pdb; pdb.set_trace()
+        if payment_difference != 0 and writeoff_acc_id:
             lines2rec.reconcile('manual', writeoff_acc_id, writeoff_period_id, writeoff_journal_id)
         else:
             code = invoice.currency_id.symbol
-            # TODO: use currency's formatting function
             msg = _("Invoice partially paid: %s%s of %s%s (%s%s remaining).") % \
                     (pay_amount, code, invoice.amount_total, code, payment_difference, code)
             invoice.message_post(body=msg)
@@ -277,7 +274,6 @@ class AccountBankStatementLine(models.Model):
         # Update the stored value (fields.function), so we write to trigger recompute
         invoice.write({})
         return move
-
 
 
     @api.model
@@ -291,7 +287,6 @@ class AccountBankStatementLine(models.Model):
                 writeoff_journal_id = self.match_selected.writeoff_difference and (self.match_selected.writeoff_journal_id.id or 0)
                 writeoff_acc_id = self.match_selected.writeoff_difference and (self.match_selected.writeoff_journal_id.default_debit_account_id.id or 0)
                 move_entry = self.pay_invoice_and_reconcile(invoice, writeoff_acc_id, writeoff_journal_id)
-                # import pdb; pdb.set_trace()
                 self.write({'journal_entry_id': move_entry.id})
             else:
                 _logger.warning(_("1200wd - Unique invoice with number %s not found, cannot reconcile" % self.name))
@@ -727,6 +722,7 @@ class AccountBankStatementLine(models.Model):
 
 class AccountBankStatement(models.Model):
     _inherit = "account.bank.statement"
+
 
     @api.one
     def action_statement_match(self):
