@@ -70,7 +70,7 @@
             </field>
         </record>
 
-        <!--Why is this?-->
+        <!--FIXME Why is this?-->
         <!--<record id="project_group_project_filter" model="ir.ui.view">-->
             <!--<field name="name">project.project.select.inherited</field>-->
             <!--<field name="model">project.project</field>-->
@@ -105,7 +105,7 @@
         <menuitem action="action_projects_overview" id="menu_projects_overview" name="Projects by Group"
                   parent="project.menu_project_management" sequence="0"/>
 
-        <!-- waarom werkt dit niet?
+        <!-- FIXME waarom werkt dit niet?
 
                 <record id="project_group_view_project_all" model="ir.actions.act_window">
                     <field name="name">project.group.view.project.inherit</field>
