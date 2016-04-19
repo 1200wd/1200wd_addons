@@ -23,7 +23,7 @@
 
 {
     'name': "Product Price History",
-    'summary': """View Product Price History""",
+    'summary': """View the purchase price history of products""",
     'description': """
         Odoo already keeps track of the history of purchase prices of products. With this simple module you are able to view these prices.
     """,
