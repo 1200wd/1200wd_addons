@@ -8,7 +8,7 @@
             <field name="inherit_id" ref="product.product_template_only_form_view"/>
             <field name="arch" type="xml">
                 <xpath expr="//div[@name='buttons']" position="inside">
-                    <button class="oe_inline oe_stat_button" name="%(product_price_history.action_product_price_history_view)d"
+                    <button class="oe_inline oe_stat_button" name="%(action_product_price_history_view)d"
                             context="{'search_default_product_template_id': [active_id]}"
                             type="action" icon="fa-history">
                         <field string="Price History" name="price_history_count" widget="statinfo" />
