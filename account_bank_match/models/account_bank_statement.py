@@ -74,6 +74,7 @@ class AccountBankStatementLine(models.Model):
     so_ref = fields.Char('Sale Order Reference')
     name = fields.Char('Communication', required=True, default='/')
 
+    show_errors = True
 
     @api.one
     def _get_iban_country_code(self):
@@ -81,6 +82,15 @@ class AccountBankStatementLine(models.Model):
         else: self.remote_account_country_code = ''
 
     remote_account_country_code = fields.Char(string="Remote IBAN country code", size=2, compute="_get_iban_country_code", readonly=True)
+
+
+    def _handle_error(self, message):
+        # global show_errors
+
+        if self.show_errors:
+            raise Warning(message)
+        else:
+            _logger.error("1200wd - %s" % message)
 
 
     @api.model
@@ -105,7 +115,8 @@ class AccountBankStatementLine(models.Model):
             invoice.signal_workflow('invoice_open')
             vals['name'] = invoice.number
         else:
-            _logger.error("1200wd - account_bank_statement - Could not create or validate invoice for sale order {}!".format(vals['so_ref']))
+            msg = "Could not create or validate invoice for sale order %s" % vals['so_ref']
+            self._handle_error(msg)
         return vals
 
 
@@ -142,7 +153,8 @@ class AccountBankStatementLine(models.Model):
                 if len(invoices) == 1:
                     vals = self.prepare_bs_line(invoices[0], vals)
                 elif len(invoices) > 1:
-                    _logger.error("1200wd - account_bank_statement - %s invoices found for orders: %s (ids)" % (len(invoices), vals['so_ref']))
+                    msg = "Expected 1 invoice, found %s invoices for orders: %s (ids)" % (len(invoices), vals['so_ref'])
+                    self._handle_error(msg)
                 else:
                     # Create invoice
                     if (order.order_policy == 'prepaid' or order.order_policy == 'manual') \
@@ -165,14 +177,14 @@ class AccountBankStatementLine(models.Model):
                     elif (order.order_policy == 'manual' and order.state == 'manual'):
                         vals = self._prepare_create_invoice(order, vals)
                     elif (order.order_policy == 'prepaid' and order.state != 'wait_payment'):
-                        _logger.debug("1200wd - account_bank_statement - Trying to pay for Sale Order {} when its state is not 'Wait for Payment'.".format(vals['so_ref']))
+                        msg = "Trying to pay for Sale Order {} when its state is not 'Wait for Payment'.".format(vals['so_ref'])
+                        self._handle_error(msg)
                     else:
-                        _logger.debug("1200wd - account_bank_statement - Create invoice skipped, order policy and state \
-                         are {} and {} resp.".format(order.order_policy, order.state))
+                        msg = "Create invoice skipped, order policy and state are {} and {} resp.".format(order.order_policy, order.state)
+                        self._handle_error(msg)
             else:
-                _logger.error("%s sale orders found for reference: %s" % (len(order), vals['so_ref']))
-                if len(order) > 1:
-                    raise Warning(_("%s sale orders found for reference: %s" % (len(order), vals['so_ref'])))
+                msg = "One sale order expected. Found %s sale orders for reference: %s" % (len(order), vals['so_ref'])
+                self._handle_error(msg)
         return vals
 
 
@@ -206,8 +218,9 @@ class AccountBankStatementLine(models.Model):
         try:
             statement_text = (self.name or '') + '_' + (self.partner_id.name or '') + '_' + (self.ref or '') + '_' + (self.so_ref or '')
         except Exception, e:
-            import pdb; pdb.set_trace()
-            _logger.warning("1200wd - Could not parse statement text for %s" % self.name)
+            msg = "Could not parse statement text for %s" % self.name
+            self._handle_error(msg)
+            return False
         statement_text = re.sub(r"\W", "", statement_text).upper()
         company_id = self.env.user.company_id.id
         matches = []
@@ -233,8 +246,8 @@ class AccountBankStatementLine(models.Model):
                     count += 1
                     if count > 100: break
             except Exception, e:
-                import pdb; pdb.set_trace()
-                raise Warning(_("Please check Bank Match Reference patterns an error occured while parsing '%s'. Error: %s" % (match_ref.name, e.args[0])))
+                msg = "Please check Bank Match Reference patterns an error occured while parsing '%s'. Error: %s" % (match_ref.name, e.args[0])
+                self._handle_error(msg)
         return matches
 
 
@@ -252,7 +265,9 @@ class AccountBankStatementLine(models.Model):
         try:
             rule_list = ast.literal_eval(rule.rule)
         except Exception, e:
-            _logger.error("1200wd - Could not parse rule '{}'. Error Message: {}".format(rule.rule, e.message))
+            msg = "Could not parse rule '{}'. Error Message: {}".format(rule.rule, e.message)
+            self._handle_error(msg)
+            return False
 
         rule_list_new = []
         for field_name, operator, value in rule_list:
@@ -275,9 +290,9 @@ class AccountBankStatementLine(models.Model):
                                 rule_list_new.append(('id', '=', False))  # Always False
                                 continue
                         except Exception, e:
-                            # import pdb; pdb.set_trace()
-                            _logger.warning("1200wd - Rule '{}'. Error matching odoo expression '{}' {}".
-                                            format(rule.rule, odoo_expression, e.message))
+                            msg = "Rule '%s'. Error matching odoo expression '%s' %s" % (rule.rule, odoo_expression, e.message)
+                            self._handle_error(msg)
+                            return False
             if new_value:
                 rule_list_new.append((field_name, operator, new_value))
             else:
@@ -298,7 +313,9 @@ class AccountBankStatementLine(models.Model):
         @return: Updated match list
         """
         if not 'so_ref' in match:
-            _logger.warning("1200wd - _update_match_list: Missing so_ref in match")
+            msg ="_update_match_list: Missing so_ref in match"
+            self._handle_error(msg)
+            return matches
 
         # If match is an account move line ...
         if match['model'] == 'account.move.line':
@@ -378,7 +395,8 @@ class AccountBankStatementLine(models.Model):
                 description = (object.date_order or 'Not found') + "; " + (object.partner_id.name or '') + "; " + \
                               (object.state or '') + "; " + currency_symbol + " " + str(object.amount_total)
         except Exception, e:
-            _logger.warning("1200wd - Could not construct match description. Error %s" % e.args[0])
+            msg = "Could not construct match description. Error %s" % e.args[0]
+            self._handle_error(msg)
         return description
 
 
@@ -450,7 +468,8 @@ class AccountBankStatementLine(models.Model):
                 return m.search([('id', '=', ref)] + domain)
 
         except Exception, e:
-            _logger.error("1200wd - Could not open model %s with reference %s. Error %s" % (model, ref, e.args[0]))
+            msg = "Could not open model %s with reference %s. Error %s" % (model, ref, e.args[0])
+            self._handle_error(msg)
         return False
 
 
@@ -533,8 +552,6 @@ class AccountBankStatementLine(models.Model):
                 ['|', ('company_id', '=', False), ('company_id', '=', company_id),
                 ('type', '=', 'bonus')]):
             rule_domain = self._parse_rule(rule)
-            if rule.name == 'Amount: Large difference Order':
-                import pdb; pdb.set_trace()
             for match in [m for m in matches if m['model'] == rule.model]:
                 if self._match_get_object(match['model'], match['name'], rule_domain):
                     match['score'] += rule.score_item
@@ -570,8 +587,13 @@ class AccountBankStatementLine(models.Model):
         @param writeoff_acc_id: account number where to write off
         @return: Move id of created move object
         """
-        assert len(invoice)==1, "Can only pay one invoice at a time."
-        assert invoice.residual, "Invoice %s has been payed already" % invoice.number or ''
+        if len(invoice) != 1:
+            self._handle_error("Can only pay one invoice at a time")
+            return False
+        if not invoice.residual:
+            self._handle_error("Invoice %s has been payed already" % invoice.number or '')
+            return False
+
         SIGN = {'out_invoice': -1, 'in_invoice': 1, 'out_refund': 1, 'in_refund': -1}
         inv_direction = SIGN[invoice.type]
         date = self._context.get('date_p') or fields.Date.context_today(self)
@@ -807,10 +829,11 @@ class AccountBankStatementLine(models.Model):
                     }
                     self.write(data)
             else:
-                _logger.warning("1200wd - Unique invoice with number %s not found, cannot reconcile" % self.name)
-                raise Warning("Unique invoice with number %s not found. Cannot reconcile" % self.name)
+                msg = "Unique invoice with number %s not found, cannot reconcile" % self.name
+                self._handle_error(msg)
+
         else:
-            _logger.warning("No reference name specified, cannot reconcile")
+            _logger.warning("1200wd - No reference name specified, cannot reconcile")
         return True
 
 
@@ -845,6 +868,7 @@ class AccountBankStatement(models.Model):
         """
         _logger.debug("1200wd - Match bank statement %d" % self.id)
         for line in [l for l in self.line_ids]:
+            line.show_errors = False
             vals = line.read([], False)
             # Match statement line with invoice or created invoice from sale order.
             vals_new = line.match(vals[0])
