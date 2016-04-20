@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 ##############################################################################
 #
-#    Product Price History
+#    Product Price History View
 #    Copyright (C) 2016 April
 #    1200 Web Development
 #    http://1200wd.com/
@@ -21,26 +21,4 @@
 #
 ##############################################################################
 
-{
-    'name': "Product Price History",
-    'summary': """View the purchase price history of products""",
-    'description': """
-        Odoo already keeps track of the history of purchase prices of products. With this simple module you are able to view these prices.
-    """,
-    'author': "1200 Web Development",
-    'website': "http://1200wd.com",
-    'category': 'Warehouse',
-    'version': '8.0.1.1',
-    'depends': [
-        'product',
-    ],
-    'data': [
-        'views/product_price_history.xml',
-    ],
-    'price': 10.00,
-    'currency': 'EUR',
-    'demo': [],
-    'installable': True,
-    'auto_install': False,
-    'application': False,
-}
+import models

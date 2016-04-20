@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 ##############################################################################
 #
-#    Product Price History
+#    Product Price History View
 #    Copyright (C) 2016 April
 #    1200 Web Development
 #    http://1200wd.com/
@@ -21,4 +21,4 @@
 #
 ##############################################################################
 
-import models
+from . import product
