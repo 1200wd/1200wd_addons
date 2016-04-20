@@ -139,7 +139,6 @@ class AccountBankStatementLine(models.Model):
             order = so_obj.search([('name', '=', vals['so_ref'])])
             if len(order) == 1:
                 invoices = order.invoice_ids
-
                 if len(invoices) == 1:
                     vals = self.prepare_bs_line(invoices[0], vals)
                 elif len(invoices) > 1:
@@ -198,6 +197,12 @@ class AccountBankStatementLine(models.Model):
 
     @api.model
     def _extract_references(self):
+        """
+        Extract references defined in the 'account.bank.statement.match.reference' table from account bank statement line.
+
+        @return: matches
+        Format {name, [sale order reference], model, [description], score total, score per item}
+        """
         try:
             statement_text = (self.name or '') + '_' + (self.partner_id.name or '') + '_' + (self.ref or '') + '_' + (self.so_ref or '')
         except Exception, e:
@@ -235,6 +240,12 @@ class AccountBankStatementLine(models.Model):
 
     @api.model
     def _parse_rule(self, rule):
+        """
+        Convert rule from account.bank.statement.match.rule to Odoo format
+
+        @param rule: record from account.bank.statement.match.rule
+        @return: Odoo styled rule
+        """
         _logger.debug("1200wd - Running match rule %s" % rule.name)
 
         rule_list = []
@@ -245,7 +256,6 @@ class AccountBankStatementLine(models.Model):
 
         rule_list_new = []
         for field_name, operator, value in rule_list:
-            # _logger.debug("1200wd - process {} {} {}".format(field_name, operator, value))
             new_value = None
             if isinstance(value, str):
                 matches = re.search("@(.+?)@", value)
@@ -279,6 +289,14 @@ class AccountBankStatementLine(models.Model):
 
     @api.model
     def _update_match_list(self, match, add_score, matches=[]):
+        """
+        Add a new match to the match list
+
+        @param match: New match
+        @param add_score: New score
+        @param matches: Match list
+        @return: Updated match list
+        """
         if not 'so_ref' in match:
             _logger.warning("1200wd - _update_match_list: Missing so_ref in match")
 
@@ -339,6 +357,12 @@ class AccountBankStatementLine(models.Model):
 
     @api.model
     def _match_description(self, object, model):
+        """
+        Generate description of match
+        @param object: match object
+        @param model: match type (invoice, sale order, account move)
+        @return: description
+        """
         description = ''
         try:
             currency_symbol = ''
@@ -391,6 +415,12 @@ class AccountBankStatementLine(models.Model):
 
     @api.model
     def _match_get_base_domain(self, model):
+        """
+        Base domain when searching matches for given model
+
+        @param model: type of model
+        @return: base domain
+        """
         daysback = (datetime.datetime.now() - datetime.timedelta(days=365)).strftime('%Y-%m-%d')
         company_id = self.env.user.company_id.id
         domain = ['|', ('company_id', '=', False), ('company_id', '=', company_id)]
@@ -426,6 +456,15 @@ class AccountBankStatementLine(models.Model):
 
     @api.model
     def match_search(self):
+        """
+        Search all matches with invoices, sale order of account move for this bank statement line.
+
+        - Extract matches with reference patterns defined in account.bank.statement.match.reference and add them to the match list
+        - Run all extraction rules defined in account.bank.statement.match.rules and add new matches to the match list
+        - Run all bonus rules and updates scores
+
+        @return: Sorted list of matches with higher score first
+        """
         # Delete old match records
         try:
             self._cr.execute("DELETE FROM account_bank_statement_match WHERE statement_line_id=%d" % self.id)
@@ -511,6 +550,10 @@ class AccountBankStatementLine(models.Model):
     # Check if there is a winning match. Assumes sorted list on descending score
     @api.model
     def _get_winning_match(self, matches):
+        """
+        @param matches: List of all matches found
+        @return: Sale order reference and invoice reference of winning match
+        """
         if matches and matches[0]['score'] > MATCH_MIN_SUCCESS_SCORE and \
                 (len(matches) == 1 or matches[1]['score'] <=MATCH_MIN_SUCCESS_SCORE or
                 matches[1]['score'] < (matches[0]['score']-(MATCH_MIN_SUCCESS_SCORE / 2))):
@@ -521,6 +564,12 @@ class AccountBankStatementLine(models.Model):
 
     @api.model
     def pay_invoice_and_reconcile(self, invoice, writeoff_acc_id):
+        """
+        Link this bank statement line to given invoice and write of differences if any to given writeoff account id
+        @param invoice: invoice object
+        @param writeoff_acc_id: account number where to write off
+        @return: Move id of created move object
+        """
         assert len(invoice)==1, "Can only pay one invoice at a time."
         assert invoice.residual, "Invoice %s has been payed already" % invoice.number or ''
         SIGN = {'out_invoice': -1, 'in_invoice': 1, 'out_refund': 1, 'in_refund': -1}
@@ -629,33 +678,17 @@ class AccountBankStatementLine(models.Model):
         return move
 
 
-    @api.model
-    def auto_reconcile(self):
-        if not MATCH_AUTO_RECONCILE or self.journal_entry_id:
-            return True
-        _logger.debug("1200wd - auto-reconcile journal %s" % self.name)
-        if self.name and self.name != '/':
-            invoice = self._match_get_object('account.invoice', self.name)
-            if len(invoice) == 1:
-                if invoice.amount_total < 0:
-                    writeoff_acc_id = self.match_selected.writeoff_difference and (self.match_selected.writeoff_journal_id.default_debit_account_id.id or 0)
-                else:
-                    writeoff_acc_id = self.match_selected.writeoff_difference and (self.match_selected.writeoff_journal_id.default_credit_account_id.id or 0)
-                move_entry = self.pay_invoice_and_reconcile(invoice, writeoff_acc_id)
-                if move_entry.id:
-                    # Need to invalidate cache, otherwise changes in name are ignored
-                    self.env.invalidate_all()
-                    self.write({'journal_entry_id': move_entry.id, 'name': self.name or '/', 'so_ref': self.so_ref or ''})
-            else:
-                _logger.warning("1200wd - Unique invoice with number %s not found, cannot reconcile" % self.name)
-                raise Warning("Unique invoice with number %s not found. Cannot reconcile" % self.name)
-        else:
-            _logger.warning("No reference name specified, cannot reconcile")
-        return True
-
-
     @api.multi
     def account_bank_match(self, always_refresh=True):
+        """
+        === ACCOUNT BANK MATCH ===
+
+        Calls match_search function if no recent matches are found in match table.
+        Store match results in match table and return results.
+
+        @param always_refresh: Always clear cache
+        @return: number of matches found and winning match references
+        """
         matches_found = 0
         so_ref = ''
         invoice_ref = ''
@@ -689,6 +722,11 @@ class AccountBankStatementLine(models.Model):
 
     @api.multi
     def action_statement_line_match(self):
+        """
+        Action for web interface to trigger match update and open view with matches.
+
+        @return: view with list of found matches
+        """
         st_line = self[0]
         ctx = self._context.copy()
         ctx.update({
@@ -698,7 +736,7 @@ class AccountBankStatementLine(models.Model):
             'statement_line_id': st_line.id,
             })
         view = self.env.ref('account_bank_match.view_account_bank_statement_line_matches_form')
-        match_result = self.account_bank_match(False)
+        match_result = self.account_bank_match(always_refresh=False)
 
         # if match_result['matches_found']:
         act_move = {
@@ -717,6 +755,13 @@ class AccountBankStatementLine(models.Model):
 
     @api.model
     def match(self, vals):
+        """
+        If bank statement line is not matched yet call account_bank_match method.
+        If a winning invoice match is found add invoice links to statement line.
+
+        @param vals: Values of account.bank.statement.line to create or update
+        @return: Updated list of values
+        """
         if (not vals.get('name', False)) or vals.get('name', False) == '/':
             # Only search for matches if match_id not set and if no sales order reference is known
             if not ('match_selected' in vals and vals['match_selected']) and not vals.get('so_ref', False):
@@ -730,6 +775,46 @@ class AccountBankStatementLine(models.Model):
 
 
     @api.model
+    def auto_reconcile(self):
+        """
+        If there is an invoice linked to this bank statement line lookup writeoff difference account
+        and call pay_invoice_and_reconcile method.
+
+        When payment is processed and bank statement line reconciled update bank statement line with
+        the id of new account move created.
+
+        @return: Always True
+        """
+        if not MATCH_AUTO_RECONCILE or self.journal_entry_id:
+            return True
+        _logger.debug("1200wd - auto-reconcile journal %s" % self.name)
+        if self.name and self.name != '/':
+            invoice = self._match_get_object('account.invoice', self.name)
+            if len(invoice) == 1:
+                if invoice.amount_total < 0:
+                    writeoff_acc_id = self.match_selected.writeoff_difference and (self.match_selected.writeoff_journal_id.default_debit_account_id.id or 0)
+                else:
+                    writeoff_acc_id = self.match_selected.writeoff_difference and (self.match_selected.writeoff_journal_id.default_credit_account_id.id or 0)
+                move_entry = self.pay_invoice_and_reconcile(invoice, writeoff_acc_id)
+                if move_entry:
+                    # Need to invalidate cache, otherwise changes in name are ignored
+                    self.env.invalidate_all()
+                    data = {
+                        'journal_entry_id': move_entry.id,
+                        'name': self.name or '/',
+                        'so_ref': self.so_ref or '',
+                        'partner_id': invoice.partner_id.id or '',
+                    }
+                    self.write(data)
+            else:
+                _logger.warning("1200wd - Unique invoice with number %s not found, cannot reconcile" % self.name)
+                raise Warning("Unique invoice with number %s not found. Cannot reconcile" % self.name)
+        else:
+            _logger.warning("No reference name specified, cannot reconcile")
+        return True
+
+
+    @api.model
     def create(self, vals):
         """Override to look up Invoice Reference based on given Sale Order Reference."""
         statement_line = super(AccountBankStatementLine, self).create(vals)
@@ -739,11 +824,11 @@ class AccountBankStatementLine(models.Model):
         return statement_line
 
 
-    @api.multi
-    def write(self, vals):
-        """Override to look up Invoice Reference based on given Sale Order Reference."""
-        # vals = self._statement_line_match(vals)
-        return super(AccountBankStatementLine, self).write(vals)
+    # @api.multi
+    # def write(self, vals):
+    #     """Override to look up Invoice Reference based on given Sale Order Reference."""
+    #     # vals = self._statement_line_match(vals)
+    #     return super(AccountBankStatementLine, self).write(vals)
 
 
 
@@ -753,6 +838,11 @@ class AccountBankStatement(models.Model):
 
     @api.one
     def action_statement_match(self):
+        """
+        Match all lines of this bank statement, if a winning match is found process payment and reconcile.
+
+        @return: Always True
+        """
         _logger.debug("1200wd - Match bank statement %d" % self.id)
         for line in [l for l in self.line_ids]:
             vals = line.read([], False)
@@ -762,3 +852,5 @@ class AccountBankStatement(models.Model):
                 _logger.debug("1200wd - Match bank statement line with values %s" % vals_new)
                 line.write(vals_new)
             line.auto_reconcile()
+
+        return True
