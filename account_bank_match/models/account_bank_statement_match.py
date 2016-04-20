@@ -86,8 +86,12 @@ class AccountBankStatementMatch(models.Model):
         if self.model == 'account.invoice':
             SIGN = {'out_invoice': -1, 'in_invoice': 1, 'out_refund': 1, 'in_refund': -1}
             invoice = self.env[self.model].search([('number', '=', self.name)])
-            direction = SIGN[invoice.type]
-            self.payment_difference = invoice.residual + (direction * self.statement_line_id.amount)
+            if not invoice:
+                _logger.debug("1200wd - compute_payment_difference - invoice %s not found" % self.name)
+                self.payment_difference = 0
+            else:
+                direction = SIGN[invoice.type]
+                self.payment_difference = invoice.residual + (direction * self.statement_line_id.amount)
         else:
             # TODO: Add difference calculation for sale.order and account.move.line model
             self.payment_difference = 0

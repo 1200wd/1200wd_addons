@@ -35,7 +35,7 @@ If one correct match is found automatically link and reconcile the statement lin
     'category': 'Accounting & Finance',
     'version': '8.0.1.1',
     'depends': [
-        'account',
+        'account_bank_statement_advanced',
         'sale',
     ],
     'data': [

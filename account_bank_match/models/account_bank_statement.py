@@ -24,6 +24,8 @@
 
 # FIXME: 1 booking instead of 2 when writing off payment differences
 # FIXME: Remove/hide save button on match form
+# FIXME: Oude reconcile methode geeft recursion depth error
+# TODO: Error handling: list of warnings when auto-match, popup with manual match
 # TODO: Test on Noorderhaaks
 # TODO: Move settings to config table
 # TODO: Test on Spieker
@@ -201,7 +203,7 @@ class AccountBankStatementLine(models.Model):
         try:
             statement_text = (self.name or '') + '_' + (self.partner_id.name or '') + '_' + (self.ref or '') + '_' + (self.so_ref or '')
         except Exception, e:
-            # import pdb; pdb.set_trace()
+            import pdb; pdb.set_trace()
             _logger.warning("1200wd - Could not parse statement text for %s" % self.name)
         statement_text = re.sub(r"\W", "", statement_text).upper()
         company_id = self.env.user.company_id.id
@@ -228,7 +230,7 @@ class AccountBankStatementLine(models.Model):
                     count += 1
                     if count > 100: break
             except Exception, e:
-                # import pdb; pdb.set_trace()
+                import pdb; pdb.set_trace()
                 raise Warning(_("Please check Bank Match Reference patterns an error occured while parsing '%s'. Error: %s" % (match_ref.name, e.args[0])))
         return matches
 
@@ -394,7 +396,7 @@ class AccountBankStatementLine(models.Model):
         domain = ['|', ('company_id', '=', False), ('company_id', '=', company_id)]
         if model == 'sale.order':
             domain.extend([('date_order', '>', daysback),
-                           ('state', 'in', ['draft', 'wait_payment', 'sent', 'done'])])
+                           ('state', 'in', ['draft', 'wait_payment', 'sent'])])
         elif model == 'account.invoice':
             domain.extend([('date_invoice', '>', daysback),
                            ('state', 'in', ['open'])])
@@ -510,8 +512,9 @@ class AccountBankStatementLine(models.Model):
 
 
     @api.model
-    def pay_invoice_and_reconcile(self, invoice, writeoff_acc_id, writeoff_journal_id):
+    def pay_invoice_and_reconcile(self, invoice, writeoff_acc_id):
         assert len(invoice)==1, "Can only pay one invoice at a time."
+        assert invoice.residual, "Invoice %s has been payed already" % invoice.number or ''
         SIGN = {'out_invoice': -1, 'in_invoice': 1, 'out_refund': 1, 'in_refund': -1}
         direction = SIGN[invoice.type]
         date = self._context.get('date_p') or fields.Date.context_today(self)
@@ -533,7 +536,6 @@ class AccountBankStatementLine(models.Model):
         name = invoice.number or invoice.invoice_line[0].name
         pay_amount = self.amount
         period_id = self.statement_id.period_id.id
-        writeoff_period_id = period_id
         total = invoice.residual
         pay_account_id = self.account_id.id or self.statement_id.account_id.id or 0
         pay_journal_id = self.journal_id.id or self.statement_id.journal_id.id or 0
@@ -541,8 +543,8 @@ class AccountBankStatementLine(models.Model):
         move_lines = []
         move_lines.append((0, 0, {
             'name': name,
-            'debit': direction * pay_amount > 0 and direction * pay_amount,
-            'credit': direction * pay_amount < 0 and -direction * pay_amount,
+            'debit': direction * total > 0 and direction * total,
+            'credit': direction * total < 0 and -direction * total,
             'account_id': invoice.account_id.id,
             'partner_id': partner.id,
             'ref': ref,
@@ -554,8 +556,8 @@ class AccountBankStatementLine(models.Model):
         if payment_difference and writeoff_acc_id:
             move_lines.append((0, 0, {
                 'name': name,
-                'debit': payment_difference < 0 and -payment_difference,
-                'credit': payment_difference > 0 and payment_difference,
+                'debit': payment_difference > 0 and payment_difference,
+                'credit': payment_difference < 0 and -payment_difference,
                 'account_id': writeoff_acc_id,
                 'partner_id': partner.id,
                 'ref': ref,
@@ -564,8 +566,8 @@ class AccountBankStatementLine(models.Model):
                 'amount_currency': -direction * (amount_currency or 0.0),
                 'company_id': invoice.company_id.id,
             }))
-            mv2_debit = total > 0 and total
-            mv2_credit = total < 0 and -total
+            mv2_debit = pay_amount > 0 and pay_amount
+            mv2_credit = pay_amount < 0 and -pay_amount
         else:
             mv2_debit = direction * pay_amount < 0 and -direction * pay_amount
             mv2_credit = direction * pay_amount > 0 and direction * pay_amount
@@ -598,15 +600,13 @@ class AccountBankStatementLine(models.Model):
             if line.account_id == invoice.account_id:
                 lines2rec += line
 
-        import pdb; pdb.set_trace()
         if not payment_difference or (payment_difference != 0 and writeoff_acc_id):
-            # lines2rec.reconcile('manual', writeoff_acc_id, writeoff_period_id, writeoff_journal_id)
-            # reconcile_context = dict(self._context, novalidate=True)
-            # import pdb; pdb.set_trace()
-            r_id = self.env['account.move.reconcile'].create({'type': type, 'line_id': map(lambda x: (4, x, False), move_ids), 'line_partial_ids': map(lambda x: (3, x, False), move_ids)})
-            # import pdb; pdb.set_trace()
-            #         workflow.trg_trigger(
-            # self._uid, 'account.move.line', line_id, self._cr)
+            r_id = self.env['account.move.reconcile'].create(
+                {'type': 'auto',
+                 'line_id': map(lambda x: (4, x, False), lines2rec.ids),
+                 'line_partial_ids': map(lambda x: (3, x, False), lines2rec.ids)
+                 }
+            )
             for id in move_ids:
                 workflow.trg_trigger(self._uid, 'account.move.line', id, self._cr)
         else:
@@ -629,14 +629,14 @@ class AccountBankStatementLine(models.Model):
         if self.name and self.name != '/':
             invoice = self._match_get_object('account.invoice', self.name)
             if len(invoice) == 1:
-                # import pdb; pdb.set_trace()
-                writeoff_journal_id = self.match_selected.writeoff_difference and (self.match_selected.writeoff_journal_id.id or 0)
                 if invoice.amount_total < 0:
                     writeoff_acc_id = self.match_selected.writeoff_difference and (self.match_selected.writeoff_journal_id.default_debit_account_id.id or 0)
                 else:
                     writeoff_acc_id = self.match_selected.writeoff_difference and (self.match_selected.writeoff_journal_id.default_credit_account_id.id or 0)
-                move_entry = self.pay_invoice_and_reconcile(invoice, writeoff_acc_id, writeoff_journal_id)
-                self.write({'journal_entry_id': move_entry.id})
+                move_entry = self.pay_invoice_and_reconcile(invoice, writeoff_acc_id)
+                # Need to invalidate cache, otherwise changes in name are ignored
+                self.env.invalidate_all()
+                self.write({'journal_entry_id': move_entry.id, 'name': self.name or '/', 'so_ref': self.so_ref or ''})
             else:
                 _logger.warning("1200wd - Unique invoice with number %s not found, cannot reconcile" % self.name)
                 raise Warning("Unique invoice with number %s not found. Cannot reconcile" % self.name)
