@@ -22,9 +22,7 @@
 ##############################################################################
 
 
-# FIXME: 1 booking instead of 2 when writing off payment differences
 # FIXME: Remove/hide save button on match form
-# FIXME: Oude reconcile methode geeft recursion depth error
 # TODO: Error handling: list of warnings when auto-match, popup with manual match
 # TODO: Test on Noorderhaaks
 # TODO: Move settings to config table
@@ -326,6 +324,8 @@ class AccountBankStatementLine(models.Model):
                  'description': match.get('description', ''),
                  'so_ref': match.get('so_ref', '')})
         else:
+            # cutoff score to avoid extreme high scores
+            if add_score>15: add_score=15
             [
                 d.update(
                     {'score': d['score'] + add_score,
@@ -413,7 +413,7 @@ class AccountBankStatementLine(models.Model):
         try:
             m = self.env[model]
             if model == 'account.invoice':
-                return m.search([('number', '=', ref)] + domain)
+                return m.search(['|', ('number', '=', ref), ('reference', '=', ref)] + domain)
             elif model == 'sale.order':
                 return m.search([('name', '=', ref)] + domain)
             else:
@@ -483,14 +483,22 @@ class AccountBankStatementLine(models.Model):
                          'so_ref': so_ref},
                         add_score, matches)
 
+        # Hide unknown references
+        for match in [m for m in matches]:
+            if not self._match_get_object(match['model'], match['name']):
+                if match['score'] > 1:
+                    match['score'] = 1
+
         # Calculate bonuses for already found matches
         for rule in self.env['account.bank.statement.match.rule'].search(
                 ['|', ('company_id', '=', False), ('company_id', '=', company_id),
                 ('type', '=', 'bonus')]):
             rule_domain = self._parse_rule(rule)
-            for match in [m for m in matches if m['model'] == rule['model']]:
+            if rule.name == 'Amount: Large difference Order':
+                import pdb; pdb.set_trace()
+            for match in [m for m in matches if m['model'] == rule.model]:
                 if self._match_get_object(match['model'], match['name'], rule_domain):
-                    match['score'] += rule['score_item']
+                    match['score'] += rule.score_item
                     _logger.debug("1200wd - Bonus found %s %s" % (rule.name, match))
 
         # Sort and cleanup and return results
@@ -516,7 +524,7 @@ class AccountBankStatementLine(models.Model):
         assert len(invoice)==1, "Can only pay one invoice at a time."
         assert invoice.residual, "Invoice %s has been payed already" % invoice.number or ''
         SIGN = {'out_invoice': -1, 'in_invoice': 1, 'out_refund': 1, 'in_refund': -1}
-        direction = SIGN[invoice.type]
+        inv_direction = SIGN[invoice.type]
         date = self._context.get('date_p') or fields.Date.context_today(self)
 
         # Take the amount in currency and the currency of the payment
@@ -531,57 +539,57 @@ class AccountBankStatementLine(models.Model):
             ref = invoice.reference
         else:
             ref = invoice.number
-
         partner = invoice.partner_id
         name = invoice.number or invoice.invoice_line[0].name
         pay_amount = self.amount
         period_id = self.statement_id.period_id.id
-        total = invoice.residual
+        invoice_total = inv_direction * invoice.residual
         pay_account_id = self.account_id.id or self.statement_id.account_id.id or 0
         pay_journal_id = self.journal_id.id or self.statement_id.journal_id.id or 0
-        payment_difference = round(total + (direction * pay_amount), self.env['decimal.precision'].precision_get('Account'))
+        payment_difference = round(invoice_total + pay_amount, self.env['decimal.precision'].precision_get('Account'))
         move_lines = []
         move_lines.append((0, 0, {
             'name': name,
-            'debit': direction * total > 0 and direction * total,
-            'credit': direction * total < 0 and -direction * total,
-            'account_id': invoice.account_id.id,
+            'debit': pay_amount > 0 and pay_amount,
+            'credit': pay_amount < 0 and -pay_amount,
+            'account_id': pay_account_id,
             'partner_id': partner.id,
             'ref': ref,
             'date': date,
             'currency_id': currency_id,
-            'amount_currency': direction * (amount_currency or 0.0),
+            'amount_currency': amount_currency or 0.0,
             'company_id': invoice.company_id.id,
         }))
         if payment_difference and writeoff_acc_id:
             move_lines.append((0, 0, {
                 'name': name,
-                'debit': payment_difference > 0 and payment_difference,
-                'credit': payment_difference < 0 and -payment_difference,
+                'debit': payment_difference < 0 and -payment_difference,
+                'credit': payment_difference > 0 and payment_difference,
                 'account_id': writeoff_acc_id,
                 'partner_id': partner.id,
                 'ref': ref,
                 'date': date,
                 'currency_id': currency_id,
-                'amount_currency': -direction * (amount_currency or 0.0),
+                'amount_currency': amount_currency or 0.0,
                 'company_id': invoice.company_id.id,
             }))
-            mv2_debit = pay_amount > 0 and pay_amount
-            mv2_credit = pay_amount < 0 and -pay_amount
+            mv2_debit = invoice_total > 0 and invoice_total
+            mv2_credit = invoice_total < 0 and -invoice_total
         else:
-            mv2_debit = direction * pay_amount < 0 and -direction * pay_amount
-            mv2_credit = direction * pay_amount > 0 and direction * pay_amount
+            mv2_debit = pay_amount < 0 and -pay_amount
+            mv2_credit = pay_amount > 0 and pay_amount
+
         move_lines.append((0, 0, {
-        'name': name,
-        'debit': mv2_debit,
-        'credit': mv2_credit,
-        'account_id': pay_account_id,
-        'partner_id': partner.id,
-        'ref': ref,
-        'date': date,
-        'currency_id': currency_id,
-        'amount_currency': -direction * (amount_currency or 0.0),
-        'company_id': invoice.company_id.id,
+            'name': name,
+            'debit': mv2_debit,
+            'credit': mv2_credit,
+            'account_id': invoice.account_id.id,
+            'partner_id': partner.id,
+            'ref': ref,
+            'date': date,
+            'currency_id': currency_id,
+            'amount_currency': inv_direction * (amount_currency or 0.0),
+            'company_id': invoice.company_id.id,
         }))
         move = self.env['account.move'].create({
             'ref': ref,
@@ -634,9 +642,10 @@ class AccountBankStatementLine(models.Model):
                 else:
                     writeoff_acc_id = self.match_selected.writeoff_difference and (self.match_selected.writeoff_journal_id.default_credit_account_id.id or 0)
                 move_entry = self.pay_invoice_and_reconcile(invoice, writeoff_acc_id)
-                # Need to invalidate cache, otherwise changes in name are ignored
-                self.env.invalidate_all()
-                self.write({'journal_entry_id': move_entry.id, 'name': self.name or '/', 'so_ref': self.so_ref or ''})
+                if move_entry.id:
+                    # Need to invalidate cache, otherwise changes in name are ignored
+                    self.env.invalidate_all()
+                    self.write({'journal_entry_id': move_entry.id, 'name': self.name or '/', 'so_ref': self.so_ref or ''})
             else:
                 _logger.warning("1200wd - Unique invoice with number %s not found, cannot reconcile" % self.name)
                 raise Warning("Unique invoice with number %s not found. Cannot reconcile" % self.name)
@@ -707,7 +716,7 @@ class AccountBankStatementLine(models.Model):
 
 
     @api.model
-    def _statement_line_match(self, vals):
+    def match(self, vals):
         if (not vals.get('name', False)) or vals.get('name', False) == '/':
             # Only search for matches if match_id not set and if no sales order reference is known
             if not ('match_selected' in vals and vals['match_selected']) and not vals.get('so_ref', False):
@@ -724,7 +733,7 @@ class AccountBankStatementLine(models.Model):
     def create(self, vals):
         """Override to look up Invoice Reference based on given Sale Order Reference."""
         statement_line = super(AccountBankStatementLine, self).create(vals)
-        vals_new = statement_line._statement_line_match(vals)
+        vals_new = statement_line.match(vals)
         if vals != vals_new:
             super(AccountBankStatementLine, self).write(vals_new)
         return statement_line
@@ -733,7 +742,7 @@ class AccountBankStatementLine(models.Model):
     @api.multi
     def write(self, vals):
         """Override to look up Invoice Reference based on given Sale Order Reference."""
-        vals = self._statement_line_match(vals)
+        # vals = self._statement_line_match(vals)
         return super(AccountBankStatementLine, self).write(vals)
 
 
@@ -748,7 +757,7 @@ class AccountBankStatement(models.Model):
         for line in [l for l in self.line_ids]:
             vals = line.read([], False)
             # Match statement line with invoice or created invoice from sale order.
-            vals_new = line._statement_line_match(vals[0])
+            vals_new = line.match(vals[0])
             if vals[0] != vals_new:
                 _logger.debug("1200wd - Match bank statement line with values %s" % vals_new)
                 line.write(vals_new)
