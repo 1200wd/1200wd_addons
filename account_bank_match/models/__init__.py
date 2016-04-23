@@ -21,5 +21,6 @@
 #
 ##############################################################################
 
+import res_config
 import account_bank_statement
 import account_bank_statement_match

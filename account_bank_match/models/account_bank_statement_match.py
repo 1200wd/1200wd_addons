@@ -59,7 +59,6 @@ class AccountBankStatementMatchReference(models.Model):
     ]
 
 
-
 # Object to store found matches to orders/invoices in statement lines
 class AccountBankStatementMatch(models.Model):
     _name = "account.bank.statement.match"

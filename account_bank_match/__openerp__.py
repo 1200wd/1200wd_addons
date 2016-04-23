@@ -40,6 +40,7 @@ If one correct match is found automatically link and reconcile the statement lin
     ],
     'data': [
         'security/ir.model.access.csv',
+        'views/res_config_view.xml',
         'views/account_bank_statement_match.xml',
         'views/account_bank_statement_view.xml',
         'views/account_view.xml',

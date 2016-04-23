@@ -23,15 +23,18 @@
 
 
 # FIXME: Remove/hide save button on match form
-# TODO: Error handling: list of warnings when auto-match, popup with manual match
+# FIXME: Auto-match on create is not working
+# TODO: Add option to book statement line on account.journal
+# TODO: Auto confirm when there is no payment difference when clicking on match
+# TODO: Add supplier ref to match description
 # TODO: Test on Noorderhaaks
-# TODO: Move settings to config table
 # TODO: Test on Spieker
 #
 # ====  NICE TO HAVE'S:  ====
-# - Check for supplier_invoice_number in reference
-# - Filters on rule view
-# -
+# - TODO: Check for supplier_invoice_number in reference
+# - TODO: Filters on rule view
+# - TODO: Do not open old reconcile view when importing bank statements
+# TODO: Extract references upon installing module
 #
 
 from openerp import models, workflow, fields, api, _
@@ -47,8 +50,8 @@ _logger = logging.getLogger(__name__)
 
 # Match module settings, normally there should be no need to change them...
 MATCH_MIN_SUCCESS_SCORE = 100
-MATCH_RULES_CACHE_MINUTES = 24*60
-MATCH_AUTO_RECONCILE = True
+MATCH_RULES_CACHE_TIME = 24*60*60 # match_cache_time
+MATCH_AUTO_RECONCILE = True # match_automatic_reconcile
 
 
 
@@ -716,7 +719,8 @@ class AccountBankStatementLine(models.Model):
         invoice_ref = ''
         for sl in self:
             # First check if any recent matches are still in cache ...
-            to_old =  ((datetime.datetime.now() - datetime.timedelta(minutes=MATCH_RULES_CACHE_MINUTES)).strftime('%Y-%m-%d %H:%M'))
+            configs = self.env['account.config.settings'].get_default_bank_match_configuration(self)
+            to_old =  ((datetime.datetime.now() - datetime.timedelta(seconds=configs.get('match_cache_time'))).strftime('%Y-%m-%d %H:%M:%S'))
             matches_found = self.env['account.bank.statement.match'].search_count([('statement_line_id', '=', sl.id), ('create_date', '>', to_old)])
             if matches_found and not always_refresh:
                 matches = self.env['account.bank.statement.match'].search_read([('statement_line_id', '=', sl.id)], order='score DESC', limit=2)
@@ -807,7 +811,8 @@ class AccountBankStatementLine(models.Model):
 
         @return: Always True
         """
-        if not MATCH_AUTO_RECONCILE or self.journal_entry_id:
+        configs = self.env['account.config.settings'].get_default_bank_match_configuration(self)
+        if not configs.get('match_automatic_reconcile') or self.journal_entry_id:
             return True
         _logger.debug("1200wd - auto-reconcile journal %s" % self.name)
         if self.name and self.name != '/':
@@ -841,9 +846,13 @@ class AccountBankStatementLine(models.Model):
     def create(self, vals):
         """Override to look up Invoice Reference based on given Sale Order Reference."""
         statement_line = super(AccountBankStatementLine, self).create(vals)
-        vals_new = statement_line.match(vals)
-        if vals != vals_new:
-            super(AccountBankStatementLine, self).write(vals_new)
+        configs = self.env['account.config.settings'].get_default_bank_match_configuration(self)
+        if configs.get('match_when_created'):
+            vals_new = statement_line.match(vals)
+            if vals != vals_new:
+                super(AccountBankStatementLine, self).write(vals_new)
+        else:
+            _logger.debug("1200wd - automatic matching disabled")
         return statement_line
 
 
