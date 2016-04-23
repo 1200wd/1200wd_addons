@@ -25,6 +25,7 @@
 # FIXME: Remove/hide save button on match form
 # FIXME: Auto-match on create is not working
 # TODO: Add option to book statement line on account.journal
+# TODO: Parse @days(-10)@ function (instead of today?)
 # TODO: Add supplier ref to match description
 # TODO: Test on Noorderhaaks
 # TODO: Test on Spieker
@@ -41,7 +42,7 @@ from openerp.exceptions import Warning
 import logging
 import re
 import ast
-import datetime
+from datetime import datetime, timedelta
 import pickle
 import itertools
 
@@ -299,7 +300,24 @@ class AccountBankStatementLine(models.Model):
                         new_value = None
                     elif 'today' in found_odoo_expression:
                         numofdays = int(re.search("today-(\d+)", found_odoo_expression).group(1))
-                        new_value = ((datetime.datetime.now() - datetime.timedelta(days=numofdays)).strftime('%Y-%m-%d'))
+                        new_value = ((datetime.now() - timedelta(days=numofdays)).strftime('%Y-%m-%d'))
+                    elif 'days' in found_odoo_expression:
+                        try:
+                            rs = re.search("(.+?)([\-|\+])days\((\d+)\)", found_odoo_expression)
+                            field = rs.group(1)
+                            sign = rs.group(2)
+                            numofdays = int(rs.group(3))
+                            field_value = eval("self." + field)
+                            ndate = datetime.strptime(field_value,'%Y-%m-%d')
+                            if sign=='-':
+                                 ndate -= timedelta(days=numofdays)
+                            else:
+                                ndate += timedelta(days=numofdays)
+                            new_value = ndate.strftime('%Y-%m-%d')
+                        except Exception, e:
+                            msg = "Rule '%s'. Error matching odoo expression '%s' %s" % (rule.rule, found_odoo_expression, e.message)
+                            self._handle_error(msg)
+                            return False
                     else:
                         odoo_expression = re.sub("@(.+?)@", "self." + found_odoo_expression, value)
                         try:
@@ -458,7 +476,7 @@ class AccountBankStatementLine(models.Model):
         @param model: type of model
         @return: base domain
         """
-        daysback = (datetime.datetime.now() - datetime.timedelta(days=365)).strftime('%Y-%m-%d')
+        daysback = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
         company_id = self.env.user.company_id.id
         domain = ['|', ('company_id', '=', False), ('company_id', '=', company_id)]
         if model == 'sale.order':
@@ -736,7 +754,7 @@ class AccountBankStatementLine(models.Model):
         for sl in self:
             # First check if any recent matches are still in cache ...
             configs = self.env['account.config.settings'].get_default_bank_match_configuration(self)
-            to_old =  ((datetime.datetime.now() - datetime.timedelta(seconds=configs.get('match_cache_time'))).strftime('%Y-%m-%d %H:%M:%S'))
+            to_old =  ((datetime.now() - timedelta(seconds=configs.get('match_cache_time'))).strftime('%Y-%m-%d %H:%M:%S'))
             matches_found = self.env['account.bank.statement.match'].search_count([('statement_line_id', '=', sl.id), ('create_date', '>', to_old)])
             if matches_found and not always_refresh:
                 matches = self.env['account.bank.statement.match'].search_read([('statement_line_id', '=', sl.id)], order='score DESC', limit=2)
