@@ -2,7 +2,7 @@
 <openerp>
     <data>
 
-        <record model="ir.ui.view" id="view_account_bank_statement_match_reference_tree">
+        <record id="view_account_bank_statement_match_reference_tree" model="ir.ui.view" >
             <field name="name">view.account.bank.statement.match.reference.tree</field>
             <field name="model">account.bank.statement.match.reference</field>
             <field name="arch" type="xml">
@@ -19,7 +19,7 @@
             </field>
         </record>
 
-        <record model="ir.ui.view" id="view_account_bank_statement_match_reference_form">
+        <record id="view_account_bank_statement_match_reference_form" model="ir.ui.view" >
             <field name="name">view.account.bank.statement.match.reference.form</field>
             <field name="model">account.bank.statement.match.reference</field>
             <field name="arch" type="xml">
@@ -37,6 +37,22 @@
                         </group>
                     </sheet>
                 </form>
+            </field>
+        </record>
+
+        <record id="view_account_bank_statement_match_reference_search" model="ir.ui.view">
+            <field name="name">view.account.bank.statement.match.reference.search</field>
+            <field name="model">account.bank.statement.match.reference</field>
+            <field name="arch" type="xml">
+                <search string="Match Reference">
+                    <field name="name"/>
+                    <group string="Group By">
+                        <filter string="Model" context="{'group_by':'model'}"/>
+                        <filter string="Bank Account" context="{'group_by':'account_bank_id'}"/>
+                        <filter string="Account Journal" context="{'group_by':'account_account_id'}"/>
+                        <filter string="Company" context="{'group_by':'company_id'}"/>
+                    </group>
+                </search>
             </field>
         </record>
 
@@ -88,7 +104,7 @@
             <field name="name">view.account.bank.statement.match.form</field>
             <field name="model">account.bank.statement.match</field>
             <field name="arch" type="xml">
-                <form string="Statement Line Match" create="true" delete="true" edit="true">
+                <form string="Statement Line Match">
                     <group col="4">
                         <field name="statement_line_id" readonly="1"/>
                         <field name="model" readonly="1"/>
@@ -133,6 +149,22 @@
                     <field name="company_id"/>
                     <field name="rule"/>
                 </tree>
+            </field>
+        </record>
+
+        <record id="view_account_bank_statement_match_rule_search" model="ir.ui.view">
+            <field name="name">view.account.bank.statement.match.rule.search</field>
+            <field name="model">account.bank.statement.match.rule</field>
+            <field name="arch" type="xml">
+                <search string="Match Rules">
+                    <field name="name"/>
+                    <field name="rule"/>
+                    <group string="Group By">
+                        <filter string="Model" context="{'group_by':'model'}"/>
+                        <filter string="Type" context="{'group_by':'type'}"/>
+                        <filter string="Company" context="{'group_by':'company_id'}"/>
+                    </group>
+                </search>
             </field>
         </record>
 

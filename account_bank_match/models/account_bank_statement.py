@@ -22,14 +22,13 @@
 ##############################################################################
 
 
-# FIXME: Remove/hide save button on match form
+# FIXME: Remove/hide save button on match form -> use wizards and Transient models?
 # FIXME: Auto-match on create is not working
 # TODO: Add option to book statement line on account.journal
 # TODO: Test on Noorderhaaks
 # TODO: Test on Spieker
 #
 # ====  NICE TO HAVE'S:  ====
-# TODO: Filters on rule view
 # TODO: Do not open old reconcile view when importing bank statements
 # TODO: Extract references upon installing module
 # TODO: Auto confirm when there is no payment difference when clicking on match
