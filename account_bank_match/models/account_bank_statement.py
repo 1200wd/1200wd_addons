@@ -25,8 +25,6 @@
 # FIXME: Remove/hide save button on match form
 # FIXME: Auto-match on create is not working
 # TODO: Add option to book statement line on account.journal
-# TODO: Parse @days(-10)@ function (instead of today?)
-# TODO: Add supplier ref to match description
 # TODO: Test on Noorderhaaks
 # TODO: Test on Spieker
 #
@@ -423,7 +421,7 @@ class AccountBankStatementLine(models.Model):
             if 'currency_id' in object:
                 currency_symbol = object.currency_id.name or ''
             if model == 'account.invoice':
-                description = (object.number or 'Not found') + "; " + (object.origin or '') + "; " + (object.date_invoice or '') + "; " + (object.partner_id.name or '') + "; " + \
+                description = (object.number or 'Not found') + "; " + (object.origin or '') + "; " + (object.supplier_invoice_number or '') + "; " + (object.date_invoice or '') + "; " + (object.partner_id.name or '') + "; " + \
                               (object.state or '') + "; " + currency_symbol + " " + str(object.amount_total or '')
             elif model == 'account.move.line':
                 description = (object.ref or 'Not found') + "; " + (object.date or '') + "; " + (object.partner_id.name or '') + "; " + \
@@ -431,6 +429,9 @@ class AccountBankStatementLine(models.Model):
             elif model == 'sale.order':
                 description = (object.date_order or 'Not found') + "; " + (object.partner_id.name or '') + "; " + \
                               (object.state or '') + "; " + currency_symbol + " " + str(object.amount_total)
+            while "; ;" in description:
+                description = description.replace("; ;",";")
+
         except Exception, e:
             msg = "Could not construct match description. Error %s" % e.args[0]
             self._handle_error(msg)
