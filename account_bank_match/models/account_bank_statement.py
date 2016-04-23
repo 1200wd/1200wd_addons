@@ -25,16 +25,15 @@
 # FIXME: Remove/hide save button on match form
 # FIXME: Auto-match on create is not working
 # TODO: Add option to book statement line on account.journal
-# TODO: Auto confirm when there is no payment difference when clicking on match
 # TODO: Add supplier ref to match description
 # TODO: Test on Noorderhaaks
 # TODO: Test on Spieker
 #
 # ====  NICE TO HAVE'S:  ====
-# - TODO: Check for supplier_invoice_number in reference
-# - TODO: Filters on rule view
-# - TODO: Do not open old reconcile view when importing bank statements
+# TODO: Filters on rule view
+# TODO: Do not open old reconcile view when importing bank statements
 # TODO: Extract references upon installing module
+# TODO: Auto confirm when there is no payment difference when clicking on match
 #
 
 from openerp import models, workflow, fields, api, _
@@ -213,7 +212,8 @@ class AccountBankStatementLine(models.Model):
     @api.model
     def _extract_references(self):
         """
-        Extract references defined in the 'account.bank.statement.match.reference' table from account bank statement line.
+        Extract references defined in the 'account.bank.statement.match.reference' table
+        from account bank statement line.
 
         @return: matches
         Format {name, [sale order reference], model, [description], score total, score per item}
@@ -228,6 +228,22 @@ class AccountBankStatementLine(models.Model):
         company_id = self.env.user.company_id.id
         matches = []
         count = 0
+
+        # Search supplier reference in bank statement line
+        supplier_inv_list = self.env['account.invoice'].search_read([
+            ('supplier_invoice_number', '!=', False),
+            ('state', '=', 'open')],['number', 'supplier_invoice_number'])
+        for supplier_inv in supplier_inv_list:
+            supplier_ref = supplier_inv['supplier_invoice_number']
+            if len(supplier_ref)<4: continue
+            if supplier_ref in statement_text:
+                inv_number = supplier_inv['number']
+                obj = self.env['account.invoice'].search([('number', '=',inv_number)])
+                description = self._match_description(obj, 'account.invoice')
+                matches.append(
+                    {'name': inv_number, 'so_ref': '', 'model': 'account.invoice', 'description': description, 'score': 0, 'score_item': 70,})
+                _logger.debug("1200wd - Supplier reference %s found for invoice %s" % (supplier_ref, supplier_inv['number']))
+
         match_refs = self.env['account.bank.statement.match.reference'].search(['|', ('company_id', '=', False), ('company_id', '=', company_id)])
         for match_ref in match_refs:
             try:

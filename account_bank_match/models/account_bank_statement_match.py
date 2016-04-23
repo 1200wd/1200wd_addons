@@ -28,6 +28,7 @@ import openerp.addons.decimal_precision as dp
 
 _logger = logging.getLogger(__name__)
 
+# TODO: Remove 'statement' from classes and table names...
 
 # Object to store reference patterns of orders and invoices to look for in statement lines
 class AccountBankStatementMatchReference(models.Model):
