@@ -79,7 +79,7 @@ class AccountBankStatementMatch(models.Model):
     score = fields.Integer("Score")
     writeoff_journal_id = fields.Many2one('account.journal', string="Write-off Journal")
     writeoff_difference = fields.Boolean("Write-off Payment Difference", default=True)
-
+    account_account_id = fields.Many2one('account.account', string="Account")
 
     @api.one
     def compute_payment_difference(self):
@@ -136,7 +136,8 @@ class AccountBankStatementMatchRule(models.Model):
             ('account.invoice', 'Invoice'),
             ('account.move.line', 'Account Move'),
             ('res.partner', 'Partner'),
-        ], select=True, required=True
+            ('account.bank.statement.line','Bank Statement Line'),
+        ], select=True, required=True, help="Model used for search rule"
     )
     score = fields.Integer("Score to Share", default=0, required=True, help="Total score to share among all matches of this rule. If 3 matches are found and the score to share is 30 then every match gets a score of 10.")
     score_item = fields.Integer("Score per Match", default=0, required=True, help="Score for each match. Will be added to the shared score.")
@@ -149,9 +150,15 @@ class AccountBankStatementMatchRule(models.Model):
     rule = fields.Text(string="Match Rule", required=True,
                        help="Rule to match a bank statement line to a sale order, invoice or account move. The rules should follow the Odoo style domain format.")
     script = fields.Text(string="Run Script",
-                         help="Run Python code after rule matched. Be carefull what you enter here, wrong code could easily wreck your Odoo database")
+                         help="Run Python code after rule matched. Be carefull what you enter here, wrong code could damage your Odoo database")
     company_id = fields.Many2one('res.company', string='Company', required=False)
+    account_account_id = fields.Many2one('account.account', string="Account",
+                                         help="Account number where to book bank statement line when this rule matches")
 
+    # TODO: Model statement line needs account_account_id
+    # _sql_constraints = [
+    #     ('', 'unique (name, model, company_id)', 'Use reference pattern only once for each model and for each Company')
+    # ]
 
 
 class AccountBankStatementLine(models.Model):

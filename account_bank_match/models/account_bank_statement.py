@@ -351,6 +351,9 @@ class AccountBankStatementLine(models.Model):
             self._handle_error(msg)
             return matches
 
+        if match['model'] == 'account.bank.statement.line':
+            import pdb; pdb.set_trace()
+
         # If match is an account move line ...
         if match['model'] == 'account.move.line':
             # aml = self._match_get_object('account.move.line', match['name'])

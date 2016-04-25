@@ -143,9 +143,10 @@
                 <tree>
                     <field name="name"/>
                     <field name="model"/>
+                    <field name="type"/>
                     <field name="score"/>
                     <field name="score_item"/>
-                    <field name="type"/>
+                    <field name="account_account_id"/>
                     <field name="company_id"/>
                     <field name="rule"/>
                 </tree>
@@ -177,10 +178,11 @@
                         <group name="group_top">
                             <field name="name"/>
                             <field name="model"/>
-                            <field name="score"/>
-                            <field name="score_item"/>
                             <field name="type"/>
+                            <field name="score" attrs="{'invisible': [('type', '!=', 'extraction')]}"/>
+                            <field name="score_item"/>
                             <field name="active"/>
+                            <field name="account_account_id"/> <!--attrs="{'invisible': [('model', '!=', 'account.bank.statement.line')]}"-->
                             <field name="company_id"/>
                             <field name="rule"/>
                             <field name="script"/>
