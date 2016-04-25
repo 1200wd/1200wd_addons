@@ -34,26 +34,23 @@ class AccountBankMatchConfiguration(models.Model):
     match_when_created = fields.Boolean(
         "Look for matches when creating bank statement line",
         help="Look for matches when importing bank statements and create new statement lines",
-        default=True,
     )
     match_automatic_reconcile = fields.Boolean(
         "Reconcile found match automatically",
         help="When a match is found the bank statement line will automatically be reconciled with the match invoice",
-        default=True,
     )
 
     match_cache_time = fields.Integer(
-        "Match cache time in seconds",
-        help="Store matches in cache and only recalculate if this number of seconds has passed. Enter 0 to disable caching.",
-        default=5, required=True,
+        "Match cache time in seconds", required=True,
+        help="Store matches in cache and only recalculate if this number of seconds has passed. Enter -1 to disable caching.",
     )
 
     @api.model
     def get_default_bank_match_configuration(self, fields):
         ir_values_obj = self.env['ir.values']
-        match_when_created = ir_values_obj.get_default('account.bank.statement.match', 'match_when_created')
-        match_automatic_reconcile = ir_values_obj.get_default('account.bank.statement.match', 'match_automatic_reconcile')
-        match_cache_time = ir_values_obj.get_default('account.bank.statement.match', 'match_cache_time')
+        match_when_created = ir_values_obj.get_default('account.bank.statement.match', 'match_when_created') or False
+        match_automatic_reconcile = ir_values_obj.get_default('account.bank.statement.match', 'match_automatic_reconcile') or False
+        match_cache_time = ir_values_obj.get_default('account.bank.statement.match', 'match_cache_time') or 5
         return {
             'match_when_created': match_when_created,
             'match_automatic_reconcile': match_automatic_reconcile,

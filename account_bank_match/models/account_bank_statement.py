@@ -757,10 +757,12 @@ class AccountBankStatementLine(models.Model):
         for sl in self:
             # First check if any recent matches are still in cache ...
             configs = self.env['account.config.settings'].get_default_bank_match_configuration(self)
-            to_old =  ((datetime.now() - timedelta(seconds=configs.get('match_cache_time'))).strftime('%Y-%m-%d %H:%M:%S'))
-            matches_found = self.env['account.bank.statement.match'].search_count([('statement_line_id', '=', sl.id), ('create_date', '>', to_old)])
-            if matches_found and not always_refresh:
-                matches = self.env['account.bank.statement.match'].search_read([('statement_line_id', '=', sl.id)], order='score DESC', limit=2)
+            match_cache_time = configs.get('match_cache_time')
+            if match_cache_time != -1 and not always_refresh:
+                to_old =  ((datetime.now() - timedelta(seconds=match_cache_time)).strftime('%Y-%m-%d %H:%M:%S'))
+                matches_found = self.env['account.bank.statement.match'].search_count([('statement_line_id', '=', sl.id), ('create_date', '>', to_old)])
+                if matches_found:
+                    matches = self.env['account.bank.statement.match'].search_read([('statement_line_id', '=', sl.id)], order='score DESC', limit=2)
 
             # ... otherwise search for matches add them to database
             else:
