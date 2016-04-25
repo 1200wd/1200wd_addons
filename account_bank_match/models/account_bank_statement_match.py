@@ -52,8 +52,8 @@ class AccountBankStatementMatchReference(models.Model):
         domain="[('journal_id', '<>', False)]")
     score = fields.Integer("Score to Share", default=0, required=True, help="Total score to share among all matches of this rule. If 3 matches are found and the score to share is 30 then every match gets a score of 10.")
     score_item = fields.Integer("Score per Match", default=0, required=True, help="Score for each match. Will be added to the shared score.")
-    account_account_id = fields.Many2one('account.account', string="Account")
     company_id = fields.Many2one('res.company', string='Company', required=True)
+    account_account_id = fields.Many2one('account.account', string="Resulting Account")
 
     _sql_constraints = [
         ('reference_pattern_name_company_unique', 'unique (name, model, company_id)', 'Use reference pattern only once for each model and for each Company')
@@ -71,7 +71,8 @@ class AccountBankStatementMatch(models.Model):
         [
             ('sale.order', 'Sale Order'),
             ('account.invoice', 'Invoice'),
-            ('account.move.line', 'Account Move Line')
+            ('account.move.line', 'Account Move Line'),
+            ('account.account', 'Account'),
         ], select=True, required=True
     )
     statement_line_id = fields.Many2one('account.bank.statement.line', string="Bank Statement Line", required=True, index=True)
@@ -79,7 +80,6 @@ class AccountBankStatementMatch(models.Model):
     score = fields.Integer("Score")
     writeoff_journal_id = fields.Many2one('account.journal', string="Write-off Journal")
     writeoff_difference = fields.Boolean("Write-off Payment Difference", default=True)
-    account_account_id = fields.Many2one('account.account', string="Account")
 
     @api.one
     def compute_payment_difference(self):

@@ -24,14 +24,14 @@
 
 # FIXME: Remove/hide save button on match form -> use wizards and Transient models?
 # FIXME: Auto-match on create is not working
-# TODO: Add option to book statement line on account.journal
 # TODO: Test on Noorderhaaks
 # TODO: Test on Spieker
 #
 # ====  NICE TO HAVE'S:  ====
-# TODO: Do not open old reconcile view when importing bank statements
-# TODO: Extract references upon installing module
-# TODO: Auto confirm when there is no payment difference when clicking on match
+# NICE: Do not open old reconcile view when importing bank statements
+# NICE: Create new rules via match form on-the-fly
+# NICE: Extract references upon installing module
+# NICE: Auto confirm when there is no payment difference when clicking on match
 #
 
 from openerp import models, workflow, fields, api, _
@@ -217,7 +217,8 @@ class AccountBankStatementLine(models.Model):
         Format {name, [sale order reference], model, [description], score total, score per item}
         """
         try:
-            statement_text = (self.name or '') + '_' + (self.partner_id.name or '') + '_' + (self.ref or '') + '_' + (self.so_ref or '')
+            statement_text = (self.name or '') + '_' + (self.partner_id.name or '') + '_' + (self.ref or '') + '_' + \
+                             (self.so_ref or '') + '_' + (self.remote_account or '')
         except Exception, e:
             msg = "Could not parse statement text for %s" % self.name
             self._handle_error(msg)
@@ -246,23 +247,27 @@ class AccountBankStatementLine(models.Model):
         for match_ref in match_refs:
             try:
                 for m in re.finditer(match_ref.name, statement_text):
-                    obj = self.env[match_ref.model].search([(self._match_get_field_name(match_ref.model), '=', m.group(0))])
+                    name = m.group(0)
+                    if match_ref.account_account_id:
+                        name = match_ref.account_account_id.id
+                    obj = self.env[match_ref.model].search([(self._match_get_field_name(match_ref.model), '=', name)])
                     description = self._match_description(obj, match_ref.model)
                     if match_ref.model == 'account.invoice': so_ref = obj.origin or ''
-                    elif match_ref.model == 'sale.order': so_ref = m.group(0)
+                    elif match_ref.model == 'sale.order': so_ref = name
                     else: so_ref = ''
                     matches.append(
-                        {'name': m.group(0),
+                        {'name': name,
                          'so_ref': so_ref,
                          'model': match_ref.model,
                          'description': description,
                          'score': match_ref.score,
                          'score_item': match_ref.score_item,
                          })
-                    _logger.debug("1200wd - Match %s found" % m.group(0))
+                    _logger.debug("1200wd - Match %s found" % name)
                     count += 1
                     if count > 100: break
             except Exception, e:
+                import pdb; pdb.set_trace()
                 msg = "Please check Bank Match Reference patterns an error occured while parsing '%s'. Error: %s" % (match_ref.name, e.args[0])
                 self._handle_error(msg)
         return matches
@@ -351,9 +356,6 @@ class AccountBankStatementLine(models.Model):
             self._handle_error(msg)
             return matches
 
-        if match['model'] == 'account.bank.statement.line':
-            import pdb; pdb.set_trace()
-
         # If match is an account move line ...
         if match['model'] == 'account.move.line':
             # aml = self._match_get_object('account.move.line', match['name'])
@@ -394,7 +396,7 @@ class AccountBankStatementLine(models.Model):
                  'model': match['model'],
                  'score': add_score,
                  'description': match.get('description', ''),
-                 'so_ref': match.get('so_ref', '')})
+                 'so_ref': match.get('so_ref', ''),})
         else:
             # cutoff score to avoid extreme high scores
             if add_score>15: add_score=15
@@ -431,6 +433,8 @@ class AccountBankStatementLine(models.Model):
             elif model == 'sale.order':
                 description = (object.date_order or 'Not found') + "; " + (object.partner_id.name or '') + "; " + \
                               (object.state or '') + "; " + currency_symbol + " " + str(object.amount_total)
+            elif model == 'account.account':
+                description = "Book full amount on account %s - %s" % (object.code, object.name)
             while "; ;" in description:
                 description = description.replace("; ;",";")
 
@@ -578,7 +582,7 @@ class AccountBankStatementLine(models.Model):
                         {'name': name,
                          'model': rule['model'],
                          'description': description,
-                         'so_ref': so_ref},
+                         'so_ref': so_ref,},
                         add_score, matches)
 
         # Hide unknown references
@@ -758,11 +762,11 @@ class AccountBankStatementLine(models.Model):
             # First check if any recent matches are still in cache ...
             configs = self.env['account.config.settings'].get_default_bank_match_configuration(self)
             match_cache_time = configs.get('match_cache_time')
-            if match_cache_time != -1 and not always_refresh:
+            if match_cache_time != -1:
                 to_old =  ((datetime.now() - timedelta(seconds=match_cache_time)).strftime('%Y-%m-%d %H:%M:%S'))
                 matches_found = self.env['account.bank.statement.match'].search_count([('statement_line_id', '=', sl.id), ('create_date', '>', to_old)])
-                if matches_found:
-                    matches = self.env['account.bank.statement.match'].search_read([('statement_line_id', '=', sl.id)], order='score DESC', limit=2)
+            if matches_found and not always_refresh:
+                matches = self.env['account.bank.statement.match'].search_read([('statement_line_id', '=', sl.id)], order='score DESC', limit=2)
 
             # ... otherwise search for matches add them to database
             else:

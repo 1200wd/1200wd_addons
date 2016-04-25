@@ -11,9 +11,9 @@
                     <field name="model"/>
                     <field name="sequence"/>
                     <field name="account_bank_id"/>
-                    <field name="account_account_id"/>
                     <field name="score"/>
                     <field name="score_item"/>
+                    <field name="account_account_id"/>
                     <field name="company_id"/>
                 </tree>
             </field>
@@ -30,9 +30,9 @@
                             <field name="model"/>
                             <field name="sequence"/>
                             <field name="account_bank_id"/>
-                            <field name="account_account_id"/>
                             <field name="score"/>
                             <field name="score_item"/>
+                            <field name="account_account_id"/>
                             <field name="company_id"/>
                         </group>
                     </sheet>
@@ -146,7 +146,6 @@
                     <field name="type"/>
                     <field name="score"/>
                     <field name="score_item"/>
-                    <field name="account_account_id"/>
                     <field name="company_id"/>
                     <field name="rule"/>
                 </tree>
@@ -182,7 +181,6 @@
                             <field name="score" attrs="{'invisible': [('type', '!=', 'extraction')]}"/>
                             <field name="score_item"/>
                             <field name="active"/>
-                            <field name="account_account_id"/> <!--attrs="{'invisible': [('model', '!=', 'account.bank.statement.line')]}"-->
                             <field name="company_id"/>
                             <field name="rule"/>
                             <field name="script"/>
