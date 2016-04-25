@@ -894,6 +894,7 @@ class AccountBankStatementLine(models.Model):
             vals_new = statement_line.match(vals)
             if vals != vals_new:
                 super(AccountBankStatementLine, self).write(vals_new)
+            statement_line.auto_reconcile()
         else:
             _logger.debug("1200wd - automatic matching disabled")
         return statement_line
@@ -909,7 +910,6 @@ class AccountBankStatementLine(models.Model):
 
 class AccountBankStatement(models.Model):
     _inherit = "account.bank.statement"
-
 
     @api.one
     def action_statement_match(self):

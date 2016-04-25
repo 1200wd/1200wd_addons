@@ -32,8 +32,8 @@ class AccountBankMatchConfiguration(models.Model):
     _inherit = 'account.config.settings'
 
     match_when_created = fields.Boolean(
-        "Look for matches when creating bank statement line",
-        help="Look for matches when importing bank statements and create new statement lines",
+        "Match bank statement lines when creating / importing statements",
+        help="Look for matches when creating bank statement lines / importing bank statements",
     )
     match_automatic_reconcile = fields.Boolean(
         "Reconcile found match automatically",

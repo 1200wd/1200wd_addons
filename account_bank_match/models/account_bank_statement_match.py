@@ -58,7 +58,7 @@ class AccountBankStatementMatchReference(models.Model):
     _sql_constraints = [
         ('reference_pattern_name_company_unique', 'unique (name, model, company_id)', 'Use reference pattern only once for each model and for each Company')
     ]
-
+    # TODO: Add constraints for account_account_id
 
 # Object to store found matches to orders/invoices in statement lines
 class AccountBankStatementMatch(models.Model):
@@ -152,13 +152,6 @@ class AccountBankStatementMatchRule(models.Model):
     script = fields.Text(string="Run Script",
                          help="Run Python code after rule matched. Be carefull what you enter here, wrong code could damage your Odoo database")
     company_id = fields.Many2one('res.company', string='Company', required=False)
-    account_account_id = fields.Many2one('account.account', string="Account",
-                                         help="Account number where to book bank statement line when this rule matches")
-
-    # TODO: Model statement line needs account_account_id
-    # _sql_constraints = [
-    #     ('', 'unique (name, model, company_id)', 'Use reference pattern only once for each model and for each Company')
-    # ]
 
 
 class AccountBankStatementLine(models.Model):
