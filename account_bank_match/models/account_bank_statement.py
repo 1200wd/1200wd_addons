@@ -86,7 +86,6 @@ class AccountBankStatementLine(models.Model):
 
     def _handle_error(self, message):
         # global show_errors
-
         if self.show_errors:
             raise Warning(message)
         else:
@@ -900,11 +899,11 @@ class AccountBankStatementLine(models.Model):
         return statement_line
 
 
-    # @api.multi
-    # def write(self, vals):
-    #     """Override to look up Invoice Reference based on given Sale Order Reference."""
-    #     # vals = self._statement_line_match(vals)
-    #     return super(AccountBankStatementLine, self).write(vals)
+    @api.multi
+    def write(self, vals):
+        # FIXME: Values are note saved anymore when removing this method
+        return super(AccountBankStatementLine, self).write(vals)
+
 
 
 
@@ -914,19 +913,25 @@ class AccountBankStatement(models.Model):
     @api.one
     def action_statement_match(self):
         """
-        Match all lines of this bank statement, if a winning match is found process payment and reconcile.
+        Match all lines of this bank statement, if a winning match is found then process payment.
+        If match_automatic_reconcile is set to true also reconcile.
+        Automatically creates a invoice when payment received is matched to a sale order.
 
-        @return: Always True
+        This function can be very slow when running on large bank statement, or larger databases with invoices and
+        orders. So it might be better in your situation to call this function with an external script instead of
+        the Odoo web interface.
+
+        @return: Always True, to avoid errors when calling to function with an RPC
         """
         _logger.debug("1200wd - Match bank statement %d" % self.id)
         for line in [l for l in self.line_ids]:
             line.show_errors = False
-            vals = line.read([], False)
-            # Match statement line with invoice or created invoice from sale order.
-            vals_new = line.match(vals[0])
-            if vals[0] != vals_new:
-                _logger.debug("1200wd - Match bank statement line with values %s" % vals_new)
-                line.write(vals_new)
+            vals = line.read(['name', 'so_ref', 'match_selected', 'journal_entry_id'], False)[0]
+            if not vals or vals['journal_entry_id']:
+                continue
+            vals_new = line.match(vals)
+            _logger.debug("1200wd - Matched bank statement line with values %s" % vals_new)
+            line.write(vals_new)
             line.auto_reconcile()
 
         return True
