@@ -22,17 +22,18 @@
 ##############################################################################
 
 
-# FIXME: Remove/hide save button on match form -> use wizards and Transient models?
-# FIXME: Auto-match on create is not working
+# TODO: Create account moves when mathing with accounts
 # TODO: Test on Noorderhaaks
 # TODO: Test on Spieker
 #
 # ====  NICE TO HAVE'S:  ====
+# VERY NICE: Increase speed
+# NICE: Remove/hide save button on match form -> use wizards and Transient models?
 # NICE: Do not open old reconcile view when importing bank statements
 # NICE: Create new rules via match form on-the-fly
 # NICE: Extract references upon installing module
 # NICE: Auto confirm when there is no payment difference when clicking on match
-#
+# FIXME: OUT# in so_ref
 
 from openerp import models, workflow, fields, api, _
 from openerp.exceptions import Warning
@@ -261,7 +262,7 @@ class AccountBankStatementLine(models.Model):
                          'score': match_ref.score,
                          'score_item': match_ref.score_item,
                          })
-                    _logger.debug("1200wd - Match %s found" % name)
+                    _logger.info("1200wd - Match %s found" % name)
                     count += 1
                     if count > 100: break
             except Exception, e:
@@ -407,7 +408,7 @@ class AccountBankStatementLine(models.Model):
                      'description': d['description']})
                 for d in matches if d['name'] == match['name']
             ]
-        _logger.debug("1200wd - Found extraction match %s score %s" % (match['name'], add_score))
+        _logger.info("1200wd - Found extraction match %s score %s" % (match['name'], add_score))
 
         return matches
 
@@ -572,7 +573,7 @@ class AccountBankStatementLine(models.Model):
             rule_matches = self.env[rule['model']].search(base_domain + rule_domain, limit=25, order=orderby_field)
 
             if rule_matches:
-                _logger.debug("1200wd - %d matches found for %s" % (len(rule_matches), rule.name))
+                _logger.info("1200wd - %d matches found for %s" % (len(rule_matches), rule.name))
                 add_score = rule.score_item + (rule.score / len(rule_matches))
                 for rule_match in rule_matches:
                     name = self._match_get_name(rule_match, rule.model)
@@ -601,7 +602,7 @@ class AccountBankStatementLine(models.Model):
             for match in [m for m in matches if m['model'] == rule.model]:
                 if self._match_get_object(match['model'], match['name'], rule_domain):
                     match['score'] += rule.score_item
-                    _logger.debug("1200wd - Bonus found for %s match %s score %s" % (rule.name, match['name'], rule.score_item))
+                    _logger.info("1200wd - Bonus found for %s match %s score %s" % (rule.name, match['name'], rule.score_item))
 
         # Sort and cleanup and return results
         matches = sorted(matches, key=lambda k: k['score'], reverse=True)
@@ -784,7 +785,7 @@ class AccountBankStatementLine(models.Model):
                             'so_ref': match['so_ref'],
                             'score': match['score'] or 0,
                         }
-                        _logger.debug("1200wd - Match found %s: %s, score %d" % (match['name'], match.get('description', False), match['score'] or 0))
+                        _logger.info("1200wd - Match found %s: %s, score %d" % (match['name'], match.get('description', False), match['score'] or 0))
                         self.env['account.bank.statement.match'].create(data)
 
             so_ref, invoice_ref = sl._get_winning_match(matches)
@@ -840,7 +841,7 @@ class AccountBankStatementLine(models.Model):
                 if match:
                     vals['so_ref'] = match['so_ref']
                     vals['name'] = match['name'] or '/'
-                _logger.debug("1200wd - matching %s with vals %s" % (match, vals))
+                _logger.info("1200wd - matching %s with vals %s" % (match, vals))
                 vals = self.order_invoice_lookup(vals)
         return vals
 
@@ -859,7 +860,7 @@ class AccountBankStatementLine(models.Model):
         configs = self.env['account.config.settings'].get_default_bank_match_configuration(self)
         if not configs.get('match_automatic_reconcile') or self.journal_entry_id:
             return True
-        _logger.debug("1200wd - auto-reconcile journal %s" % self.name)
+        _logger.info("1200wd - auto-reconcile journal %s" % self.name)
         if self.name and self.name != '/':
             invoice = self._match_get_object('account.invoice', self.name)
             if len(invoice) == 1:
@@ -893,12 +894,14 @@ class AccountBankStatementLine(models.Model):
         statement_line = super(AccountBankStatementLine, self).create(vals)
         configs = self.env['account.config.settings'].get_default_bank_match_configuration(self)
         if configs.get('match_when_created'):
+            statement_line.show_errors = False
             vals_new = statement_line.match(vals)
-            if vals != vals_new:
-                super(AccountBankStatementLine, self).write(vals_new)
-            statement_line.auto_reconcile()
+            if vals_new['name'] != '/':
+                _logger.info("1200wd - Matched bank statement line %s with %s" % (self.id, vals_new['name']))
+                statement_line.write(vals_new)
+                statement_line.auto_reconcile()
         else:
-            _logger.debug("1200wd - automatic matching disabled")
+            _logger.info("1200wd - automatic matching disabled")
         return statement_line
 
 
@@ -926,15 +929,16 @@ class AccountBankStatement(models.Model):
 
         @return: Always True, to avoid errors when calling to function with an RPC
         """
-        _logger.debug("1200wd - Match bank statement %d" % self.id)
+        _logger.info("1200wd - Match bank statement %d" % self.id)
         for line in [l for l in self.line_ids]:
             line.show_errors = False
             vals = line.read(['name', 'so_ref', 'match_selected', 'journal_entry_id'], False)[0]
             if not vals or vals['journal_entry_id']:
                 continue
             vals_new = line.match(vals)
-            _logger.debug("1200wd - Matched bank statement line with values %s" % vals_new)
-            line.write(vals_new)
-            line.auto_reconcile()
+            if vals_new['name'] != '/':
+                _logger.info("1200wd - Matched bank statement line %s with %s" % (line.id, vals_new['name']))
+                line.write(vals_new)
+                line.auto_reconcile()
 
         return True
