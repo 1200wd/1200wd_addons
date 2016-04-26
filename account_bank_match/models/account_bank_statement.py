@@ -107,7 +107,6 @@ class AccountBankStatementLine(models.Model):
 
     @api.model
     def prepare_bs_line(self, invoice, vals):
-        _logger.debug("1200wd - account_bank_statement_line prepare_bs_line, invoice {}".format(invoice.number))
         if invoice.number:
             vals['name'] = invoice.number
         elif invoice.state == 'draft':
@@ -240,7 +239,7 @@ class AccountBankStatementLine(models.Model):
                 description = self._match_description(obj, 'account.invoice')
                 matches.append(
                     {'name': inv_number, 'so_ref': '', 'model': 'account.invoice', 'description': description, 'score': 0, 'score_item': 70,})
-                _logger.debug("1200wd - Supplier reference %s found for invoice %s" % (supplier_ref, supplier_inv['number']))
+                # _logger.debug("1200wd - Supplier reference %s found for invoice %s" % (supplier_ref, supplier_inv['number']))
 
         match_refs = self.env['account.bank.statement.match.reference'].search(['|', ('company_id', '=', False), ('company_id', '=', company_id)])
         for match_ref in match_refs:
@@ -280,7 +279,7 @@ class AccountBankStatementLine(models.Model):
         @param rule: record from account.bank.statement.match.rule
         @return: Odoo styled rule
         """
-        _logger.debug("1200wd - Running match rule %s" % rule.name)
+        # _logger.debug("1200wd - Running match rule %s" % rule.name)
 
         rule_list = []
         try:
@@ -336,7 +335,7 @@ class AccountBankStatementLine(models.Model):
             else:
                 rule_list_new.append((field_name, operator, value))
 
-        _logger.debug("1200wd - Parsing rule result %s" % rule_list_new)
+        # _logger.debug("1200wd - Parsing rule result %s" % rule_list_new)
         return rule_list_new
 
 
@@ -397,8 +396,10 @@ class AccountBankStatementLine(models.Model):
                  'description': match.get('description', ''),
                  'so_ref': match.get('so_ref', ''),})
         else:
-            # cutoff score to avoid extreme high scores
-            if add_score>15: add_score=15
+            # Adapt score for subsequent matches to avoid extreme high scores
+            score_current = [d['score'] for d in matches if d['name']==match['name']][0]
+            weight_factor = 1.0 / max(1.0, score_current/25.0)
+            add_score = int(add_score * weight_factor)
             [
                 d.update(
                     {'score': d['score'] + add_score,
@@ -406,6 +407,7 @@ class AccountBankStatementLine(models.Model):
                      'description': d['description']})
                 for d in matches if d['name'] == match['name']
             ]
+        _logger.debug("1200wd - Found extraction match %s score %s" % (match['name'], add_score))
 
         return matches
 
@@ -568,18 +570,19 @@ class AccountBankStatementLine(models.Model):
             orderby_field = self._match_get_datefield_name(rule['model'])
             if orderby_field: orderby_field += ' DESC'
             rule_matches = self.env[rule['model']].search(base_domain + rule_domain, limit=25, order=orderby_field)
-            _logger.debug("1200wd - %d matches found" % len(rule_matches))
+
             if rule_matches:
-                add_score = rule['score_item'] + (rule['score'] / len(rule_matches))
+                _logger.debug("1200wd - %d matches found for %s" % (len(rule_matches), rule.name))
+                add_score = rule.score_item + (rule.score / len(rule_matches))
                 for rule_match in rule_matches:
-                    name = self._match_get_name(rule_match, rule['model'])
-                    if rule['model'] == 'account.invoice': so_ref = rule_match.origin or ''
-                    elif rule['model'] == 'sale.order': so_ref = rule_match.name
+                    name = self._match_get_name(rule_match, rule.model)
+                    if rule.model == 'account.invoice': so_ref = rule_match.origin or ''
+                    elif rule.model == 'sale.order': so_ref = rule_match.name
                     else: so_ref = ''
-                    description = self._match_description(rule_match, rule['model'])
+                    description = self._match_description(rule_match, rule.model)
                     matches = self._update_match_list(
                         {'name': name,
-                         'model': rule['model'],
+                         'model': rule.model,
                          'description': description,
                          'so_ref': so_ref,},
                         add_score, matches)
@@ -598,7 +601,7 @@ class AccountBankStatementLine(models.Model):
             for match in [m for m in matches if m['model'] == rule.model]:
                 if self._match_get_object(match['model'], match['name'], rule_domain):
                     match['score'] += rule.score_item
-                    _logger.debug("1200wd - Bonus found %s %s" % (rule.name, match))
+                    _logger.debug("1200wd - Bonus found for %s match %s score %s" % (rule.name, match['name'], rule.score_item))
 
         # Sort and cleanup and return results
         matches = sorted(matches, key=lambda k: k['score'], reverse=True)
