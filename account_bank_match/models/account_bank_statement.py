@@ -75,7 +75,7 @@ class AccountBankStatementLine(models.Model):
     so_ref = fields.Char('Sale Order Reference')
     name = fields.Char('Communication', required=True, default='/')
 
-    show_errors = True
+    show_errors = False
 
     @api.one
     def _get_iban_country_code(self):
@@ -221,7 +221,7 @@ class AccountBankStatementLine(models.Model):
         except Exception, e:
             msg = "Could not parse statement text for %s" % self.name
             self._handle_error(msg)
-            return False
+            return []
         statement_text = re.sub(r"\W", "", statement_text).upper()
         company_id = self.env.user.company_id.id
         matches = []
@@ -912,7 +912,6 @@ class AccountBankStatementLine(models.Model):
 
 
 
-
 class AccountBankStatement(models.Model):
     _inherit = "account.bank.statement"
 
@@ -937,6 +936,7 @@ class AccountBankStatement(models.Model):
                 continue
             vals_new = line.match(vals)
             if vals_new['name'] != '/':
+                line.show_errors = True
                 _logger.info("1200wd - Matched bank statement line %s with %s" % (line.id, vals_new['name']))
                 line.write(vals_new)
                 line.auto_reconcile()

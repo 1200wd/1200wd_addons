@@ -112,6 +112,7 @@ class AccountBankStatementMatch(models.Model):
             vals['so_ref'] = ''
             vals['name'] = self.name or '/'
 
+        self.statement_line_id.show_errors = True
         vals = self.statement_line_id.order_invoice_lookup(vals)
         self.statement_line_id.write(vals)
         self.statement_line_id.auto_reconcile()
