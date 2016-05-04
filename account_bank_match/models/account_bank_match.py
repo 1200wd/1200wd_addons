@@ -2,7 +2,7 @@
 ##############################################################################
 #
 #    Account Bank Match
-#    Copyright (C) 2016 April
+#    Copyright (C) 2016 May
 #    1200 Web Development
 #    http://1200wd.com/
 #
@@ -28,11 +28,9 @@ import openerp.addons.decimal_precision as dp
 
 _logger = logging.getLogger(__name__)
 
-# TODO: Remove 'statement' from classes and table names...
-
 # Object to store reference patterns of orders and invoices to look for in statement lines
-class AccountBankStatementMatchReference(models.Model):
-    _name = "account.bank.statement.match.reference"
+class AccountBankMatchReference(models.Model):
+    _name = "account.bank.match.reference"
     _order = "sequence,name"
 
     name = fields.Char(string="Reference Pattern", size=32,
@@ -63,8 +61,8 @@ class AccountBankStatementMatchReference(models.Model):
 
 
 # Object to store found matches to orders/invoices in statement lines
-class AccountBankStatementMatch(models.Model):
-    _name = "account.bank.statement.match"
+class AccountBankMatch(models.Model):
+    _name = "account.bank.match"
 
     name = fields.Char(string="Reference", size=32, required=True,
                        help="Reference of match to order, invoice or account")
@@ -122,7 +120,7 @@ class AccountBankStatementMatch(models.Model):
 
 
 # Object to store found matches to orders/invoices in statement lines
-class AccountBankStatementMatchRule(models.Model):
+class AccountBankMatchRule(models.Model):
     """
     Example Rule:
     {   'name': "Sale Order amount match",
@@ -130,7 +128,7 @@ class AccountBankStatementMatchRule(models.Model):
         'rule': "[('amount', '>', '@sale_order.amount-0.01@'), ('amount', '<', '@sale_order.amount-0.01@')]"
         'type': "sale.order"
     """
-    _name = "account.bank.statement.match.rule"
+    _name = "account.bank.match.rule"
 
     name = fields.Char(string="Title", size=256, required=True)
     model = fields.Selection(
@@ -166,12 +164,3 @@ class AccountBankMatchMoveLines(models.Model):
     account_account_id = fields.Many2one('account.account', string="Account")
     amount = fields.Float("Amount")
     tax_id = fields.Many2one('account.tax', string='Tax', domain=[('parent_id', '=', False)])
-
-
-
-class AccountBankStatementLine(models.Model):
-    _inherit = 'account.bank.statement.line'
-
-    match_ids = fields.One2many('account.bank.statement.match', 'statement_line_id', "Matches")
-    match_selected = fields.Many2one('account.bank.statement.match', string="Winning Match")
-    match_account_ids = fields.One2many('account.bank.match.move.lines', 'statement_line_id', string="Accounts")

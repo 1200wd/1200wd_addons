@@ -2,9 +2,9 @@
 <openerp>
     <data>
 
-        <record id="view_account_bank_statement_match_reference_tree" model="ir.ui.view" >
-            <field name="name">view.account.bank.statement.match.reference.tree</field>
-            <field name="model">account.bank.statement.match.reference</field>
+        <record id="view_account_bank_match_reference_tree" model="ir.ui.view" >
+            <field name="name">view.account.bank_match.reference.tree</field>
+            <field name="model">account.bank.match.reference</field>
             <field name="arch" type="xml">
                 <tree>
                     <field name="name"/>
@@ -19,9 +19,9 @@
             </field>
         </record>
 
-        <record id="view_account_bank_statement_match_reference_form" model="ir.ui.view" >
-            <field name="name">view.account.bank.statement.match.reference.form</field>
-            <field name="model">account.bank.statement.match.reference</field>
+        <record id="view_account_bank_match_reference_form" model="ir.ui.view" >
+            <field name="name">view.account.bank_match.reference.form</field>
+            <field name="model">account.bank.match.reference</field>
             <field name="arch" type="xml">
                 <form>
                     <sheet>
@@ -40,9 +40,9 @@
             </field>
         </record>
 
-        <record id="view_account_bank_statement_match_reference_search" model="ir.ui.view">
-            <field name="name">view.account.bank.statement.match.reference.search</field>
-            <field name="model">account.bank.statement.match.reference</field>
+        <record id="view_account_bank_match_reference_search" model="ir.ui.view">
+            <field name="name">view.account.bank_match.reference.search</field>
+            <field name="model">account.bank.match.reference</field>
             <field name="arch" type="xml">
                 <search string="Match Reference">
                     <field name="name"/>
@@ -56,9 +56,9 @@
             </field>
         </record>
 
-        <record id="view_account_bank_statement_match_tree" model="ir.ui.view">
-            <field name="name">view.account.bank.statement.match.tree</field>
-            <field name="model">account.bank.statement.match</field>
+        <record id="view_account_bank_match_tree" model="ir.ui.view">
+            <field name="name">view.account.bank_match.tree</field>
+            <field name="model">account.bank.match</field>
             <field name="arch" type="xml">
                 <tree create="false" delete="false" edit="true">
                     <field name="statement_line_id" invisible="1"/>
@@ -103,9 +103,9 @@
             </field>
         </record>
 
-        <record id="view_account_bank_statement_match_form" model="ir.ui.view">
-            <field name="name">view.account.bank.statement.match.form</field>
-            <field name="model">account.bank.statement.match</field>
+        <record id="view_account_bank_match_form" model="ir.ui.view">
+            <field name="name">view.account.bank_match.form</field>
+            <field name="model">account.bank.match</field>
             <field name="arch" type="xml">
                 <form string="Statement Line Match">
                     <group col="4">
@@ -129,9 +129,9 @@
             </field>
         </record>
 
-        <record id="view_account_bank_statement_match_search" model="ir.ui.view">
-            <field name="name">view.account.bank.statement.match.search</field>
-            <field name="model">account.bank.statement.match</field>
+        <record id="view_account_bank_match_search" model="ir.ui.view">
+            <field name="name">view.account.bank_match.search</field>
+            <field name="model">account.bank.match</field>
             <field name="arch" type="xml">
                 <search string="statement_line">
                     <field name="statement_line_id"/>
@@ -139,9 +139,9 @@
             </field>
         </record>
 
-        <record id="view_account_bank_statement_match_rule_tree" model="ir.ui.view">
-            <field name="name">view.account.bank.statement.match.rule.tree</field>
-            <field name="model">account.bank.statement.match.rule</field>
+        <record id="view_account_bank_match_rule_tree" model="ir.ui.view">
+            <field name="name">view.account.bank_match.rule.tree</field>
+            <field name="model">account.bank.match.rule</field>
             <field name="arch" type="xml">
                 <tree>
                     <field name="name"/>
@@ -155,9 +155,9 @@
             </field>
         </record>
 
-        <record id="view_account_bank_statement_match_rule_search" model="ir.ui.view">
-            <field name="name">view.account.bank.statement.match.rule.search</field>
-            <field name="model">account.bank.statement.match.rule</field>
+        <record id="view_account_bank_match_rule_search" model="ir.ui.view">
+            <field name="name">view.account.bank_match.rule.search</field>
+            <field name="model">account.bank.match.rule</field>
             <field name="arch" type="xml">
                 <search string="Match Rules">
                     <field name="name"/>
@@ -171,9 +171,9 @@
             </field>
         </record>
 
-        <record id="view_account_bank_statement_match_rule_form" model="ir.ui.view">
-            <field name="name">view.account.bank.statement.match.rule.form</field>
-            <field name="model">account.bank.statement.match.rule</field>
+        <record id="view_account_bank_match_rule_form" model="ir.ui.view">
+            <field name="name">view.account.bank_match.rule.form</field>
+            <field name="model">account.bank.match.rule</field>
             <field name="arch" type="xml">
                 <form>
                     <sheet>
@@ -206,21 +206,21 @@
             </field>
         </record>
 
-        <act_window id="action_account_bank_statement_match_view"
+        <act_window id="action_account_bank_match_view"
                     name="Bank Statement Lines Matches"
-                    res_model="account.bank.statement.match"
+                    res_model="account.bank.match"
                     view_type="form"
                     view_mode="tree,form"/>
 
-        <act_window id="action_account_bank_statement_match_reference_view"
+        <act_window id="action_account_bank_match_reference_view"
                     name="Match Reference"
-                    res_model="account.bank.statement.match.reference"
+                    res_model="account.bank.match.reference"
                     view_type="form"
                     view_mode="tree,form"/>
 
-        <act_window id="action_account_bank_statement_match_rule_view"
+        <act_window id="action_account_bank_match_rule_view"
                     name="Match Rules"
-                    res_model="account.bank.statement.match.rule"
+                    res_model="account.bank.match.rule"
                     view_type="form"
                     view_mode="tree,form"/>
 
@@ -230,17 +230,17 @@
                   sequence="65"/>
 
         <menuitem id="menu_match_reference"
-                  action="action_account_bank_statement_match_reference_view"
+                  action="action_account_bank_match_reference_view"
                   parent="menu_bank_match"
                   sequence="5"/>
 
         <menuitem id="menu_match_rule"
-                  action="action_account_bank_statement_match_rule_view"
+                  action="action_account_bank_match_rule_view"
                   parent="menu_bank_match"
                   sequence="15"/>
 
         <menuitem id="menu_match_list"
-                  action="action_account_bank_statement_match_view"
+                  action="action_account_bank_match_view"
                   parent="menu_bank_match"
                   sequence="15"/>
 

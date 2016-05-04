@@ -2,7 +2,7 @@
 ##############################################################################
 #
 #    Account Bank Match
-#    Copyright (C) 2016 April
+#    Copyright (C) 2016 May
 #    1200 Web Development
 #    http://1200wd.com/
 #
@@ -27,7 +27,7 @@
 # TODO: Test on Spieker
 #
 # ====  NICE TO HAVE'S:  ====
-# VERY NICE: Increase speed
+# VERY NICE: Increase speed (remove some bonus rules?)
 # NICE: Remove/hide save button on match form -> use wizards and Transient models?
 # NICE: Do not open old reconcile view when importing bank statements
 # NICE: Create new rules via match form on-the-fly
@@ -75,8 +75,8 @@ class AccountBankStatementLine(models.Model):
     so_ref = fields.Char('Sale Order Reference')
     name = fields.Char('Communication', required=True, default='/')
 
-    match_ids = fields.One2many('account.bank.statement.match', 'statement_line_id', "Matches")
-    match_selected = fields.Many2one('account.bank.statement.match', string="Winning Match")
+    match_ids = fields.One2many('account.bank.match', 'statement_line_id', "Matches")
+    match_selected = fields.Many2one('account.bank.match', string="Winning Match")
     match_account_ids = fields.One2many('account.bank.match.move.lines', 'statement_line_id', string="Accounts")
 
     show_errors = False
@@ -213,7 +213,7 @@ class AccountBankStatementLine(models.Model):
     @api.model
     def _extract_references(self):
         """
-        Extract references defined in the 'account.bank.statement.match.reference' table
+        Extract references defined in the 'account.bank.match.reference' table
         from account bank statement line.
 
         @return: matches
@@ -246,7 +246,7 @@ class AccountBankStatementLine(models.Model):
                     {'name': inv_number, 'so_ref': '', 'model': 'account.invoice', 'description': description, 'score': 0, 'score_item': 70,})
                 # _logger.debug("1200wd - Supplier reference %s found for invoice %s" % (supplier_ref, supplier_inv['number']))
 
-        match_refs = self.env['account.bank.statement.match.reference'].search(['|', ('company_id', '=', False), ('company_id', '=', company_id)])
+        match_refs = self.env['account.bank.match.reference'].search(['|', ('company_id', '=', False), ('company_id', '=', company_id)])
         for match_ref in match_refs:
             try:
                 for m in re.finditer(match_ref.name, statement_text):
@@ -279,9 +279,9 @@ class AccountBankStatementLine(models.Model):
     @api.model
     def _parse_rule(self, rule):
         """
-        Convert rule from account.bank.statement.match.rule to Odoo format
+        Convert rule from account.bank.match.rule to Odoo format
 
-        @param rule: record from account.bank.statement.match.rule
+        @param rule: record from account.bank.match.rule
         @return: Odoo styled rule
         """
         # _logger.debug("1200wd - Running match rule %s" % rule.name)
@@ -528,15 +528,15 @@ class AccountBankStatementLine(models.Model):
         """
         Search all matches with invoices, sale order of account move for this bank statement line.
 
-        - Extract matches with reference patterns defined in account.bank.statement.match.reference and add them to the match list
-        - Run all extraction rules defined in account.bank.statement.match.rules and add new matches to the match list
+        - Extract matches with reference patterns defined in account.bank.match.reference and add them to the match list
+        - Run all extraction rules defined in account.bank.match.rules and add new matches to the match list
         - Run all bonus rules and updates scores
 
         @return: Sorted list of matches with higher score first
         """
         # Delete old match records
         try:
-            self._cr.execute("DELETE FROM account_bank_statement_match WHERE statement_line_id=%d" % self.id)
+            self._cr.execute("DELETE FROM account_bank_match WHERE statement_line_id=%d" % self.id)
             self.invalidate_cache()
         except AttributeError:
             return False
@@ -565,7 +565,7 @@ class AccountBankStatementLine(models.Model):
                 matches = self._update_match_list(ref_match, base_score + ref_match['score_item'], matches)
 
         # Run match rules on invoices, sale orders and account.moves
-        for rule in self.env['account.bank.statement.match.rule'].search(
+        for rule in self.env['account.bank.match.rule'].search(
                 ['|', ('company_id', '=', False), ('company_id', '=', company_id),
                 ('type', '=', 'extraction')]):
             rule_domain = self._parse_rule(rule)
@@ -599,7 +599,7 @@ class AccountBankStatementLine(models.Model):
                     match['score'] = 1
 
         # Calculate bonuses for already found matches
-        for rule in self.env['account.bank.statement.match.rule'].search(
+        for rule in self.env['account.bank.match.rule'].search(
                 ['|', ('company_id', '=', False), ('company_id', '=', company_id),
                 ('type', '=', 'bonus')]):
             rule_domain = self._parse_rule(rule)
@@ -771,9 +771,9 @@ class AccountBankStatementLine(models.Model):
             match_cache_time = configs.get('match_cache_time')
             if match_cache_time != -1:
                 to_old =  ((datetime.now() - timedelta(seconds=match_cache_time)).strftime('%Y-%m-%d %H:%M:%S'))
-                matches_found = self.env['account.bank.statement.match'].search_count([('statement_line_id', '=', sl.id), ('create_date', '>', to_old)])
+                matches_found = self.env['account.bank.match'].search_count([('statement_line_id', '=', sl.id), ('create_date', '>', to_old)])
             if matches_found and not always_refresh:
-                matches = self.env['account.bank.statement.match'].search_read([('statement_line_id', '=', sl.id)], order='score DESC', limit=2)
+                matches = self.env['account.bank.match'].search_read([('statement_line_id', '=', sl.id)], order='score DESC', limit=2)
 
             # ... otherwise search for matches add them to database
             else:
@@ -790,7 +790,7 @@ class AccountBankStatementLine(models.Model):
                             'score': match['score'] or 0,
                         }
                         _logger.info("1200wd - Match found %s: %s, score %d" % (match['name'], match.get('description', False), match['score'] or 0))
-                        self.env['account.bank.statement.match'].create(data)
+                        self.env['account.bank.match'].create(data)
 
             so_ref, invoice_ref = sl._get_winning_match(matches)
         return {'matches_found': matches_found, 'so_ref': so_ref, 'name': invoice_ref}
@@ -806,7 +806,7 @@ class AccountBankStatementLine(models.Model):
         st_line = self[0]
         ctx = self._context.copy()
         ctx.update({
-            'action_account_bank_statement_match_view': True,
+            'action_account_bank_match_view': True,
             'active_id': st_line.id,
             'active_ids': [st_line.id],
             'statement_line_id': st_line.id,

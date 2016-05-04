@@ -2,7 +2,7 @@
 ##############################################################################
 #
 #    Account Bank Match
-#    Copyright (C) 2016 April
+#    Copyright (C) 2016 May
 #    1200 Web Development
 #    http://1200wd.com/
 #
@@ -41,10 +41,9 @@ If one correct match is found automatically link and reconcile the statement lin
     'data': [
         'security/ir.model.access.csv',
         'views/res_config_view.xml',
-        'views/account_bank_statement_match.xml',
+        'views/account_bank_match.xml',
         'views/account_bank_statement_view.xml',
-        'views/account_view.xml',
-        'data/account.bank.statement.match.rule.csv',
+        'data/account.bank.match.rule.csv',
     ],
     'price': 100.00,
     'currency': 'EUR',
