@@ -60,6 +60,8 @@ class AccountBankStatementMatchReference(models.Model):
     ]
     # TODO: Add constraints for account_account_id
 
+
+
 # Object to store found matches to orders/invoices in statement lines
 class AccountBankStatementMatch(models.Model):
     _name = "account.bank.statement.match"
@@ -155,8 +157,21 @@ class AccountBankStatementMatchRule(models.Model):
     company_id = fields.Many2one('res.company', string='Company', required=False)
 
 
+
+class AccountBankMatchMoveLines(models.Model):
+    _name = "account.bank.match.move.lines"
+
+    name = fields.Char(string="Description", size=256, required=True)
+    statement_line_id = fields.Many2one('account.bank.statement.line', string="Bank Statement Line", required=True)
+    account_account_id = fields.Many2one('account.account', string="Account")
+    amount = fields.Float("Amount")
+    tax_id = fields.Many2one('account.tax', string='Tax', domain=[('parent_id', '=', False)])
+
+
+
 class AccountBankStatementLine(models.Model):
     _inherit = 'account.bank.statement.line'
 
     match_ids = fields.One2many('account.bank.statement.match', 'statement_line_id', "Matches")
     match_selected = fields.Many2one('account.bank.statement.match', string="Winning Match")
+    match_account_ids = fields.One2many('account.bank.match.move.lines', 'statement_line_id', string="Accounts")

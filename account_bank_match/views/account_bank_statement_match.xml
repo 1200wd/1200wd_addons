@@ -95,6 +95,9 @@
                         <page string="Matches">
                             <field name="match_ids"/>
                         </page>
+                        <page string="Match with Account">
+                            <field name="match_account_ids"/>
+                        </page>
                     </notebook>
                 </form>
             </field>
@@ -187,6 +190,19 @@
                         </group>
                     </sheet>
                 </form>
+            </field>
+        </record>
+
+        <record id="view_account_bank_match_move_lines_tree" model="ir.ui.view">
+            <field name="name">view.account.bank.match.move.lines.tree</field>
+            <field name="model">account.bank.match.move.lines</field>
+            <field name="arch" type="xml">
+                <tree editable="bottom">
+                    <field name="name"/>
+                    <field name="account_account_id"/>
+                    <field name="tax_id"/>
+                    <field name="amount"/>
+                </tree>
             </field>
         </record>
 

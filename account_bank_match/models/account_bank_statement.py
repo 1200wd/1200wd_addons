@@ -75,6 +75,10 @@ class AccountBankStatementLine(models.Model):
     so_ref = fields.Char('Sale Order Reference')
     name = fields.Char('Communication', required=True, default='/')
 
+    match_ids = fields.One2many('account.bank.statement.match', 'statement_line_id', "Matches")
+    match_selected = fields.Many2one('account.bank.statement.match', string="Winning Match")
+    match_account_ids = fields.One2many('account.bank.match.move.lines', 'statement_line_id', string="Accounts")
+
     show_errors = False
 
     @api.one
