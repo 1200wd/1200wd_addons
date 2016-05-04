@@ -31,7 +31,7 @@
 # NICE: Remove/hide save button on match form -> use wizards and Transient models?
 # NICE: Do not open old reconcile view when importing bank statements
 # NICE: Create new rules via match form on-the-fly
-# NICE: Extract references upon installing module
+# NICE: Call action_generate_references upon installing module
 # NICE: Auto confirm when there is no payment difference when clicking on match
 # FIXME: OUT# in so_ref
 

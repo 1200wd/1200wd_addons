@@ -63,3 +63,26 @@ class AccountBankMatchConfiguration(models.Model):
         ir_values_obj.set_default('account.bank.statement.match', 'match_when_created', self.match_when_created)
         ir_values_obj.set_default('account.bank.statement.match', 'match_automatic_reconcile', self.match_automatic_reconcile)
         ir_values_obj.set_default('account.bank.statement.match', 'match_cache_time', self.match_cache_time)
+
+    @api.one
+    def action_generate_references(self):
+        aj = self.env['account.journal'].search([('type', 'in', ['sale', 'sale_refund', 'purchase', 'purchase_refund'])])
+        for journal in aj:
+            seq = journal.sequence_id
+            if (not seq.prefix and not seq.suffix):
+                continue
+            ref_pat = (seq.prefix or '') + '[0-9]{' + str(seq.padding) + '}' + (seq.suffix or '')
+            if not self.env['account.bank.match.reference'].search_count([('name', '=', ref_pat)]):
+                # import pdb; pdb.set_trace()
+                ref_seq = 10
+                if 'refund' in journal.type: ref_seq += 5
+                data = {
+                    'name': ref_pat,
+                    'model': 'account.invoice',
+                    'sequence': ref_seq,
+                    'score': 70,
+                    'score_item': 20,
+                    'company_id': journal.company_id.id,
+                }
+                _logger.debug("1200wd - Create match reference %s" % data)
+                self.env['account.bank.match.reference'].create(data)

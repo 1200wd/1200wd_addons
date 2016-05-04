@@ -24,6 +24,9 @@
                                 <field name="match_cache_time" class="oe_inline"/>
                                 <label for="match_cache_time"/>
                             </div>
+                            <div>
+                                <button name="action_generate_references" string="Create References from Sequences" type="object"/>
+                            </div>
                         </div>
                     </group>
 	            </xpath>
