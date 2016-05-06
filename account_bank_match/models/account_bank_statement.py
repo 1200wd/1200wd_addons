@@ -21,8 +21,7 @@
 #
 ##############################################################################
 
-
-# TODO: Create account moves when mathing with accounts
+# TODO: Remove direct linking to account.move.line?
 # TODO: Test on Noorderhaaks
 # TODO: Test on Spieker
 #
@@ -751,6 +750,67 @@ class AccountBankStatementLine(models.Model):
         return move
 
 
+    @api.model
+    def create_account_move(self, account_id):
+        """
+        Create an account move from current bank statement line to specified account.
+        Use date, amount, partner etc from this statement line.
+
+        @param account_id: account_account id
+        @return: newly created move object
+        """
+        account = self.env['account.account'].browse([account_id])
+        date = self._context.get('date_p') or fields.Date.context_today(self)
+        if self._context.get('amount_currency') and self._context.get('currency_id'):
+            amount_currency = self._context['amount_currency']
+            currency_id = self._context['currency_id']
+        else:
+            amount_currency = False
+            currency_id = False
+
+        ref = self.ref or self.name
+        partner_id = self.partner_id or 0
+        name = account.code
+        pay_amount = self.amount
+        period_id = self.statement_id.period_id.id
+        pay_account_id = self.account_id.id or self.statement_id.account_id.id or 0
+        pay_journal_id = self.journal_id.id or self.statement_id.journal_id.id or 0
+        move_lines = []
+        move_lines.append((0, 0, {
+            'name': name,
+            'debit': pay_amount > 0 and pay_amount,
+            'credit': pay_amount < 0 and -pay_amount,
+            'account_id': pay_account_id,
+            'partner_id': partner_id,
+            'ref': ref,
+            'date': date,
+            'currency_id': currency_id,
+            'amount_currency': amount_currency or 0.0,
+            'company_id': self.company_id.id,
+        }))
+        move_lines.append((0, 0, {
+            'name': name,
+            'debit': pay_amount < 0 and -pay_amount,
+            'credit': pay_amount > 0 and pay_amount,
+            'account_id': account_id,
+            'partner_id': partner_id,
+            'ref': ref,
+            'date': date,
+            'currency_id': currency_id,
+            'amount_currency': -1 * (amount_currency or 0.0),
+            'company_id': self.company_id.id,
+        }))
+        move = self.env['account.move'].create({
+            'ref': ref,
+            'line_id': move_lines,
+            'journal_id': pay_journal_id,
+            'period_id': period_id,
+            'date': date,
+        })
+        self.journal_entry_id = move.id
+        return move
+
+
     @api.multi
     def account_bank_match(self, always_refresh=True):
         """
@@ -851,7 +911,7 @@ class AccountBankStatementLine(models.Model):
 
 
     @api.model
-    def auto_reconcile(self):
+    def auto_reconcile(self, type='auto'):
         """
         If there is an invoice linked to this bank statement line lookup writeoff difference account
         and call pay_invoice_and_reconcile method.
@@ -862,7 +922,7 @@ class AccountBankStatementLine(models.Model):
         @return: Always True
         """
         configs = self.env['account.config.settings'].get_default_bank_match_configuration(self)
-        if not configs.get('match_automatic_reconcile') or self.journal_entry_id:
+        if type == 'auto' and not configs.get('match_automatic_reconcile') or self.journal_entry_id:
             return True
         _logger.info("1200wd - auto-reconcile journal %s" % self.name)
         if self.name and self.name != '/':

@@ -134,7 +134,6 @@ class AccountBankMatch(models.Model):
                                       readonly=True, compute='compute_payment_difference')
 
 
-
     @api.one
     def action_match_confirm(self):
         vals = {'match_selected': self.id}
@@ -146,11 +145,15 @@ class AccountBankMatch(models.Model):
         elif self.model == 'account.move.line':
             vals['so_ref'] = ''
             vals['name'] = self.name or '/'
+        elif self.model == 'account.account':
+            account_id = int(self.name) or 0
+            self.statement_line_id.create_account_move(account_id)
 
+        #TODO: Skip code for account.account and account.move.line model?
         self.statement_line_id.show_errors = True
         vals = self.statement_line_id.order_invoice_lookup(vals)
         self.statement_line_id.write(vals)
-        self.statement_line_id.auto_reconcile()
+        self.statement_line_id.auto_reconcile(type='manual')
 
 
 
