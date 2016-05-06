@@ -77,7 +77,6 @@ class AccountBankStatementLine(models.Model):
 
     match_ids = fields.One2many('account.bank.match', 'statement_line_id', "Matches")
     match_selected = fields.Many2one('account.bank.match', string="Winning Match")
-    match_account_ids = fields.One2many('account.bank.match.move.lines', 'statement_line_id', string="Accounts")
 
     show_errors = False
 
@@ -226,7 +225,8 @@ class AccountBankStatementLine(models.Model):
             msg = "Could not parse statement text for %s" % self.name
             self._handle_error(msg)
             return []
-        statement_text = re.sub(r"\W", "", statement_text).upper()
+        statement_text = re.sub(r"\s", "", statement_text).upper()
+        _logger.debug("1200wd - %s" % statement_text)
         company_id = self.env.user.company_id.id
         matches = []
         count = 0
@@ -890,6 +890,38 @@ class AccountBankStatementLine(models.Model):
         else:
             _logger.warning("1200wd - No reference name specified, cannot reconcile")
         return True
+
+
+    @api.multi
+    def action_match_reference_create(self):
+        """
+        Action for web interface to create new reference rule and open view.
+
+        @return: view to create new reference extraction rule
+        """
+        st_line = self[0]
+        ctx = self._context.copy()
+        ref = re.sub(r"\s", "", st_line.ref).upper()
+        data = {
+            'name': ref,
+            'partner_bank_account': st_line.remote_account or '',
+            'account_journal_id': st_line.journal_id.id,
+            'company_id': st_line.company_id.id,
+        }
+        new_rm = self.env['account.bank.match.reference.create'].create(data)
+        view = self.env.ref('account_bank_match.view_account_bank_match_reference_create_form')
+        act_move = {
+            'name': _('Match Reference Extraction Rule'),
+            'res_id': new_rm.id,
+            'view_type': 'form',
+            'view_mode': 'tree,form',
+            'res_model': 'account.bank.match.reference.create',
+            'type': 'ir.actions.act_window',
+            'views': [(view.id, 'form')],
+            'target': 'new',
+            }
+        act_move['context'] = dict(ctx, wizard_action=pickle.dumps(act_move))
+        return act_move
 
 
     @api.model

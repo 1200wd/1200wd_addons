@@ -3,36 +3,37 @@
     <data>
 
         <record id="view_account_bank_match_reference_tree" model="ir.ui.view" >
-            <field name="name">view.account.bank_match.reference.tree</field>
+            <field name="name">view.account.bank.match.reference.tree</field>
             <field name="model">account.bank.match.reference</field>
             <field name="arch" type="xml">
                 <tree>
                     <field name="name"/>
                     <field name="model"/>
                     <field name="sequence"/>
-                    <field name="account_bank_id"/>
                     <field name="score"/>
                     <field name="score_item"/>
                     <field name="account_account_id"/>
+                    <field name="account_journal_id"/>
                     <field name="company_id"/>
                 </tree>
             </field>
         </record>
 
         <record id="view_account_bank_match_reference_form" model="ir.ui.view" >
-            <field name="name">view.account.bank_match.reference.form</field>
+            <field name="name">view.account.bank.match.reference.form</field>
             <field name="model">account.bank.match.reference</field>
             <field name="arch" type="xml">
                 <form>
                     <sheet>
                         <group name="group_top">
                             <field name="name"/>
+                            <field name="partner_bank_account"/>
                             <field name="model"/>
                             <field name="sequence"/>
-                            <field name="account_bank_id"/>
                             <field name="score"/>
                             <field name="score_item"/>
                             <field name="account_account_id"/>
+                            <field name="account_journal_id"/>
                             <field name="company_id"/>
                         </group>
                     </sheet>
@@ -41,23 +42,45 @@
         </record>
 
         <record id="view_account_bank_match_reference_search" model="ir.ui.view">
-            <field name="name">view.account.bank_match.reference.search</field>
+            <field name="name">view.account.bank.match.reference.search</field>
             <field name="model">account.bank.match.reference</field>
             <field name="arch" type="xml">
                 <search string="Match Reference">
                     <field name="name"/>
                     <group string="Group By">
                         <filter string="Model" context="{'group_by':'model'}"/>
-                        <filter string="Bank Account" context="{'group_by':'account_bank_id'}"/>
-                        <filter string="Account Journal" context="{'group_by':'account_account_id'}"/>
+                        <filter string="Journal Filter" context="{'group_by':'account_journal_id'}"/>
+                        <filter string="Account" context="{'group_by':'account_account_id'}"/>
                         <filter string="Company" context="{'group_by':'company_id'}"/>
                     </group>
                 </search>
             </field>
         </record>
 
+        <record id="view_account_bank_match_reference_create_form" model="ir.ui.view" >
+            <field name="name">view.account.bank.match.reference.create.form</field>
+            <field name="model">account.bank.match.reference.create</field>
+            <field name="arch" type="xml">
+                <form>
+                    <sheet>
+                        <group name="group_top">
+                            <field name="name"/>
+                            <field name="company_id" invisible="True"/>
+                            <field name="partner_bank_account"/>
+                            <field name="account_journal_id"/>
+                            <field name="account_account_id"/>
+                        </group>
+                    </sheet>
+                    <footer>
+                        <button name="action_match_reference_save" type="object" string="Save"/> or
+                        <button name="cancel" string="Cancel" special="cancel" class="oe_link"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+
         <record id="view_account_bank_match_tree" model="ir.ui.view">
-            <field name="name">view.account.bank_match.tree</field>
+            <field name="name">view.account.bank.match.tree</field>
             <field name="model">account.bank.match</field>
             <field name="arch" type="xml">
                 <tree create="false" delete="false" edit="true">
@@ -77,6 +100,10 @@
             <field name="priority">50</field>
             <field name="arch" type="xml">
                 <form string="Statement Line" create="false" delete="false">
+                    <header>
+                        <button name="account_bank_match" string="_Refresh Matches" type="object"/>
+                        <button name="action_match_reference_create" string="_Create Reference Extraction Rule" type="object"/>
+                    </header>
                     <group col="4" readonly="1">
                         <field name="statement_id" readonly="1"/>
                         <field name="journal_id" readonly="1" invisible="1"/>
@@ -89,14 +116,10 @@
                         <field name="remote_account" readonly="1"/>
                         <field name="bank_account_id" readonly="1"/>
                         <field name="amount" readonly="1"/>
-                        <button name="account_bank_match" string="_Refresh Matches" type="object" class="oe_highlight"/>
                     </group>
                     <notebook>
                         <page string="Matches">
                             <field name="match_ids"/>
-                        </page>
-                        <page string="Match with Account">
-                            <field name="match_account_ids"/>
                         </page>
                     </notebook>
                 </form>
@@ -104,7 +127,7 @@
         </record>
 
         <record id="view_account_bank_match_form" model="ir.ui.view">
-            <field name="name">view.account.bank_match.form</field>
+            <field name="name">view.account.bank.match.form</field>
             <field name="model">account.bank.match</field>
             <field name="arch" type="xml">
                 <form string="Statement Line Match">
@@ -130,7 +153,7 @@
         </record>
 
         <record id="view_account_bank_match_search" model="ir.ui.view">
-            <field name="name">view.account.bank_match.search</field>
+            <field name="name">view.account.bank.match.search</field>
             <field name="model">account.bank.match</field>
             <field name="arch" type="xml">
                 <search string="statement_line">
@@ -140,7 +163,7 @@
         </record>
 
         <record id="view_account_bank_match_rule_tree" model="ir.ui.view">
-            <field name="name">view.account.bank_match.rule.tree</field>
+            <field name="name">view.account.bank.match.rule.tree</field>
             <field name="model">account.bank.match.rule</field>
             <field name="arch" type="xml">
                 <tree>
@@ -156,7 +179,7 @@
         </record>
 
         <record id="view_account_bank_match_rule_search" model="ir.ui.view">
-            <field name="name">view.account.bank_match.rule.search</field>
+            <field name="name">view.account.bank.match.rule.search</field>
             <field name="model">account.bank.match.rule</field>
             <field name="arch" type="xml">
                 <search string="Match Rules">
@@ -172,7 +195,7 @@
         </record>
 
         <record id="view_account_bank_match_rule_form" model="ir.ui.view">
-            <field name="name">view.account.bank_match.rule.form</field>
+            <field name="name">view.account.bank.match.rule.form</field>
             <field name="model">account.bank.match.rule</field>
             <field name="arch" type="xml">
                 <form>
@@ -190,19 +213,6 @@
                         </group>
                     </sheet>
                 </form>
-            </field>
-        </record>
-
-        <record id="view_account_bank_match_move_lines_tree" model="ir.ui.view">
-            <field name="name">view.account.bank.match.move.lines.tree</field>
-            <field name="model">account.bank.match.move.lines</field>
-            <field name="arch" type="xml">
-                <tree editable="bottom">
-                    <field name="name"/>
-                    <field name="account_account_id"/>
-                    <field name="tax_id"/>
-                    <field name="amount"/>
-                </tree>
             </field>
         </record>
 

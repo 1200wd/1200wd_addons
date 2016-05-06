@@ -25,6 +25,8 @@ import logging
 
 from openerp import models, fields, api
 import openerp.addons.decimal_precision as dp
+from openerp.exceptions import ValidationError
+import re
 
 _logger = logging.getLogger(__name__)
 
@@ -33,9 +35,8 @@ class AccountBankMatchReference(models.Model):
     _name = "account.bank.match.reference"
     _order = "sequence,name"
 
-    name = fields.Char(string="Reference Pattern", size=32,
-                                    help="Regular expression pattern to match reference",
-                                    required=True)
+    name = fields.Char(string="Reference Pattern", size=256,
+                       help="Regular expression pattern to match reference")
     model = fields.Selection(
         [
             ('sale.order', 'Sale Order'),
@@ -45,18 +46,51 @@ class AccountBankMatchReference(models.Model):
         ], select=True, required=True
     )
     sequence = fields.Integer('Sequence')
-    account_bank_id = fields.Many2one('res.partner.bank', string='Bank Account',
-        help='Match only applies to selected bank account. Leave empty to match all bank accounts.',
-        domain="[('journal_id', '<>', False)]")
+    account_journal_id = fields.Many2one('account.journal', string='Journal Filter',
+        help='Match only applies to selected journal. Leave empty to match all journals.')
     score = fields.Integer("Score to Share", default=0, required=True, help="Total score to share among all matches of this rule. If 3 matches are found and the score to share is 30 then every match gets a score of 10.")
     score_item = fields.Integer("Score per Match", default=0, required=True, help="Score for each match. Will be added to the shared score.")
     company_id = fields.Many2one('res.company', string='Company', required=True)
     account_account_id = fields.Many2one('account.account', string="Resulting Account")
+    partner_bank_account = fields.Char(string="Partner Bank Account", size=64, help="Remote owner bank account number to match")
 
     _sql_constraints = [
         ('reference_pattern_name_company_unique', 'unique (name, model, company_id)', 'Use reference pattern only once for each model and for each Company')
     ]
     # TODO: Add constraints for account_account_id
+
+    @api.one
+    @api.constrains('name')
+    def _check_name_format(self):
+        if re.search(r"\s", self.name):
+            raise ValidationError('Please enter reference pattern without any whitespace character such as space or tab')
+
+
+
+class AccountBankMatchReferenceCreate(models.TransientModel):
+    _name = "account.bank.match.reference.create"
+
+    name = fields.Char(string="Reference Pattern", size=256,
+                       help="Regular expression pattern to match reference. Leave emtpy to only match on Bank Account")
+    partner_bank_account = fields.Char(string="Partner Bank Account", size=64, help="Remote owner bank account number to match")
+    account_journal_id = fields.Many2one('account.journal', string='Journal Filter',
+        help='Match only applies to selected journal. Leave empty to match all journals.')
+    account_account_id = fields.Many2one('account.account', string="Resulting Account", required=True)
+    company_id = fields.Many2one('res.company', string='Company', required=True)
+
+    @api.multi
+    def action_match_reference_save(self):
+        data = {
+            'name': self.name,
+            'model': 'account.account',
+            'sequence': 50,
+            'account_journal_id': self.account_journal_id.id,
+            'score_item': 100,
+            'company_id': self.company_id.id,
+            'account_account_id': self.account_account_id.id,
+            'partner_bank_account': self.partner_bank_account,
+        }
+        self.env['account.bank.match.reference'].create(data)
 
 
 
@@ -98,6 +132,7 @@ class AccountBankMatch(models.Model):
 
     payment_difference = fields.Float(string="Payment Difference", digits=dp.get_precision('Account'),
                                       readonly=True, compute='compute_payment_difference')
+
 
 
     @api.one
@@ -153,14 +188,3 @@ class AccountBankMatchRule(models.Model):
     script = fields.Text(string="Run Script",
                          help="Run Python code after rule matched. Be carefull what you enter here, wrong code could damage your Odoo database")
     company_id = fields.Many2one('res.company', string='Company', required=False)
-
-
-
-class AccountBankMatchMoveLines(models.Model):
-    _name = "account.bank.match.move.lines"
-
-    name = fields.Char(string="Description", size=256, required=True)
-    statement_line_id = fields.Many2one('account.bank.statement.line', string="Bank Statement Line", required=True)
-    account_account_id = fields.Many2one('account.account', string="Account")
-    amount = fields.Float("Amount")
-    tax_id = fields.Many2one('account.tax', string='Tax', domain=[('parent_id', '=', False)])
