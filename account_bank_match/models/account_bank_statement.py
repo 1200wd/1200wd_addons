@@ -29,9 +29,7 @@
 # VERY NICE: Increase speed (remove some bonus rules?)
 # NICE: Remove/hide save button on match form -> use wizards and Transient models?
 # NICE: Do not open old reconcile view when importing bank statements
-# NICE: Create new rules via match form on-the-fly
 # NICE: Call action_generate_references upon installing module
-# NICE: Auto confirm when there is no payment difference when clicking on match
 # FIXME: OUT# in so_ref
 
 from openerp import models, workflow, fields, api, _
@@ -807,6 +805,7 @@ class AccountBankStatementLine(models.Model):
             'period_id': period_id,
             'date': date,
         })
+        _logger.info("1200wd - Created new account move with id %s, ref %s" % (move.id, ref))
         self.journal_entry_id = move.id
         return move
 
@@ -1033,8 +1032,14 @@ class AccountBankStatement(models.Model):
             vals_new = line.match(vals)
             if vals_new['name'] != '/':
                 line.show_errors = True
-                _logger.info("1200wd - Matched bank statement line %s with %s" % (line.id, vals_new['name']))
                 line.write(vals_new)
-                line.auto_reconcile()
+                line_match_ids = [l.id for l in line.match_ids]
+                line_match = line_match_ids and self.env['account.bank.match'].search([('id', 'in', line_match_ids), ('name','=',vals_new['name'])])
+                if line_match_ids and len(line_match) and line_match.model == 'account.account':
+                    account_id = int(vals_new['name']) or 0
+                    line.create_account_move(account_id)
+                else:
+                    line.auto_reconcile()
+                _logger.info("1200wd - Matched bank statement line %s with %s" % (line.id, vals_new['name']))
 
         return True

@@ -21,6 +21,8 @@
 #
 ##############################################################################
 
+# TODO: Add various constrains and value checking
+
 import logging
 
 from openerp import models, fields, api
@@ -75,7 +77,7 @@ class AccountBankMatchReferenceCreate(models.TransientModel):
     partner_bank_account = fields.Char(string="Partner Bank Account", size=64, help="Remote owner bank account number to match")
     account_journal_id = fields.Many2one('account.journal', string='Journal Filter',
         help='Match only applies to selected journal. Leave empty to match all journals.')
-    account_account_id = fields.Many2one('account.account', string="Resulting Account", required=True)
+    account_account_id = fields.Many2one('account.account', string="Resulting Account")
     company_id = fields.Many2one('res.company', string='Company', required=True)
 
     @api.multi
@@ -136,6 +138,7 @@ class AccountBankMatch(models.Model):
 
     @api.one
     def action_match_confirm(self):
+        self.statement_line_id.show_errors = True
         vals = {'match_selected': self.id}
         if self.model == 'sale.order':
             vals['so_ref'] = self.name
@@ -149,11 +152,11 @@ class AccountBankMatch(models.Model):
             account_id = int(self.name) or 0
             self.statement_line_id.create_account_move(account_id)
 
-        #TODO: Skip code for account.account and account.move.line model?
-        self.statement_line_id.show_errors = True
         vals = self.statement_line_id.order_invoice_lookup(vals)
         self.statement_line_id.write(vals)
-        self.statement_line_id.auto_reconcile(type='manual')
+        if self.model != 'account.account':
+            self.statement_line_id.auto_reconcile(type='manual')
+        return True
 
 
 
