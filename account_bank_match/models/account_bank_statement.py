@@ -188,25 +188,6 @@ class AccountBankStatementLine(models.Model):
 
 
     @api.model
-    def _make_transfer(self, vals, account_name):
-        journal_id = account_name
-        move_vals = {
-            'journal_id': journal_id,
-            'name': vals['name'],
-            'amount': vals['amount'],
-            # 'amount_currency': vals['amount_currency'],
-            'partner_id': vals['partner_id'],
-            'date': vals['date'],
-            # 'period_id': 1,
-            # 'company_id': 1,
-        }
-        # import pdb; pdb.set_trace()
-        # move_line_pool = self.pool.get('account.move.line')
-        # move_pool = self.pool.get('account.move')
-        # return move_pool.account_move_prepare(cr, uid, journal_id, context=context)
-
-
-    @api.model
     def _extract_references(self):
         """
         Extract references defined in the 'account.bank.match.reference' table
@@ -856,12 +837,17 @@ class AccountBankStatementLine(models.Model):
 
 
     @api.multi
-    def action_statement_line_match(self):
+    def action_match_refresh(self):
+        return self.action_statement_line_match(always_refresh=True)
+
+    @api.multi
+    def action_statement_line_match(self, always_refresh=False):
         """
         Action for web interface to trigger match update and open view with matches.
 
         @return: view with list of found matches
         """
+        self.ensure_one()
         st_line = self[0]
         ctx = self._context.copy()
         ctx.update({
@@ -871,7 +857,7 @@ class AccountBankStatementLine(models.Model):
             'statement_line_id': st_line.id,
             })
         view = self.env.ref('account_bank_match.view_account_bank_statement_line_matches_form')
-        match_result = self.account_bank_match(always_refresh=False)
+        match_result = self.account_bank_match(always_refresh=always_refresh)
 
         # if match_result['matches_found']:
         act_move = {

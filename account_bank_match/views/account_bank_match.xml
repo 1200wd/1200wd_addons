@@ -101,7 +101,7 @@
             <field name="arch" type="xml">
                 <form string="Statement Line" create="false" delete="false">
                     <header>
-                        <button name="account_bank_match" string="_Refresh Matches" type="object"/>
+                        <button name="action_match_refresh" string="_Refresh Matches" type="object"/>
                         <button name="action_match_reference_create" string="_Create Reference Extraction Rule" type="object"/>
                     </header>
                     <group col="4" readonly="1">
