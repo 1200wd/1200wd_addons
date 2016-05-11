@@ -53,13 +53,13 @@ class AccountBankMatchReference(models.Model):
     score = fields.Integer("Score to Share", default=0, required=True, help="Total score to share among all matches of this rule. If 3 matches are found and the score to share is 30 then every match gets a score of 10.")
     score_item = fields.Integer("Score per Match", default=0, required=True, help="Score for each match. Will be added to the shared score.")
     company_id = fields.Many2one('res.company', string='Company', required=True)
-    account_account_id = fields.Many2one('account.account', string="Resulting Account")
+    account_account_id = fields.Many2one('account.account', string="Resulting Account",
+                                         domain="[('type', '=', 'other'), ('company_id', '=', company_id)]")
     partner_bank_account = fields.Char(string="Partner Bank Account", size=64, help="Remote owner bank account number to match")
 
     _sql_constraints = [
         ('reference_pattern_name_company_unique', 'unique (name, model, company_id)', 'Use reference pattern only once for each model and for each Company')
     ]
-    # TODO: Add constraints for account_account_id
 
     @api.one
     @api.constrains('name')
@@ -77,8 +77,9 @@ class AccountBankMatchReferenceCreate(models.TransientModel):
     partner_bank_account = fields.Char(string="Partner Bank Account", size=64, help="Remote owner bank account number to match")
     account_journal_id = fields.Many2one('account.journal', string='Journal Filter',
         help='Match only applies to selected journal. Leave empty to match all journals.')
-    account_account_id = fields.Many2one('account.account', string="Resulting Account")
     company_id = fields.Many2one('res.company', string='Company', required=True)
+    account_account_id = fields.Many2one('account.account', string="Resulting Account",
+                                         domain="[('type', '=', 'other'), ('company_id', '=', company_id)]")
 
     @api.multi
     def action_match_reference_save(self):

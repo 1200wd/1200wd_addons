@@ -22,6 +22,7 @@
 ##############################################################################
 
 # TODO: Remove direct linking to account.move.line?
+# TODO: Button + popup to manually add matched to insert known reference
 # TODO: Test on Noorderhaaks
 # TODO: Test on Spieker
 #
@@ -30,6 +31,8 @@
 # NICE: Remove/hide save button on match form -> use wizards and Transient models?
 # NICE: Do not open old reconcile view when importing bank statements
 # NICE: Call action_generate_references upon installing module
+# NICE: Possibility to link statement line to more then one invoice, account, etc
+# FIXME: Duplicate match reference gives error
 # FIXME: OUT# in so_ref
 
 from openerp import models, workflow, fields, api, _
