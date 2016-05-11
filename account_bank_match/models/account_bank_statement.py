@@ -31,7 +31,6 @@
 # NICE: Do not open old reconcile view when importing bank statements
 # NICE: Call action_generate_references upon installing module
 # NICE: Possibility to link statement line to more then one invoice, account, etc
-# FIXME: Duplicate match reference gives error
 
 from openerp import models, workflow, fields, api, _
 from openerp.exceptions import Warning

@@ -23,6 +23,7 @@
 
 # TODO: Add various constrains and value checking
 
+from openerp.tools.translate import _
 import logging
 
 from openerp import models, fields, api
@@ -66,6 +67,12 @@ class AccountBankMatchReference(models.Model):
     def _check_name_format(self):
         if re.search(r"\s", self.name):
             raise ValidationError('Please enter reference pattern without any whitespace character such as space or tab')
+
+    @api.one
+    def copy(self, default=None):
+        default = dict(default or {})
+        default['name'] = _('%s_copy') % self.name
+        return super(AccountBankMatchReference, self).copy(default)
 
 
 
