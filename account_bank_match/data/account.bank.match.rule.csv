@@ -1,7 +1,6 @@
 "id","active","company_id/id","rule","model","script","score_item","score","name","type"
 "account_bank_match.account_bank_match_rule_1","True","","[('type', 'in', ['out_invoice', 'in_refund']), ('amount_total', '>', '@amount-0.10@'), ('amount_total', '<', '@amount+0.10@')]","Invoice","","5","25","Amount: Small difference Invoice","Extraction"
 "account_bank_match.account_bank_match_rule_2","True","","[('type', 'in', ['out_invoice', 'in_refund']), ('amount_total', '=', '@amount@')]","Invoice","","10","50","Amount: Exact Invoice","Extraction"
-"account_bank_match.account_bank_match_rule_3","True","","[('debit', '=', '@amount@')]","Account Move","","1","25","Amount: Exact Move","Extraction"
 "account_bank_match.account_bank_match_rule_4","True","","[('date_invoice', '<', '@date-days(100)@')]","Invoice","","-10","0","Date: Old Invoice","Bonus"
 "account_bank_match.account_bank_match_rule_5","True","","[('date_order', '<', '@date-days(100)@')]","Sale Order","","-20","0","Date: Old Order","Bonus"
 "account_bank_match.account_bank_match_rule_6","True","","[('date_order', '>', '@date-days(40)@'), ('date_order', '<', '@date-days(1)@')]","Sale Order","","10","0","Date: Recent Order","Bonus"

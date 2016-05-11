@@ -21,7 +21,6 @@
 #
 ##############################################################################
 
-# TODO: Remove direct linking to account.move.line?
 # TODO: Button + popup to manually add matched to insert known reference
 # TODO: Test on Noorderhaaks
 # TODO: Test on Spieker
@@ -33,7 +32,6 @@
 # NICE: Call action_generate_references upon installing module
 # NICE: Possibility to link statement line to more then one invoice, account, etc
 # FIXME: Duplicate match reference gives error
-# FIXME: OUT# in so_ref
 
 from openerp import models, workflow, fields, api, _
 from openerp.exceptions import Warning
@@ -341,10 +339,8 @@ class AccountBankStatementLine(models.Model):
             return matches
 
         # If match is an account move line ...
-        if match['model'] == 'account.move.line':
+        # if match['model'] == 'account.move.line':
             # aml = self._match_get_object('account.move.line', match['name'])
-            # TODO: Add extra code for matching with move lines here, for now thou shall
-            pass
 
         # If match is a partner replace match with open invoices of this partner
         elif match['model'] == 'res.partner':
@@ -414,9 +410,9 @@ class AccountBankStatementLine(models.Model):
             if model == 'account.invoice':
                 description = (object.number or 'Not found') + "; " + (object.origin or '') + "; " + (object.supplier_invoice_number or '') + "; " + (object.date_invoice or '') + "; " + (object.partner_id.name or '') + "; " + \
                               (object.state or '') + "; " + currency_symbol + " " + str(object.amount_total or '')
-            elif model == 'account.move.line':
-                description = (object.ref or 'Not found') + "; " + (object.date or '') + "; " + (object.partner_id.name or '') + "; " + \
-                              (object.state or '') + "; " + currency_symbol + " " + str(object.debit or '')
+            # elif model == 'account.move.line':
+            #     description = (object.ref or 'Not found') + "; " + (object.date or '') + "; " + (object.partner_id.name or '') + "; " + \
+            #                   (object.state or '') + "; " + currency_symbol + " " + str(object.debit or '')
             elif model == 'sale.order':
                 description = (object.date_order or 'Not found') + "; " + (object.partner_id.name or '') + "; " + \
                               (object.state or '') + "; " + currency_symbol + " " + str(object.amount_total)
@@ -455,8 +451,8 @@ class AccountBankStatementLine(models.Model):
     def _match_get_datefield_name(self, model):
         if model == 'account.invoice':
             return 'date_invoice'
-        elif model == 'account.move.line':
-            return 'date'
+        # elif model == 'account.move.line':
+        #     return 'date'
         elif model == 'sale.order':
             return 'date_order'
         else: return ''
@@ -479,8 +475,8 @@ class AccountBankStatementLine(models.Model):
         elif model == 'account.invoice':
             domain.extend([('date_invoice', '>', daysback),
                            ('state', 'in', ['open'])])
-        elif model == 'account.move.line':
-            domain.extend([('date', '>', daysback), ('reconcile_ref', '=', False)])
+        # elif model == 'account.move.line':
+        #     domain.extend([('date', '>', daysback), ('reconcile_ref', '=', False)])
 
         return domain
 

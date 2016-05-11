@@ -108,7 +108,7 @@ class AccountBankMatch(models.Model):
         [
             ('sale.order', 'Sale Order'),
             ('account.invoice', 'Invoice'),
-            ('account.move.line', 'Account Move Line'),
+            # ('account.move.line', 'Account Move Line'),
             ('account.account', 'Account'),
         ], select=True, required=True
     )
@@ -146,9 +146,9 @@ class AccountBankMatch(models.Model):
             vals['name'] = '/'
         elif self.model == 'account.invoice':
             vals['name'] = self.name or '/'
-        elif self.model == 'account.move.line':
-            vals['so_ref'] = ''
-            vals['name'] = self.name or '/'
+        # elif self.model == 'account.move.line':
+        #     vals['so_ref'] = ''
+        #     vals['name'] = self.name or '/'
         elif self.model == 'account.account':
             account_id = int(self.name) or 0
             self.statement_line_id.create_account_move(account_id)
@@ -177,7 +177,7 @@ class AccountBankMatchRule(models.Model):
         [
             ('sale.order', 'Sale Order'),
             ('account.invoice', 'Invoice'),
-            ('account.move.line', 'Account Move'),
+            # ('account.move.line', 'Account Move'),
             ('res.partner', 'Partner'),
             ('account.bank.statement.line','Bank Statement Line'),
         ], select=True, required=True, help="Model used for search rule"
