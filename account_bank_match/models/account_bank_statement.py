@@ -862,8 +862,8 @@ class AccountBankStatementLine(models.Model):
         @return: Updated list of values
         """
         if (not vals.get('name', False)) or vals.get('name', False) == '/':
-            # Only search for matches if match_id not set and if no sales order reference is known
-            if not ('match_selected' in vals and vals['match_selected']) and not vals.get('so_ref', False):
+            # Only search for matches if match_id not set
+            if not ('match_selected' in vals and vals['match_selected']):
                 match = self.account_bank_match(False)
                 if match:
                     vals['so_ref'] = match['so_ref']
