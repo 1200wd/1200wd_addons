@@ -40,10 +40,10 @@
         'views/product_view.xml',
         'views/stock_view.xml',
     ],
-    'price': 500.00,
+    'price': 0.00,
     'currency': 'EUR',
     'demo': [],
-    'installable': True,
+    'installable': False,
     'auto_install': False,
     'application': False,
 }
