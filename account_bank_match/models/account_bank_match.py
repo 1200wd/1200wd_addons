@@ -50,11 +50,11 @@ class AccountBankMatchReference(models.Model):
     )
     sequence = fields.Integer('Sequence')
     account_journal_id = fields.Many2one('account.journal', string='Journal Filter',
-        help='Match only applies to selected journal. Leave empty to match all journals.')
+        help='Match only applies to selected journal. Leave empty to match all journals.', ondelete="cascade")
     score = fields.Integer("Score to Share", default=0, required=True, help="Total score to share among all matches of this rule. If 3 matches are found and the score to share is 30 then every match gets a score of 10.")
     score_item = fields.Integer("Score per Match", default=0, required=True, help="Score for each match. Will be added to the shared score.")
-    company_id = fields.Many2one('res.company', string='Company', required=True)
-    account_account_id = fields.Many2one('account.account', string="Resulting Account",
+    company_id = fields.Many2one('res.company', string='Company', required=True, ondelete="cascade")
+    account_account_id = fields.Many2one('account.account', string="Resulting Account", ondelete="cascade",
                                          domain="[('type', '=', 'other'), ('company_id', '=', company_id)]")
     partner_bank_account = fields.Char(string="Partner Bank Account", size=64, help="Remote owner bank account number to match")
 
@@ -82,10 +82,10 @@ class AccountBankMatchReferenceCreate(models.TransientModel):
     name = fields.Char(string="Reference Pattern", size=256,
                        help="Regular expression pattern to match reference. Leave emtpy to only match on Bank Account")
     partner_bank_account = fields.Char(string="Partner Bank Account", size=64, help="Remote owner bank account number to match")
-    account_journal_id = fields.Many2one('account.journal', string='Journal Filter',
+    account_journal_id = fields.Many2one('account.journal', string='Journal Filter', ondelete="cascade",
         help='Match only applies to selected journal. Leave empty to match all journals.')
-    company_id = fields.Many2one('res.company', string='Company', required=True)
-    account_account_id = fields.Many2one('account.account', string="Resulting Account",
+    company_id = fields.Many2one('res.company', string='Company', required=True, ondelete="cascade")
+    account_account_id = fields.Many2one('account.account', string="Resulting Account", ondelete="cascade",
                                          domain="[('type', '=', 'other'), ('company_id', '=', company_id)]")
 
     @api.multi
@@ -119,10 +119,11 @@ class AccountBankMatch(models.Model):
             ('account.account', 'Account'),
         ], select=True, required=True
     )
-    statement_line_id = fields.Many2one('account.bank.statement.line', string="Bank Statement Line", required=True, index=True)
+    statement_line_id = fields.Many2one('account.bank.statement.line', string="Bank Statement Line",
+                                        required=True, index=True, ondelete="cascade")
     description = fields.Char(string="Description", size=256)
     score = fields.Integer("Score")
-    writeoff_journal_id = fields.Many2one('account.journal', string="Write-off Journal")
+    writeoff_journal_id = fields.Many2one('account.journal', string="Write-off Journal", ondelete="cascade")
     writeoff_difference = fields.Boolean("Write-off Payment Difference", default=True)
 
     @api.one
@@ -201,4 +202,4 @@ class AccountBankMatchRule(models.Model):
                        help="Rule to match a bank statement line to a sale order, invoice or account move. The rules should follow the Odoo style domain format.")
     script = fields.Text(string="Run Script",
                          help="Run Python code after rule matched. Be carefull what you enter here, wrong code could damage your Odoo database")
-    company_id = fields.Many2one('res.company', string='Company', required=False)
+    company_id = fields.Many2one('res.company', string='Company', ondelete="cascade", required=False)

@@ -165,17 +165,10 @@ class AccountBankStatementLine(models.Model):
                                 # Invoice has just been created and is still in draft, confirm it to lookup its name.
                                 for invoice in order.invoice_ids:
                                     invoice.signal_workflow('invoice_open')
-                                    try:
-                                        if vals['name'] == "/":
-                                            vals['name'] = ''
-                                            vals['name'] = invoice.number
-                                        else:
-                                            vals['name'] = ', '.join([vals['name'], invoice.number])
-                                    except KeyError:
-                                        vals['name'] = invoice.number
-                    elif (order.order_policy == 'manual' and order.state == 'manual'):
+                                    vals['name'] = invoice.number
+                    elif order.order_policy == 'manual' and order.state == 'manual':
                         vals = self._prepare_create_invoice(order, vals)
-                    elif (order.order_policy == 'prepaid' and order.state != 'wait_payment'):
+                    elif order.order_policy == 'prepaid' and order.state != 'wait_payment':
                         msg = "Trying to pay for Sale Order {} when its state is not 'Wait for Payment'.".format(vals['so_ref'])
                         self._handle_error(msg)
                     else:
@@ -379,7 +372,7 @@ class AccountBankStatementLine(models.Model):
         else:
             # Adapt score for subsequent matches to avoid extreme high scores
             score_current = [d['score'] for d in matches if d['name']==match['name']][0]
-            weight_factor = 1.0 / max(1.0, score_current/25.0)
+            weight_factor = 1.0 / max(1.0, max(score_current-50,1)/25.0)
             add_score = int(add_score * weight_factor)
             [
                 d.update(
@@ -598,7 +591,7 @@ class AccountBankStatementLine(models.Model):
         @param matches: List of all matches found
         @return: Sale order reference and invoice reference of winning match
         """
-        if matches and matches[0]['score'] > MATCH_MIN_SUCCESS_SCORE and \
+        if matches and matches[0]['score'] >= MATCH_MIN_SUCCESS_SCORE and \
                 (len(matches) == 1 or matches[1]['score'] <=MATCH_MIN_SUCCESS_SCORE or
                 matches[1]['score'] < (matches[0]['score']-(MATCH_MIN_SUCCESS_SCORE / 2))):
             return (matches[0]['so_ref'], matches[0]['name'])
@@ -1015,7 +1008,7 @@ class AccountBankStatement(models.Model):
                 continue
             vals_new = line.match(vals)
             if vals_new['name'] != '/':
-                line.show_errors = True
+                # line.show_errors = True
                 line.write(vals_new)
                 line_match_ids = [l.id for l in line.match_ids]
                 line_match = line_match_ids and self.env['account.bank.match'].search([('id', 'in', line_match_ids), ('name','=',vals_new['name'])])
