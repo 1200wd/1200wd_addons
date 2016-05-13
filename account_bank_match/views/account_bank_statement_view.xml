@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<openerp>
+    <data>
+
+        <record id="view_bank_statement_form_inherit_match" model="ir.ui.view">
+            <field name="name">bank.statement.line.form.match</field>
+            <field name="model">account.bank.statement</field>
+            <field name="inherit_id" ref="account.view_bank_statement_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='line_ids']/tree/field[@name='bank_account_id']" position="after">
+                    <button name="action_statement_line_match" attrs="{'invisible': [('move_state', '!=', False)]}" string="Match" type="object" icon="STOCK_INDEX"/>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="view_bank_statement_form_invoice" model="ir.ui.view">
+            <field name="name">account.invoice.supplier.form.invoice</field>
+            <field name="model">account.bank.statement</field>
+            <field name="inherit_id" ref="account.view_bank_statement_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='line_ids']/tree/field[@name='ref']"
+                       position="after">
+                    <field name="so_ref"/>
+                </xpath>
+                <xpath expr="//field[@name='line_ids']/tree/field[@name='name']"
+                       position="attributes">
+                    <attribute name="required">0</attribute>
+                </xpath>
+                <xpath expr="//button[@string='Reconcile']" position="before">
+                    <button name="action_statement_match"
+                            states="draft" string="Match" type="object"
+                            help="Match bank statement lines with invoices or sales orders."/>
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</openerp>

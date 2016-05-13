@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 ##############################################################################
 #
-#    Stock Forecasted
+#    Account Bank Match
+#    Copyright (C) 2016 April
 #    1200 Web Development
 #    http://1200wd.com/
-#    Copyright (C) 2016 January
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -21,29 +21,4 @@
 #
 ##############################################################################
 
-{
-    'name': "Stock Forecast",
-    'summary': """Stock forecast based on stock moves and sale orders""",
-    'description': """
-    IN DEVELOPMENT! TEST VERSION ONLY!
-    """,
-    'author': "1200 Web Development",
-    'website': "http://1200wd.com/",
-    'category': 'Warehouse',
-    'version': '8.0.1.1',
-    'depends': [
-        'sale',
-        'stock',
-    ],
-    'data': [
-        'views/sale_view.xml',
-        'views/product_view.xml',
-        'views/stock_view.xml',
-    ],
-    'price': 500.00,
-    'currency': 'EUR',
-    'demo': [],
-    'installable': True,
-    'auto_install': False,
-    'application': False,
-}
+import models
