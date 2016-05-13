@@ -21,17 +21,6 @@
 #
 ##############################################################################
 
-# TODO: Button + popup to manually add matched to insert known reference
-# TODO: Test on Noorderhaaks
-# TODO: Test on Spieker
-#
-# ====  NICE TO HAVE'S:  ====
-# VERY NICE: Increase speed (remove some bonus rules?)
-# NICE: Remove/hide save button on match form -> use wizards and Transient models?
-# NICE: Do not open old reconcile view when importing bank statements
-# NICE: Call action_generate_references upon installing module
-# NICE: Possibility to link statement line to more then one invoice, account, etc
-
 from openerp import models, workflow, fields, api, _
 from openerp.exceptions import Warning
 import logging
@@ -45,8 +34,6 @@ _logger = logging.getLogger(__name__)
 
 # Match module settings, normally there should be no need to change them...
 MATCH_MIN_SUCCESS_SCORE = 100
-MATCH_RULES_CACHE_TIME = 24*60*60 # match_cache_time
-MATCH_AUTO_RECONCILE = True # match_automatic_reconcile
 
 
 

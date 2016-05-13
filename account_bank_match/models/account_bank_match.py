@@ -21,7 +21,7 @@
 #
 ##############################################################################
 
-# TODO: Add various constrains and value checking
+# TODO: Do not open old reconcile view when importing bank statements
 
 from openerp.tools.translate import _
 import logging
@@ -138,7 +138,7 @@ class AccountBankMatch(models.Model):
                 direction = SIGN[invoice.type]
                 self.payment_difference = invoice.residual + (direction * self.statement_line_id.amount)
         else:
-            # TODO: Add difference calculation for sale.order and account.move.line model
+            # TODO: Add difference calculation for sale.order model
             self.payment_difference = 0
 
     payment_difference = fields.Float(string="Payment Difference", digits=dp.get_precision('Account'),
