@@ -1033,3 +1033,15 @@ class AccountBankStatement(models.Model):
 
         #TODO: Show popup with results
         return True
+
+
+    @api.model
+    def create(self, vals):
+        #FIXME: This is a quick fix to solve problems with a incorrect period in the bank statement. Find out why Odoo uses wrong period sometimes...
+        try:
+            period_id = self.onchange_date(vals['date'], self.env.user.company_id.id)['value']['period_id']
+            vals['period_id'] = period_id
+        except Exception, e:
+            _logger.debug("1200wd - Could not fix period of statement %s. Error %s" % (vals['name'], e.args[0]))
+
+        return super(AccountBankStatement, self).create(vals)
