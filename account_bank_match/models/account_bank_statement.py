@@ -603,7 +603,7 @@ class AccountBankStatementLine(models.Model):
 
         SIGN = {'out_invoice': -1, 'in_invoice': 1, 'out_refund': 1, 'in_refund': -1}
         inv_direction = SIGN[invoice.type]
-        date = self._context.get('date_p') or fields.Date.context_today(self)
+        date = self.date or self._context.get('date_p') or fields.Date.context_today(self)
 
         # Take the amount in currency and the currency of the payment
         if self._context.get('amount_currency') and self._context.get('currency_id'):
@@ -717,7 +717,7 @@ class AccountBankStatementLine(models.Model):
         @return: newly created move object
         """
         account = self.env['account.account'].browse([account_id])
-        date = self._context.get('date_p') or fields.Date.context_today(self)
+        date = self.date or self._context.get('date_p') or fields.Date.context_today(self)
         if self._context.get('amount_currency') and self._context.get('currency_id'):
             amount_currency = self._context['amount_currency']
             currency_id = self._context['currency_id']
