@@ -34,7 +34,7 @@ _logger = logging.getLogger(__name__)
 
 # Match module settings, normally there should be no need to change them...
 MATCH_MIN_SUCCESS_SCORE = 100
-
+MATCH_MAX_PER_REFERENCE = 100
 
 
 class SaleAdvancePaymentInv(models.TransientModel):
@@ -204,9 +204,27 @@ class AccountBankStatementLine(models.Model):
                     {'name': inv_number, 'so_ref': '', 'model': 'account.invoice', 'description': description, 'score': 0, 'score_item': 70,})
                 # _logger.debug("1200wd - Supplier reference %s found for invoice %s" % (supplier_ref, supplier_inv['number']))
 
-        match_refs = self.env['account.bank.match.reference'].search(['|', ('company_id', '=', False), ('company_id', '=', company_id)])
+        search_domain = ['|', ('company_id', '=', False), ('company_id', '=', company_id),
+                         '|', ('account_journal_id', '=', False), ('account_journal_id', '=', self.journal_id.id),
+                         '|', ('partner_bank_account', '=', False), ('partner_bank_account', '=', self.remote_account)]
+        match_refs = self.env['account.bank.match.reference'].search(search_domain)
         for match_ref in match_refs:
             try:
+                if not match_ref.name:
+                    name = '/'
+                    if match_ref.account_account_id:
+                        name = match_ref.account_account_id.id
+                    obj = self.env[match_ref.model].search([(self._match_get_field_name(match_ref.model), '=', name)])
+                    description = "%s; Partner bank %s" % (self._match_description(obj, match_ref.model), match_ref.partner_bank_account)
+                    matches.append(
+                        {'name': name,
+                         'so_ref': '',
+                         'model': match_ref.model,
+                         'description': description,
+                         'score': match_ref.score,
+                         'score_item': match_ref.score_item,
+                         })
+                    continue
                 for m in re.finditer(match_ref.name, statement_text):
                     name = m.group(0)
                     if match_ref.account_account_id:
@@ -226,9 +244,9 @@ class AccountBankStatementLine(models.Model):
                          })
                     _logger.info("1200wd - Match %s found" % name)
                     count += 1
-                    if count > 100: break
+                    if count > MATCH_MAX_PER_REFERENCE: break
             except Exception, e:
-                import pdb; pdb.set_trace()
+                # import pdb; pdb.set_trace()
                 msg = "Please check Bank Match Reference patterns an error occured while parsing '%s'. Error: %s" % (match_ref.name, e.args[0])
                 self._handle_error(msg)
         return matches
@@ -520,7 +538,7 @@ class AccountBankStatementLine(models.Model):
             for ref_match in ref_matches:
                 matches = self._update_match_list(ref_match, base_score + ref_match['score_item'], matches)
 
-        # Run match rules on invoices, sale orders and account.moves
+        # Run match rules on invoices, sale orders
         for rule in self.env['account.bank.match.rule'].search(
                 ['|', ('company_id', '=', False), ('company_id', '=', company_id),
                 ('type', '=', 'extraction')]):
@@ -726,7 +744,7 @@ class AccountBankStatementLine(models.Model):
             currency_id = False
 
         ref = self.ref or self.name
-        partner_id = self.partner_id or 0
+        partner_id = self.partner_id.id or 0
         name = account.code
         pay_amount = self.amount
         period_id = self.statement_id.period_id.id
@@ -1006,4 +1024,5 @@ class AccountBankStatement(models.Model):
                     line.auto_reconcile()
                 _logger.info("1200wd - Matched bank statement line %s with %s" % (line.id, vals_new['name']))
 
+        #TODO: Show popup with results
         return True
