@@ -58,14 +58,15 @@ class AccountBankMatchReference(models.Model):
                                          domain="[('type', '=', 'other'), ('company_id', '=', company_id)]")
     partner_bank_account = fields.Char(string="Partner Bank Account", size=64, help="Remote owner bank account number to match")
 
-    _sql_constraints = [
-        ('reference_pattern_name_company_unique', 'unique (name, model, company_id)', 'Use reference pattern only once for each model and for each Company')
-    ]
+    # FIXME: Disabled because it causes problems when matching with account_journal_id and empty names
+    # _sql_constraints = [
+    #     ('reference_pattern_name_company_unique', 'unique (name, model, company_id)', 'Use reference pattern only once for each model and for each Company')
+    # ]
 
     @api.one
     @api.constrains('name')
     def _check_name_format(self):
-        if re.search(r"\s", self.name):
+        if self.name and re.search(r"\s", self.name):
             raise ValidationError('Please enter reference pattern without any whitespace character such as space or tab')
 
     @api.one

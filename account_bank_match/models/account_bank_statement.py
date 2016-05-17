@@ -34,7 +34,7 @@ _logger = logging.getLogger(__name__)
 
 # Match module settings, normally there should be no need to change them...
 MATCH_MIN_SUCCESS_SCORE = 100
-
+MATCH_MAX_PER_REFERENCE = 100
 
 
 class SaleAdvancePaymentInv(models.TransientModel):
@@ -60,7 +60,7 @@ class AccountBankStatementLine(models.Model):
     name = fields.Char('Communication', required=True, default='/')
 
     match_ids = fields.One2many('account.bank.match', 'statement_line_id', "Matches")
-    match_selected = fields.Many2one('account.bank.match', string="Winning Match")
+    match_selected = fields.Many2one('account.bank.match', string="Winning Match", ondelete='cascade')
 
     show_errors = False
 
@@ -204,9 +204,28 @@ class AccountBankStatementLine(models.Model):
                     {'name': inv_number, 'so_ref': '', 'model': 'account.invoice', 'description': description, 'score': 0, 'score_item': 70,})
                 # _logger.debug("1200wd - Supplier reference %s found for invoice %s" % (supplier_ref, supplier_inv['number']))
 
-        match_refs = self.env['account.bank.match.reference'].search(['|', ('company_id', '=', False), ('company_id', '=', company_id)])
+        search_domain = ['|', ('company_id', '=', False), ('company_id', '=', company_id),
+                         '|', ('account_journal_id', '=', False), ('account_journal_id', '=',
+                                                                   self.journal_id.id or self.statement_id.journal_id.id),
+                         '|', ('partner_bank_account', '=', False), ('partner_bank_account', '=', self.remote_account)]
+        match_refs = self.env['account.bank.match.reference'].search(search_domain)
         for match_ref in match_refs:
             try:
+                if not match_ref.name:
+                    name = '/'
+                    if match_ref.account_account_id:
+                        name = match_ref.account_account_id.id
+                    obj = self.env[match_ref.model].search([(self._match_get_field_name(match_ref.model), '=', name)])
+                    description = "%s; Partner bank %s" % (self._match_description(obj, match_ref.model), match_ref.partner_bank_account)
+                    matches.append(
+                        {'name': name,
+                         'so_ref': '',
+                         'model': match_ref.model,
+                         'description': description,
+                         'score': match_ref.score,
+                         'score_item': match_ref.score_item,
+                         })
+                    continue
                 for m in re.finditer(match_ref.name, statement_text):
                     name = m.group(0)
                     if match_ref.account_account_id:
@@ -226,9 +245,9 @@ class AccountBankStatementLine(models.Model):
                          })
                     _logger.info("1200wd - Match %s found" % name)
                     count += 1
-                    if count > 100: break
+                    if count > MATCH_MAX_PER_REFERENCE: break
             except Exception, e:
-                import pdb; pdb.set_trace()
+                # import pdb; pdb.set_trace()
                 msg = "Please check Bank Match Reference patterns an error occured while parsing '%s'. Error: %s" % (match_ref.name, e.args[0])
                 self._handle_error(msg)
         return matches
@@ -520,18 +539,18 @@ class AccountBankStatementLine(models.Model):
             for ref_match in ref_matches:
                 matches = self._update_match_list(ref_match, base_score + ref_match['score_item'], matches)
 
-        # Run match rules on invoices, sale orders and account.moves
+        # Run match rules on invoices, sale orders
         for rule in self.env['account.bank.match.rule'].search(
                 ['|', ('company_id', '=', False), ('company_id', '=', company_id),
                 ('type', '=', 'extraction')]):
             rule_domain = self._parse_rule(rule)
+            # _logger.debug("1200wd - Running rule %s domain %s" % (rule.name, rule_domain))
             if not rule_domain: # stop running rule if empty domain is returned to avoid useless matches on rule parsing errors
                 continue
             base_domain = self._match_get_base_domain(rule['model'])
             orderby_field = self._match_get_datefield_name(rule['model'])
             if orderby_field: orderby_field += ' DESC'
             rule_matches = self.env[rule['model']].search(base_domain + rule_domain, limit=25, order=orderby_field)
-
             if rule_matches:
                 _logger.info("1200wd - %d matches found for %s" % (len(rule_matches), rule.name))
                 add_score = rule.score_item + (rule.score / len(rule_matches))
@@ -603,7 +622,7 @@ class AccountBankStatementLine(models.Model):
 
         SIGN = {'out_invoice': -1, 'in_invoice': 1, 'out_refund': 1, 'in_refund': -1}
         inv_direction = SIGN[invoice.type]
-        date = self._context.get('date_p') or fields.Date.context_today(self)
+        date = self.date or self._context.get('date_p') or fields.Date.context_today(self)
 
         # Take the amount in currency and the currency of the payment
         if self._context.get('amount_currency') and self._context.get('currency_id'):
@@ -717,7 +736,7 @@ class AccountBankStatementLine(models.Model):
         @return: newly created move object
         """
         account = self.env['account.account'].browse([account_id])
-        date = self._context.get('date_p') or fields.Date.context_today(self)
+        date = self.date or self._context.get('date_p') or fields.Date.context_today(self)
         if self._context.get('amount_currency') and self._context.get('currency_id'):
             amount_currency = self._context['amount_currency']
             currency_id = self._context['currency_id']
@@ -726,7 +745,7 @@ class AccountBankStatementLine(models.Model):
             currency_id = False
 
         ref = self.ref or self.name
-        partner_id = self.partner_id or 0
+        partner_id = self.partner_id.id or 0
         name = account.code
         pay_amount = self.amount
         period_id = self.statement_id.period_id.id
@@ -862,8 +881,8 @@ class AccountBankStatementLine(models.Model):
         @return: Updated list of values
         """
         if (not vals.get('name', False)) or vals.get('name', False) == '/':
-            # Only search for matches if match_id not set and if no sales order reference is known
-            if not ('match_selected' in vals and vals['match_selected']) and not vals.get('so_ref', False):
+            # Only search for matches if match_id not set
+            if not ('match_selected' in vals and vals['match_selected']):
                 match = self.account_bank_match(False)
                 if match:
                     vals['so_ref'] = match['so_ref']
@@ -956,9 +975,15 @@ class AccountBankStatementLine(models.Model):
             statement_line.show_errors = False
             vals_new = statement_line.match(vals)
             if vals_new['name'] != '/':
-                _logger.info("1200wd - Matched bank statement line %s with %s" % (self.id, vals_new['name']))
                 statement_line.write(vals_new)
-                statement_line.auto_reconcile()
+                line_match_ids = [l.id for l in statement_line.match_ids]
+                line_match = line_match_ids and self.env['account.bank.match'].search([('id', 'in', line_match_ids), ('name','=',vals_new['name'])])
+                if line_match_ids and len(line_match) and line_match.model == 'account.account':
+                    account_id = int(vals_new['name']) or 0
+                    statement_line.create_account_move(account_id)
+                else:
+                    statement_line.auto_reconcile()
+                _logger.info("1200wd - Matched bank statement line %s with %s" % (self['id'], vals_new['name']))
         else:
             _logger.info("1200wd - automatic matching disabled")
         return statement_line
@@ -1006,4 +1031,17 @@ class AccountBankStatement(models.Model):
                     line.auto_reconcile()
                 _logger.info("1200wd - Matched bank statement line %s with %s" % (line.id, vals_new['name']))
 
+        #TODO: Show popup with results
         return True
+
+
+    @api.model
+    def create(self, vals):
+        #FIXME: This is a quick fix to solve problems with a incorrect period in the bank statement. Find out why Odoo uses wrong period sometimes...
+        try:
+            period_id = self.onchange_date(vals['date'], self.env.user.company_id.id)['value']['period_id']
+            vals['period_id'] = period_id
+        except Exception, e:
+            _logger.debug("1200wd - Could not fix period of statement %s. Error %s" % (vals['name'], e.args[0]))
+
+        return super(AccountBankStatement, self).create(vals)
