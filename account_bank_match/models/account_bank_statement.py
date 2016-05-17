@@ -205,7 +205,8 @@ class AccountBankStatementLine(models.Model):
                 # _logger.debug("1200wd - Supplier reference %s found for invoice %s" % (supplier_ref, supplier_inv['number']))
 
         search_domain = ['|', ('company_id', '=', False), ('company_id', '=', company_id),
-                         '|', ('account_journal_id', '=', False), ('account_journal_id', '=', self.journal_id.id),
+                         '|', ('account_journal_id', '=', False), ('account_journal_id', '=',
+                                                                   self.journal_id.id or self.statement_id.journal_id.id),
                          '|', ('partner_bank_account', '=', False), ('partner_bank_account', '=', self.remote_account)]
         match_refs = self.env['account.bank.match.reference'].search(search_domain)
         for match_ref in match_refs:
@@ -543,13 +544,13 @@ class AccountBankStatementLine(models.Model):
                 ['|', ('company_id', '=', False), ('company_id', '=', company_id),
                 ('type', '=', 'extraction')]):
             rule_domain = self._parse_rule(rule)
+            # _logger.debug("1200wd - Running rule %s domain %s" % (rule.name, rule_domain))
             if not rule_domain: # stop running rule if empty domain is returned to avoid useless matches on rule parsing errors
                 continue
             base_domain = self._match_get_base_domain(rule['model'])
             orderby_field = self._match_get_datefield_name(rule['model'])
             if orderby_field: orderby_field += ' DESC'
             rule_matches = self.env[rule['model']].search(base_domain + rule_domain, limit=25, order=orderby_field)
-
             if rule_matches:
                 _logger.info("1200wd - %d matches found for %s" % (len(rule_matches), rule.name))
                 add_score = rule.score_item + (rule.score / len(rule_matches))
@@ -974,9 +975,15 @@ class AccountBankStatementLine(models.Model):
             statement_line.show_errors = False
             vals_new = statement_line.match(vals)
             if vals_new['name'] != '/':
-                _logger.info("1200wd - Matched bank statement line %s with %s" % (self.id, vals_new['name']))
                 statement_line.write(vals_new)
-                statement_line.auto_reconcile()
+                line_match_ids = [l.id for l in statement_line.match_ids]
+                line_match = line_match_ids and self.env['account.bank.match'].search([('id', 'in', line_match_ids), ('name','=',vals_new['name'])])
+                if line_match_ids and len(line_match) and line_match.model == 'account.account':
+                    account_id = int(vals_new['name']) or 0
+                    statement_line.create_account_move(account_id)
+                else:
+                    statement_line.auto_reconcile()
+                _logger.info("1200wd - Matched bank statement line %s with %s" % (self['id'], vals_new['name']))
         else:
             _logger.info("1200wd - automatic matching disabled")
         return statement_line
