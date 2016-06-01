@@ -27,7 +27,7 @@ from openerp import models, fields, api, exceptions
 _logger = logging.getLogger(__name__)
 
 
-class res_partner(models.Model):
+class ResPartner(models.Model):
     _inherit = 'res.partner'
 
     @api.model
@@ -45,4 +45,4 @@ class res_partner(models.Model):
         self._update_fiscal_position()
 
     def _commercial_fields(self, cr, uid, context=None):
-        return super(res_partner, self)._commercial_fields(cr, uid, context=context) + ['sales_channel_id']
+        return super(ResPartner, self)._commercial_fields(cr, uid, context=context) + ['sales_channel_id']

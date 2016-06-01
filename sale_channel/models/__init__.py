@@ -25,3 +25,4 @@ import sale
 import account_invoice
 import partner
 import stock
+import account

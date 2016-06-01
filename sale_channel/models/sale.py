@@ -27,14 +27,14 @@ from openerp import models, fields, api, _, exceptions
 _logger = logging.getLogger(__name__)
 
 
-class sale_order_line(models.Model):
+class SaleOrderLine(models.Model):
     _inherit = 'sale.order.line'
 
     def product_id_change(self, cr, uid, ids, pricelist, product, qty=0,
             uom=False, qty_uos=0, uos=False, name='', partner_id=False,
             lang=False, update_tax=True, date_order=False, packaging=False, fiscal_position=False, flag=False, context=None):
         # Call super function and change tax depending on Sales Channel
-        result = super(sale_order_line, self).product_id_change(cr, uid, ids, pricelist, product, qty, uom, qty_uos,
+        result = super(SaleOrderLine, self).product_id_change(cr, uid, ids, pricelist, product, qty, uom, qty_uos,
                                                                 uos, name, partner_id, lang, update_tax, date_order,
                                                                 packaging, fiscal_position, flag, context)
         if product:
@@ -72,7 +72,7 @@ class sale_order_line(models.Model):
         return result
 
 
-class sale_order(models.Model):
+class SaleOrder(models.Model):
     _inherit = "sale.order"
 
     @api.model
@@ -90,7 +90,7 @@ class sale_order(models.Model):
 
     @api.multi
     def onchange_partner_id(self, partner_id):
-        res = super(sale_order, self).onchange_partner_id(partner_id)
+        res = super(SaleOrder, self).onchange_partner_id(partner_id)
         partner = self.env['res.partner'].browse(partner_id)
 
         if partner_id:
@@ -103,7 +103,7 @@ class sale_order(models.Model):
     @api.model
     def _prepare_invoice(self, order, lines, context=None):
         _logger.debug('1200wd sale_channel prepare_invoice')
-        val = super(sale_order, self)._prepare_invoice(order, lines, context=context)
+        val = super(SaleOrder, self)._prepare_invoice(order, lines, context=context)
 
         if order.sales_channel_id:
             val.update({
@@ -111,15 +111,3 @@ class sale_order(models.Model):
             })
 
         return val
-
-
-class account_tax(models.Model):
-    _inherit = 'account.tax'
-
-    @api.model
-    def _get_sales_channel_domain(self):
-        ids = self.env.ref('res_partner_category.sales_channel').ids
-        return [('category_id', 'in', ids)]
-
-    sales_channel_id = fields.Many2one('res.partner', string="Sales channel",
-                                       ondelete='set null', domain=_get_sales_channel_domain)

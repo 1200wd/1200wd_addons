@@ -22,27 +22,27 @@
 from openerp import models, fields, api
 
 
-class account_invoice_report(models.Model):
+class AccountInvoiceReport(models.Model):
     _inherit = "account.invoice.report"
 
     sales_channel_id = fields.Many2one('res.partner', string="Sales channel", ondelete='set null', required=False)
 
     def _select(self):
-        select_str = super(account_invoice_report, self)._select()
+        select_str = super(AccountInvoiceReport, self)._select()
         select_str += """,
                     sub.sales_channel_id as sales_channel_id
         """
         return select_str
 
     def _sub_select(self):
-        select_str = super(account_invoice_report, self)._sub_select()
+        select_str = super(AccountInvoiceReport, self)._sub_select()
         select_str += """,
                     ai.sales_channel_id as sales_channel_id
         """
         return select_str
 
     def _group_by(self):
-        group_by_str = super(account_invoice_report, self)._group_by()
+        group_by_str = super(AccountInvoiceReport, self)._group_by()
         group_by_str += """,
                     ai.sales_channel_id
         """

@@ -26,7 +26,7 @@ from openerp import models, fields, api, _, exceptions
 
 _logger = logging.getLogger(__name__)
 
-class stock_picking(models.Model):
+class StockPicking(models.Model):
     _inherit = "stock.picking"
 
     @api.model
@@ -34,7 +34,7 @@ class stock_picking(models.Model):
         """
         Create invoice from stock.picking: include customer sales channel and customer pricelist
         """
-        inv_vals = super(stock_picking, self)._get_invoice_vals(key, inv_type, journal_id, move)
+        inv_vals = super(StockPicking, self)._get_invoice_vals(key, inv_type, journal_id, move)
         if 'partner_id' in inv_vals:
             partner = self.env['res.partner'].browse(inv_vals['partner_id'])
             if partner and partner.sales_channel_id:
@@ -48,6 +48,5 @@ class stock_picking(models.Model):
                 _logger.warning("1200wd - sale_channel - Could not update sales channel sales channel, partner has no sales channel defined. Vals %s" % inv_vals)
         else:
             _logger.warning("1200wd - sale_channel - Could not update sales channel sales channel, partner not found. Vals %s" % inv_vals)
-
 
         return inv_vals

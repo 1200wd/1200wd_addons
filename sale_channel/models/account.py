@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+##############################################################################
 #
 #    Sales Channels
 #    Copyright (C) 2016 June
@@ -18,25 +19,18 @@
 #    You should have received a copy of the GNU Affero General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
+##############################################################################
 
-from openerp import models, fields, api
+from openerp import models, fields, api, _, exceptions
 
 
-class SaleReport(models.Model):
-    _inherit = "sale.report"
+class AccountTax(models.Model):
+    _inherit = 'account.tax'
 
-    sales_channel_id = fields.Many2one('res.partner', string="Sales channel", ondelete='set null', required=False)
+    @api.model
+    def _get_sales_channel_domain(self):
+        ids = self.env.ref('res_partner_category.sales_channel').ids
+        return [('category_id', 'in', ids)]
 
-    def _select(self):
-        select_str = super(SaleReport, self)._select()
-        select_str += """,
-                    s.sales_channel_id as sales_channel_id
-        """
-        return select_str
-
-    def _group_by(self):
-        group_by_str = super(SaleReport, self)._group_by()
-        group_by_str += """,
-                    s.sales_channel_id
-        """
-        return group_by_str
+    sales_channel_id = fields.Many2one('res.partner', string="Sales channel",
+                                       ondelete='set null', domain=_get_sales_channel_domain)

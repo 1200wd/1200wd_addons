@@ -27,7 +27,7 @@ from openerp import models, fields, api
 _logger = logging.getLogger(__name__)
 
 
-class account_invoice(models.Model):
+class AccountInvoice(models.Model):
     _inherit = "account.invoice"
 
     @api.model
@@ -42,7 +42,7 @@ class account_invoice(models.Model):
     def onchange_partner_id(self, type, partner_id, date_invoice=False,
                             payment_term=False, partner_bank_id=False, company_id=False):
         _logger.debug('1200wd - account_invoice sale_channel onchange_partner_id')
-        res = super(account_invoice, self).onchange_partner_id(
+        res = super(AccountInvoice, self).onchange_partner_id(
             type, partner_id, date_invoice=False, payment_term=False, partner_bank_id=False, company_id=False
         )
         partner = self.env['res.partner'].browse(partner_id)
@@ -56,9 +56,8 @@ class account_invoice(models.Model):
     @api.model
     def _prepare_refund(self, invoice, date=None, period_id=None, description=None, journal_id=None):
         _logger.debug('1200wd - account_invoice _prepare_refund include sales_channel')
-        values = super(account_invoice, self)._prepare_refund(invoice, date=None, period_id=None, description=None,
+        values = super(AccountInvoice, self)._prepare_refund(invoice, date=None, period_id=None, description=None,
                                                               journal_id=None)
-        # import pdb; pdb.set_trace()
         values.update({
             'sales_channel_id': invoice.sales_channel_id.id,
         })
