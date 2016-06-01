@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+<data>
+
+    <record id="view_account_invoice_filter_view" model="ir.ui.view">
+        <field name="inherit_id" ref="sale.view_order_product_search"/>
+        <field name="model">sale.report</field>
+        <field name="arch" type="xml">
+            <xpath expr="//filter[@string='Order Month']" position="after">
+                <seperator/>
+                <filter string="Sales Channel" context="{'group_by':'sales_channel_id'}"/>
+            </xpath>
+        </field>
+    </record>
+
+</data>
+</openerp>
