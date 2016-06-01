@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<openerp>
+    <data>
+
+        <record model="ir.ui.view" id="view_partner_form_ari_partner">
+            <field name="name">view.partner.form.ari.partner</field>
+            <field name="model">res.partner</field>
+            <field name="inherit_id" ref="base.view_partner_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='phone']" position="before">
+                    <field name="sales_channel_id"/>
+                </xpath>
+            </field>
+        </record>
+
+        <record model="ir.ui.view" id="view_partner_tree_ari_partner">
+            <field name="name">view.partner.tree.ari.partner</field>
+            <field name="model">res.partner</field>
+            <field name="inherit_id" ref="base.view_partner_tree"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='display_name']" position="after">
+                    <field name="sales_channel_id"/>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="view_res_partner_filter" model="ir.ui.view">
+            <field name="inherit_id" ref="base.view_res_partner_filter"/>
+            <field name="model">res.partner</field>
+            <field name="arch" type="xml">
+                <xpath expr="//filter[@string='Companies']" position="after">
+                    <filter string="Sales Channels" name="type_sales_channel" domain="[['category_id', 'ilike', 'sales channel']]"/>
+                </xpath>
+                <xpath expr="//filter[@string='Country']" position="after">
+                    <filter string="Sales Channel" domain="[]" context="{'group_by':'sales_channel_id'}"/>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="action_sales_channels_view" model="ir.actions.act_window">
+            <field name="name">Sales Channels</field>
+            <field name="res_model">res.partner</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+            <field name="domain">[('category_id', 'ilike', 'sales channel')]</field>
+            <field name="help" type="html">
+                <p class="oe_view_nocontent_create">Create the first Sales Channel
+                </p>
+            </field>
+        </record>
+
+        <menuitem id="menu_sales_channel"
+                  action="action_sales_channels_view"
+                  parent="base.menu_base_config"
+                  groups="base.group_sale_manager"/>
+
+    </data>
+</openerp>
