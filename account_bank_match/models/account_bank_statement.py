@@ -64,6 +64,8 @@ class AccountBankStatementLine(models.Model):
 
     show_errors = False
 
+    statement_text = ''
+
     @api.one
     def _get_iban_country_code(self):
         if self.remote_account: self.remote_account_country_code = self.remote_account[:2]
@@ -184,28 +186,11 @@ class AccountBankStatementLine(models.Model):
             self._handle_error(msg)
             return []
         statement_text = re.sub(r"\s", "", statement_text).upper()
+        self.statement_text = statement_text
         _logger.debug("1200wd - %s" % statement_text)
         company_id = self.env.user.company_id.id
         matches = []
         count = 0
-
-        # Search supplier reference in bank statement line
-        supplier_inv_list = self.env['account.invoice'].search_read([
-            ('supplier_invoice_number', '!=', False),
-            ('state', '=', 'open')],['number', 'supplier_invoice_number'])
-        for supplier_inv in supplier_inv_list:
-            supplier_ref = supplier_inv['supplier_invoice_number']
-            if len(supplier_ref)<3: continue
-            if supplier_ref in statement_text:
-                inv_number = supplier_inv['number']
-                obj = self.env['account.invoice'].search([('number', '=',inv_number)])
-                description = self._match_description(obj, 'account.invoice')
-                # Add bonus if supplier reference has more characters
-                score = 20 + min(50,(len(supplier_ref)-3)*10)
-                import pdb; pdb.set_trace()
-                matches.append(
-                    {'name': inv_number, 'so_ref': '', 'model': 'account.invoice', 'description': description, 'score': 0, 'score_item': score,})
-                _logger.debug("1200wd - Supplier reference %s found for invoice %s" % (supplier_ref, inv_number))
 
         search_domain = ['|', ('company_id', '=', False), ('company_id', '=', company_id),
                          '|', ('account_journal_id', '=', False), ('account_journal_id', '=',
@@ -250,7 +235,6 @@ class AccountBankStatementLine(models.Model):
                     count += 1
                     if count > MATCH_MAX_PER_REFERENCE: break
             except Exception, e:
-                # import pdb; pdb.set_trace()
                 msg = "Please check Bank Match Reference patterns an error occured while parsing '%s'. Error: %s" % (match_ref.name, e.args[0])
                 self._handle_error(msg)
         return matches
@@ -541,6 +525,27 @@ class AccountBankStatementLine(models.Model):
             base_score = sum([d['score'] for d in ref_matches]) / len(ref_matches)
             for ref_match in ref_matches:
                 matches = self._update_match_list(ref_match, base_score + ref_match['score_item'], matches)
+
+        # Search supplier reference in bank statement line
+        ref_matches = []
+        supplier_inv_list = self.env['account.invoice'].search_read([
+            ('supplier_invoice_number', '!=', False),
+            ('state', '=', 'open')],['number', 'supplier_invoice_number'])
+        for supplier_inv in supplier_inv_list:
+            supplier_ref = supplier_inv['supplier_invoice_number']
+            if len(supplier_ref)<3: continue
+            if supplier_ref in self.statement_text:
+                inv_number = supplier_inv['number']
+                obj = self.env['account.invoice'].search([('number', '=',inv_number)])
+                description = self._match_description(obj, 'account.invoice')
+                # Add bonus, increase score depending on number of characters of supplier reference
+                score = 40 + min(50,(len(supplier_ref)-3)*10)
+                ref_matches.append(
+                    {'name': inv_number, 'so_ref': '', 'model': 'account.invoice', 'description': description, 'score': 0, 'score_item': score,})
+                _logger.debug("1200wd - Supplier reference %s found for invoice %s" % (supplier_ref, inv_number))
+        if ref_matches:
+            for ref_match in ref_matches:
+                matches = self._update_match_list(ref_match, ref_match['score_item'], matches)
 
         # Run match rules on invoices, sale orders
         for rule in self.env['account.bank.match.rule'].search(
