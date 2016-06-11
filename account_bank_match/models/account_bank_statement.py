@@ -195,14 +195,17 @@ class AccountBankStatementLine(models.Model):
             ('state', '=', 'open')],['number', 'supplier_invoice_number'])
         for supplier_inv in supplier_inv_list:
             supplier_ref = supplier_inv['supplier_invoice_number']
-            if len(supplier_ref)<4: continue
+            if len(supplier_ref)<3: continue
             if supplier_ref in statement_text:
                 inv_number = supplier_inv['number']
                 obj = self.env['account.invoice'].search([('number', '=',inv_number)])
                 description = self._match_description(obj, 'account.invoice')
+                # Add bonus if supplier reference has more characters
+                score = 20 + min(50,(len(supplier_ref)-3)*10)
+                import pdb; pdb.set_trace()
                 matches.append(
-                    {'name': inv_number, 'so_ref': '', 'model': 'account.invoice', 'description': description, 'score': 0, 'score_item': 70,})
-                # _logger.debug("1200wd - Supplier reference %s found for invoice %s" % (supplier_ref, supplier_inv['number']))
+                    {'name': inv_number, 'so_ref': '', 'model': 'account.invoice', 'description': description, 'score': 0, 'score_item': score,})
+                _logger.debug("1200wd - Supplier reference %s found for invoice %s" % (supplier_ref, inv_number))
 
         search_domain = ['|', ('company_id', '=', False), ('company_id', '=', company_id),
                          '|', ('account_journal_id', '=', False), ('account_journal_id', '=',
@@ -387,7 +390,7 @@ class AccountBankStatementLine(models.Model):
                      'description': d['description']})
                 for d in matches if d['name'] == match['name']
             ]
-        _logger.info("1200wd - Found extraction match %s score %s" % (match['name'], add_score))
+        _logger.info("1200wd - Found match %s score %s" % (match['name'], add_score))
 
         return matches
 
