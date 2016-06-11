@@ -637,6 +637,9 @@ class AccountBankStatementLine(models.Model):
         else:
             ref = invoice.number
         partner = invoice.partner_id
+
+        if partner.parent_id:
+            partner = partner.parent_id
         name = invoice.number or invoice.invoice_line[0].name
         pay_amount = self.amount
         period_id = self.statement_id.period_id.id
