@@ -73,7 +73,6 @@ class AccountBankMatchConfiguration(models.Model):
                 continue
             ref_pat = (seq.prefix or '') + '[0-9]{' + str(seq.padding) + '}' + (seq.suffix or '')
             if not self.env['account.bank.match.reference'].search_count([('name', '=', ref_pat)]):
-                # import pdb; pdb.set_trace()
                 ref_seq = 10
                 if 'refund' in journal.type: ref_seq += 5
                 data = {

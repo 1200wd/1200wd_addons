@@ -925,17 +925,22 @@ class AccountBankStatementLine(models.Model):
                     writeoff_acc_id = self.match_selected.writeoff_difference and (self.match_selected.writeoff_journal_id.default_debit_account_id.id or 0)
                 else:
                     writeoff_acc_id = self.match_selected.writeoff_difference and (self.match_selected.writeoff_journal_id.default_credit_account_id.id or 0)
-                move_entry = self.pay_invoice_and_reconcile(invoice, writeoff_acc_id)
-                if move_entry:
-                    # Need to invalidate cache, otherwise changes in name are ignored
-                    self.env.invalidate_all()
-                    data = {
-                        'journal_entry_id': move_entry.id,
-                        'name': self.name or '/',
-                        'so_ref': self.so_ref or '',
-                        'partner_id': invoice.partner_id.id or '',
-                    }
-                    self.write(data)
+
+                if self.match_selected.writeoff_difference and writeoff_acc_id:
+                    move_entry = self.pay_invoice_and_reconcile(invoice, writeoff_acc_id)
+                    if move_entry:
+                        # Need to invalidate cache, otherwise changes in name are ignored
+                        self.env.invalidate_all()
+                        data = {
+                            'journal_entry_id': move_entry.id,
+                            'name': self.name or '/',
+                            'so_ref': self.so_ref or '',
+                            'partner_id': invoice.partner_id.id or '',
+                        }
+                        self.write(data)
+                else:
+                    msg = "Please select account to writeoff differences"
+                    self._handle_error(msg)
             else:
                 msg = "Unique invoice with number %s not found, cannot reconcile" % self.name
                 self._handle_error(msg)
