@@ -9,7 +9,6 @@
 "account_bank_match.account_bank_match_rule_9","True","","[('type', 'in', ['out_invoice', 'in_refund']), ('amount_total', '>', '@amount@*0.9'), ('amount_total', '<', '@amount@*1.1')]","Invoice","","1","5","Amount: +-10% difference Invoice","Extraction"
 "account_bank_match.account_bank_match_rule_10","True","","[('id', '=', '@partner_id.id@')]","Partner","","0","80","Partner ID","Extraction"
 "account_bank_match.account_bank_match_rule_11","True","","[('name', 'ilike', '@partner_name@')]","Partner","","0","70","Partner Name","Extraction"
-"account_bank_match.account_bank_match_rule_12","True","","[('partner_id.country_id.code', 'ilike', '@remote_account_country_code@')]","Invoice","","5","0","IBAN: Country code same as partner Country code","Bonus"
 "account_bank_match.account_bank_match_rule_13","True","","[('partner_id', '!=', '@partner_id.id@')]","Invoice","","-25","0","Partner ID Wrong","Bonus"
 "account_bank_match.account_bank_match_rule_14","True","","[('type', 'not in', ['out_invoice', 'in_refund']), ('amount_total', '=', '@amount@*-1')]","Invoice","","10","50","Amount: Exact Invoice OUT","Extraction"
 "account_bank_match.account_bank_match_rule_15","True","","[('type', 'not in', ['out_invoice', 'in_refund']), ('amount_total', '>', '-1*@amount-0.10@'), ('amount_total', '<', '-1*@amount+0.10@')]","Invoice","","5","25","Amount: Small difference Invoice OUT","Extraction"

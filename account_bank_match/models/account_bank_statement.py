@@ -64,6 +64,8 @@ class AccountBankStatementLine(models.Model):
 
     show_errors = False
 
+    statement_text = ''
+
     @api.one
     def _get_iban_country_code(self):
         if self.remote_account: self.remote_account_country_code = self.remote_account[:2]
@@ -184,25 +186,11 @@ class AccountBankStatementLine(models.Model):
             self._handle_error(msg)
             return []
         statement_text = re.sub(r"\s", "", statement_text).upper()
+        self.statement_text = statement_text
         _logger.debug("1200wd - %s" % statement_text)
         company_id = self.env.user.company_id.id
         matches = []
         count = 0
-
-        # Search supplier reference in bank statement line
-        supplier_inv_list = self.env['account.invoice'].search_read([
-            ('supplier_invoice_number', '!=', False),
-            ('state', '=', 'open')],['number', 'supplier_invoice_number'])
-        for supplier_inv in supplier_inv_list:
-            supplier_ref = supplier_inv['supplier_invoice_number']
-            if len(supplier_ref)<4: continue
-            if supplier_ref in statement_text:
-                inv_number = supplier_inv['number']
-                obj = self.env['account.invoice'].search([('number', '=',inv_number)])
-                description = self._match_description(obj, 'account.invoice')
-                matches.append(
-                    {'name': inv_number, 'so_ref': '', 'model': 'account.invoice', 'description': description, 'score': 0, 'score_item': 70,})
-                # _logger.debug("1200wd - Supplier reference %s found for invoice %s" % (supplier_ref, supplier_inv['number']))
 
         search_domain = ['|', ('company_id', '=', False), ('company_id', '=', company_id),
                          '|', ('account_journal_id', '=', False), ('account_journal_id', '=',
@@ -247,7 +235,6 @@ class AccountBankStatementLine(models.Model):
                     count += 1
                     if count > MATCH_MAX_PER_REFERENCE: break
             except Exception, e:
-                # import pdb; pdb.set_trace()
                 msg = "Please check Bank Match Reference patterns an error occured while parsing '%s'. Error: %s" % (match_ref.name, e.args[0])
                 self._handle_error(msg)
         return matches
@@ -387,7 +374,7 @@ class AccountBankStatementLine(models.Model):
                      'description': d['description']})
                 for d in matches if d['name'] == match['name']
             ]
-        _logger.info("1200wd - Found extraction match %s score %s" % (match['name'], add_score))
+        _logger.info("1200wd - Found match %s score %s" % (match['name'], add_score))
 
         return matches
 
@@ -539,6 +526,27 @@ class AccountBankStatementLine(models.Model):
             for ref_match in ref_matches:
                 matches = self._update_match_list(ref_match, base_score + ref_match['score_item'], matches)
 
+        # Search supplier reference in bank statement line
+        ref_matches = []
+        supplier_inv_list = self.env['account.invoice'].search_read([
+            ('supplier_invoice_number', '!=', False),
+            ('state', '=', 'open')],['number', 'supplier_invoice_number'])
+        for supplier_inv in supplier_inv_list:
+            supplier_ref = supplier_inv['supplier_invoice_number']
+            if len(supplier_ref)<3: continue
+            if supplier_ref in self.statement_text:
+                inv_number = supplier_inv['number']
+                obj = self.env['account.invoice'].search([('number', '=',inv_number)])
+                description = self._match_description(obj, 'account.invoice')
+                # Add bonus, increase score depending on number of characters of supplier reference
+                score = 40 + min(50,(len(supplier_ref)-3)*10)
+                ref_matches.append(
+                    {'name': inv_number, 'so_ref': '', 'model': 'account.invoice', 'description': description, 'score': 0, 'score_item': score,})
+                _logger.debug("1200wd - Supplier reference %s found for invoice %s" % (supplier_ref, inv_number))
+        if ref_matches:
+            for ref_match in ref_matches:
+                matches = self._update_match_list(ref_match, ref_match['score_item'], matches)
+
         # Run match rules on invoices, sale orders
         for rule in self.env['account.bank.match.rule'].search(
                 ['|', ('company_id', '=', False), ('company_id', '=', company_id),
@@ -637,6 +645,9 @@ class AccountBankStatementLine(models.Model):
         else:
             ref = invoice.number
         partner = invoice.partner_id
+
+        if partner.parent_id:
+            partner = partner.parent_id
         name = invoice.number or invoice.invoice_line[0].name
         pay_amount = self.amount
         period_id = self.statement_id.period_id.id
@@ -914,17 +925,22 @@ class AccountBankStatementLine(models.Model):
                     writeoff_acc_id = self.match_selected.writeoff_difference and (self.match_selected.writeoff_journal_id.default_debit_account_id.id or 0)
                 else:
                     writeoff_acc_id = self.match_selected.writeoff_difference and (self.match_selected.writeoff_journal_id.default_credit_account_id.id or 0)
-                move_entry = self.pay_invoice_and_reconcile(invoice, writeoff_acc_id)
-                if move_entry:
-                    # Need to invalidate cache, otherwise changes in name are ignored
-                    self.env.invalidate_all()
-                    data = {
-                        'journal_entry_id': move_entry.id,
-                        'name': self.name or '/',
-                        'so_ref': self.so_ref or '',
-                        'partner_id': invoice.partner_id.id or '',
-                    }
-                    self.write(data)
+
+                if self.match_selected.writeoff_difference and writeoff_acc_id:
+                    move_entry = self.pay_invoice_and_reconcile(invoice, writeoff_acc_id)
+                    if move_entry:
+                        # Need to invalidate cache, otherwise changes in name are ignored
+                        self.env.invalidate_all()
+                        data = {
+                            'journal_entry_id': move_entry.id,
+                            'name': self.name or '/',
+                            'so_ref': self.so_ref or '',
+                            'partner_id': invoice.partner_id.id or '',
+                        }
+                        self.write(data)
+                else:
+                    msg = "Please select account to writeoff differences"
+                    self._handle_error(msg)
             else:
                 msg = "Unique invoice with number %s not found, cannot reconcile" % self.name
                 self._handle_error(msg)
@@ -968,30 +984,33 @@ class AccountBankStatementLine(models.Model):
 
     @api.model
     def create(self, vals):
-        """Override to look up Invoice Reference based on given Sale Order Reference."""
         statement_line = super(AccountBankStatementLine, self).create(vals)
-        configs = self.env['account.config.settings'].get_default_bank_match_configuration(self)
-        if configs.get('match_when_created'):
-            statement_line.show_errors = False
-            vals_new = statement_line.match(vals)
-            if vals_new['name'] != '/':
-                statement_line.write(vals_new)
-                line_match_ids = [l.id for l in statement_line.match_ids]
-                line_match = line_match_ids and self.env['account.bank.match'].search([('id', 'in', line_match_ids), ('name','=',vals_new['name'])])
-                if line_match_ids and len(line_match) and line_match.model == 'account.account':
-                    account_id = int(vals_new['name']) or 0
-                    statement_line.create_account_move(account_id)
-                else:
-                    statement_line.auto_reconcile()
-                _logger.info("1200wd - Matched bank statement line %s with %s" % (self['id'], vals_new['name']))
-        else:
-            _logger.info("1200wd - automatic matching disabled")
+        # TODO: Remove this method or fix it. Automatic matching on create statement not working as it should because self object is empty,
+        #           the vals variable should be passed to all methods...
+        #
+        # configs = self.env['account.config.settings'].get_default_bank_match_configuration(self)
+        # # Only run match code when self object is known and when configured in settings
+        # if self.id and configs.get('match_when_created'):
+        #     statement_line.show_errors = False
+        #     vals_new = statement_line.match(vals)
+        #     if vals_new['name'] != '/':
+        #         statement_line.write(vals_new)
+        #         line_match_ids = [l.id for l in statement_line.match_ids]
+        #         line_match = line_match_ids and self.env['account.bank.match'].search([('id', 'in', line_match_ids), ('name','=',vals_new['name'])])
+        #         if line_match_ids and len(line_match) and line_match.model == 'account.account':
+        #             account_id = int(vals_new['name']) or 0
+        #             statement_line.create_account_move(account_id)
+        #         else:
+        #             statement_line.auto_reconcile()
+        #         _logger.info("1200wd - Matched bank statement line %s with %s" % (self['id'], vals_new['name']))
+        # else:
+        #     _logger.info("1200wd - automatic matching disabled")
         return statement_line
 
 
     @api.multi
     def write(self, vals):
-        # FIXME: Values are note saved anymore when removing this method
+        # FIXME: Values are not saved anymore when removing this method
         return super(AccountBankStatementLine, self).write(vals)
 
 
