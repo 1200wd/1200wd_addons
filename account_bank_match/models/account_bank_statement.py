@@ -614,7 +614,7 @@ class AccountBankStatementLine(models.Model):
 
 
     @api.model
-    def pay_invoice_and_reconcile(self, invoice, writeoff_acc_id, writeoff_difference=True):
+    def pay_invoice_and_reconcile(self, invoice, writeoff_acc_id, writeoff_difference=True, type=''):
         """
         Link this bank statement line to given invoice and write of differences if any to given writeoff account id
         @param invoice: invoice object
@@ -655,6 +655,16 @@ class AccountBankStatementLine(models.Model):
         pay_account_id = self.account_id.id or self.statement_id.account_id.id or 0
         pay_journal_id = self.journal_id.id or self.statement_id.journal_id.id or 0
         payment_difference = round(invoice_total + pay_amount, self.env['decimal.precision'].precision_get('Account'))
+
+        # Skip reconciling if auto-matching and difference is too big
+        configs = self.env['account.config.settings'].get_default_bank_match_configuration(self)
+        writeoff_max_perc = configs.get('match_writeoff_max_perc')
+        if (abs(payment_difference / invoice_total) * 100) > writeoff_max_perc and type=='auto':
+            import pdb; pdb.set_trace()
+            msg = "Payment difference too big to automatically reconcile"
+            self._handle_error(msg)
+            return False
+
         move_lines = []
         move_lines.append((0, 0, {
             'name': name,
@@ -927,12 +937,17 @@ class AccountBankStatementLine(models.Model):
         if self.name and self.name != '/':
             invoice = self._match_get_object('account.invoice', self.name)
             if len(invoice) == 1:
+                default_writeoff_journal_id = self.env['account.journal'].browse([configs.get('match_writeoff_journal_id')])
                 if invoice.amount_total < 0:
-                    writeoff_acc_id = self.match_selected.writeoff_difference and (self.match_selected.writeoff_journal_id.default_debit_account_id.id or 0)
+                    writeoff_acc_id = self.match_selected.writeoff_difference and \
+                                      (self.match_selected.writeoff_journal_id.default_debit_account_id.id or 0) or \
+                                      (default_writeoff_journal_id.default_debit_account_id.id or 0)
                 else:
-                    writeoff_acc_id = self.match_selected.writeoff_difference and (self.match_selected.writeoff_journal_id.default_credit_account_id.id or 0)
+                    writeoff_acc_id = self.match_selected.writeoff_difference and \
+                                      (self.match_selected.writeoff_journal_id.default_credit_account_id.id or 0) or \
+                                      (default_writeoff_journal_id.default_credit_account_id.id or 0)
 
-                move_entry = self.pay_invoice_and_reconcile(invoice, writeoff_acc_id, self.match_selected.writeoff_difference)
+                move_entry = self.pay_invoice_and_reconcile(invoice, writeoff_acc_id, self.match_selected.writeoff_difference, type=type)
                 if move_entry:
                     # Need to invalidate cache, otherwise changes in name are ignored
                     self.env.invalidate_all()
@@ -943,12 +958,15 @@ class AccountBankStatementLine(models.Model):
                         'partner_id': invoice.partner_id.id or '',
                     }
                     self.write(data)
+                else:
+                    return False
             else:
                 msg = "Unique invoice with number %s not found, cannot reconcile" % self.name
                 self._handle_error(msg)
-
+                return False
         else:
             _logger.warning("1200wd - No reference name specified, cannot reconcile")
+            return False
         return True
 
 
