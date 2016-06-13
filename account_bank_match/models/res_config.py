@@ -47,7 +47,6 @@ class AccountBankMatchConfiguration(models.Model):
         match_automatic_reconcile = ir_values_obj.get_default('account.bank.statement.match', 'match_automatic_reconcile') or False
         match_cache_time = ir_values_obj.get_default('account.bank.statement.match', 'match_cache_time') or 0
         return {
-            'match_when_created': match_when_created,
             'match_automatic_reconcile': match_automatic_reconcile,
             'match_cache_time': match_cache_time,
         }

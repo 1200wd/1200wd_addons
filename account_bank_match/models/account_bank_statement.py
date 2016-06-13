@@ -987,26 +987,7 @@ class AccountBankStatementLine(models.Model):
     @api.model
     def create(self, vals):
         statement_line = super(AccountBankStatementLine, self).create(vals)
-        # TODO: Remove this method or fix it. Automatic matching on create statement not working as it should because self object is empty,
-        #           the vals variable should be passed to all methods...
-        #
-        # configs = self.env['account.config.settings'].get_default_bank_match_configuration(self)
-        # # Only run match code when self object is known and when configured in settings
-        # if self.id and configs.get('match_when_created'):
-        #     statement_line.show_errors = False
-        #     vals_new = statement_line.match(vals)
-        #     if vals_new['name'] != '/':
-        #         statement_line.write(vals_new)
-        #         line_match_ids = [l.id for l in statement_line.match_ids]
-        #         line_match = line_match_ids and self.env['account.bank.match'].search([('id', 'in', line_match_ids), ('name','=',vals_new['name'])])
-        #         if line_match_ids and len(line_match) and line_match.model == 'account.account':
-        #             account_id = int(vals_new['name']) or 0
-        #             statement_line.create_account_move(account_id)
-        #         else:
-        #             statement_line.auto_reconcile()
-        #         _logger.info("1200wd - Matched bank statement line %s with %s" % (self['id'], vals_new['name']))
-        # else:
-        #     _logger.info("1200wd - automatic matching disabled")
+        # TODO: Remove this method.
         return statement_line
 
 
