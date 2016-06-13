@@ -719,6 +719,7 @@ class AccountBankStatementLine(models.Model):
         if writeoff_difference and payment_difference and not writeoff_acc_id:
             msg = "Please select account to writeoff differences"
             self._handle_error(msg)
+            return False
         elif not payment_difference or (payment_difference and writeoff_acc_id and writeoff_difference):
             # Pay and reconcile invoice, book payment differences
             r_id = self.env['account.move.reconcile'].create(
@@ -931,7 +932,6 @@ class AccountBankStatementLine(models.Model):
                 else:
                     writeoff_acc_id = self.match_selected.writeoff_difference and (self.match_selected.writeoff_journal_id.default_credit_account_id.id or 0)
 
-                # if self.match_selected.writeoff_difference and writeoff_acc_id:
                 move_entry = self.pay_invoice_and_reconcile(invoice, writeoff_acc_id, self.match_selected.writeoff_difference)
                 if move_entry:
                     # Need to invalidate cache, otherwise changes in name are ignored
@@ -943,9 +943,6 @@ class AccountBankStatementLine(models.Model):
                         'partner_id': invoice.partner_id.id or '',
                     }
                     self.write(data)
-                # else:
-                #     msg = "Please select account to writeoff differences"
-                #     self._handle_error(msg)
             else:
                 msg = "Unique invoice with number %s not found, cannot reconcile" % self.name
                 self._handle_error(msg)
