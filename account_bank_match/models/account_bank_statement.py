@@ -40,15 +40,15 @@ MATCH_MAX_PER_REFERENCE = 100
 class SaleAdvancePaymentInv(models.TransientModel):
     _inherit = "sale.advance.payment.inv"
 
-    @api.model
-    def create_invoices(self, ids):
+    def create_invoices(self, cr, uid, ids=[], context=None):
         """ Override to skip the wizard and invoice the whole sales order"""
-        if not self._context.get('override', False):
-            return super(SaleAdvancePaymentInv, self).create_invoices(ids)
+        if not context.get('override', False):
+            return super(SaleAdvancePaymentInv, self).create_invoices(cr, uid, ids, context=context)
         res = []
-        sale_ids = self._context.get('order_ids', [])
+        sale_obj = self.pool.get('sale.order')
+        sale_ids = context.get('order_ids', [])
         if sale_ids:
-            res = self.env['sale.order'].manual_invoice(sale_ids)['res_id'] or []
+            res = sale_obj.manual_invoice(cr, uid, sale_ids, context)['res_id'] or []
         return res
 
 
