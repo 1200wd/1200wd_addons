@@ -614,7 +614,7 @@ class AccountBankStatementLine(models.Model):
 
 
     @api.model
-    def pay_invoice_and_reconcile(self, invoice, writeoff_acc_id):
+    def pay_invoice_and_reconcile(self, invoice, writeoff_acc_id, writeoff_difference=True):
         """
         Link this bank statement line to given invoice and write of differences if any to given writeoff account id
         @param invoice: invoice object
@@ -668,7 +668,7 @@ class AccountBankStatementLine(models.Model):
             'amount_currency': amount_currency or 0.0,
             'company_id': invoice.company_id.id,
         }))
-        if payment_difference and writeoff_acc_id:
+        if payment_difference and writeoff_acc_id and writeoff_difference:
             move_lines.append((0, 0, {
                 'name': name,
                 'debit': payment_difference < 0 and -payment_difference,
@@ -716,7 +716,11 @@ class AccountBankStatementLine(models.Model):
             if line.account_id == invoice.account_id:
                 lines2rec += line
 
-        if not payment_difference or (payment_difference != 0 and writeoff_acc_id):
+        if writeoff_difference and payment_difference and not writeoff_acc_id:
+            msg = "Please select account to writeoff differences"
+            self._handle_error(msg)
+        elif not payment_difference or (payment_difference and writeoff_acc_id and writeoff_difference):
+            # Pay and reconcile invoice, book payment differences
             r_id = self.env['account.move.reconcile'].create(
                 {'type': 'auto',
                  'line_id': map(lambda x: (4, x, False), lines2rec.ids),
@@ -725,7 +729,8 @@ class AccountBankStatementLine(models.Model):
             )
             for id in move_ids:
                 workflow.trg_trigger(self._uid, 'account.move.line', id, self._cr)
-        else:
+        else: # Payment difference, but do not writeoff_differences
+            # Partially pay invoice, leave invoice open
             code = invoice.currency_id.symbol
             msg = _("Invoice partially paid: %s%s of %s%s (%s%s remaining).") % \
                     (pay_amount, code, invoice.amount_total, code, payment_difference, code)
@@ -926,21 +931,21 @@ class AccountBankStatementLine(models.Model):
                 else:
                     writeoff_acc_id = self.match_selected.writeoff_difference and (self.match_selected.writeoff_journal_id.default_credit_account_id.id or 0)
 
-                if self.match_selected.writeoff_difference and writeoff_acc_id:
-                    move_entry = self.pay_invoice_and_reconcile(invoice, writeoff_acc_id)
-                    if move_entry:
-                        # Need to invalidate cache, otherwise changes in name are ignored
-                        self.env.invalidate_all()
-                        data = {
-                            'journal_entry_id': move_entry.id,
-                            'name': self.name or '/',
-                            'so_ref': self.so_ref or '',
-                            'partner_id': invoice.partner_id.id or '',
-                        }
-                        self.write(data)
-                else:
-                    msg = "Please select account to writeoff differences"
-                    self._handle_error(msg)
+                # if self.match_selected.writeoff_difference and writeoff_acc_id:
+                move_entry = self.pay_invoice_and_reconcile(invoice, writeoff_acc_id, self.match_selected.writeoff_difference)
+                if move_entry:
+                    # Need to invalidate cache, otherwise changes in name are ignored
+                    self.env.invalidate_all()
+                    data = {
+                        'journal_entry_id': move_entry.id,
+                        'name': self.name or '/',
+                        'so_ref': self.so_ref or '',
+                        'partner_id': invoice.partner_id.id or '',
+                    }
+                    self.write(data)
+                # else:
+                #     msg = "Please select account to writeoff differences"
+                #     self._handle_error(msg)
             else:
                 msg = "Unique invoice with number %s not found, cannot reconcile" % self.name
                 self._handle_error(msg)
