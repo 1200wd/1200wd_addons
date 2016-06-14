@@ -951,7 +951,9 @@ class AccountBankStatementLine(models.Model):
                                       (self.match_selected.writeoff_journal_id.default_credit_account_id.id or 0) or \
                                       (default_writeoff_journal_id.default_credit_account_id.id or 0)
 
-                move_entry = self.pay_invoice_and_reconcile(invoice, writeoff_acc_id, self.match_selected.writeoff_difference, type=type)
+                writeoff_difference = self.match_selected.writeoff_difference
+                if type=='auto': writeoff_difference = True
+                move_entry = self.pay_invoice_and_reconcile(invoice, writeoff_acc_id, writeoff_difference, type=type)
                 if move_entry:
                     # Need to invalidate cache, otherwise changes in name are ignored
                     self.env.invalidate_all()
