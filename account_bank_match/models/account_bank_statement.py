@@ -660,7 +660,6 @@ class AccountBankStatementLine(models.Model):
         configs = self.env['account.config.settings'].get_default_bank_match_configuration(self)
         writeoff_max_perc = configs.get('match_writeoff_max_perc')
         if (abs(payment_difference / invoice_total) * 100) > writeoff_max_perc and type=='auto':
-            import pdb; pdb.set_trace()
             msg = "Payment difference too big to automatically reconcile"
             self._handle_error(msg)
             return False
