@@ -659,7 +659,8 @@ class AccountBankStatementLine(models.Model):
         # Skip reconciling if auto-matching and difference is too big
         configs = self.env['account.config.settings'].get_default_bank_match_configuration(self)
         writeoff_max_perc = configs.get('match_writeoff_max_perc')
-        if (abs(payment_difference / invoice_total) * 100) > writeoff_max_perc and type=='auto':
+        if writeoff_difference and type=='auto' and \
+                        (abs(payment_difference / invoice_total) * 100) > writeoff_max_perc:
             msg = "Payment difference too big to automatically reconcile"
             self._handle_error(msg)
             return False
@@ -725,7 +726,7 @@ class AccountBankStatementLine(models.Model):
             if line.account_id == invoice.account_id:
                 lines2rec += line
 
-        if writeoff_difference and payment_difference and not writeoff_acc_id:
+        if payment_difference and writeoff_difference and not writeoff_acc_id:
             msg = "Please select account to writeoff differences"
             self._handle_error(msg)
             return False
@@ -739,6 +740,10 @@ class AccountBankStatementLine(models.Model):
             )
             for id in move_ids:
                 workflow.trg_trigger(self._uid, 'account.move.line', id, self._cr)
+        elif type == 'auto':
+            msg = "Cannot partially pay invoices when auto-matching"
+            self._handle_error(msg)
+            return False
         else: # Payment difference, but do not writeoff_differences
             # Partially pay invoice, leave invoice open
             code = invoice.currency_id.symbol
