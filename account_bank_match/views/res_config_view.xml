@@ -13,16 +13,20 @@
                         <label for="id" string="Match Configuration"/>
                         <div>
                             <div>
-                                <field name="match_when_created" class="oe_inline"/>
-                                <label for="match_when_created"/>
-                            </div>
-                            <div>
                                 <field name="match_automatic_reconcile" class="oe_inline"/>
                                 <label for="match_automatic_reconcile"/>
                             </div>
                             <div>
                                 <field name="match_cache_time" class="oe_inline"/>
                                 <label for="match_cache_time"/>
+                            </div>
+                            <div>
+                                <field name="match_writeoff_journal_id" class="oe_inline"/>
+                                <label for="match_writeoff_journal_id"/>
+                            </div>
+                            <div>
+                                <field name="match_writeoff_max_perc" class="oe_inline"/>
+                                <label for="match_writeoff_max_perc"/>
                             </div>
                             <div>
                                 <button name="action_generate_references" string="Create References from Sequences" type="object"/>

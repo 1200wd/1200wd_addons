@@ -109,6 +109,11 @@ class AccountBankMatchReferenceCreate(models.TransientModel):
 class AccountBankMatch(models.Model):
     _name = "account.bank.match"
 
+    @api.model
+    def _get_default_writeoff(self):
+        configs = self.env['account.config.settings'].get_default_bank_match_configuration(self)
+        return configs.get('match_writeoff_journal_id') or 0
+
     name = fields.Char(string="Reference", size=32, required=True,
                        help="Reference of match to order, invoice or account")
     so_ref = fields.Char('Sale Order Reference')
@@ -124,8 +129,10 @@ class AccountBankMatch(models.Model):
                                         required=True, index=True, ondelete="cascade")
     description = fields.Char(string="Description", size=256)
     score = fields.Integer("Score")
-    writeoff_journal_id = fields.Many2one('account.journal', string="Write-off Journal", ondelete="cascade")
+    writeoff_journal_id = fields.Many2one('account.journal', string="Write-off Journal", ondelete="cascade",
+                                          default=_get_default_writeoff)
     writeoff_difference = fields.Boolean("Write-off Payment Difference", default=True)
+
 
     @api.one
     def compute_payment_difference(self):

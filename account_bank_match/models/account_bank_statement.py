@@ -40,15 +40,15 @@ MATCH_MAX_PER_REFERENCE = 100
 class SaleAdvancePaymentInv(models.TransientModel):
     _inherit = "sale.advance.payment.inv"
 
-    @api.model
-    def create_invoices(self, ids):
+    def create_invoices(self, cr, uid, ids=[], context=None):
         """ Override to skip the wizard and invoice the whole sales order"""
-        if not self._context.get('override', False):
-            return super(SaleAdvancePaymentInv, self).create_invoices(ids)
+        if not context.get('override', False):
+            return super(SaleAdvancePaymentInv, self).create_invoices(cr, uid, ids, context=context)
         res = []
-        sale_ids = self._context.get('order_ids', [])
+        sale_obj = self.pool.get('sale.order')
+        sale_ids = context.get('order_ids', [])
         if sale_ids:
-            res = self.env['sale.order'].manual_invoice(sale_ids)['res_id'] or []
+            res = sale_obj.manual_invoice(cr, uid, sale_ids, context)['res_id'] or []
         return res
 
 
@@ -614,7 +614,7 @@ class AccountBankStatementLine(models.Model):
 
 
     @api.model
-    def pay_invoice_and_reconcile(self, invoice, writeoff_acc_id):
+    def pay_invoice_and_reconcile(self, invoice, writeoff_acc_id, writeoff_difference=True, type=''):
         """
         Link this bank statement line to given invoice and write of differences if any to given writeoff account id
         @param invoice: invoice object
@@ -655,6 +655,16 @@ class AccountBankStatementLine(models.Model):
         pay_account_id = self.account_id.id or self.statement_id.account_id.id or 0
         pay_journal_id = self.journal_id.id or self.statement_id.journal_id.id or 0
         payment_difference = round(invoice_total + pay_amount, self.env['decimal.precision'].precision_get('Account'))
+
+        # Skip reconciling if auto-matching and difference is too big
+        configs = self.env['account.config.settings'].get_default_bank_match_configuration(self)
+        writeoff_max_perc = configs.get('match_writeoff_max_perc')
+        if writeoff_difference and type=='auto' and \
+                        (abs(payment_difference / invoice_total) * 100) > writeoff_max_perc:
+            msg = "Payment difference too big to automatically reconcile"
+            self._handle_error(msg)
+            return False
+
         move_lines = []
         move_lines.append((0, 0, {
             'name': name,
@@ -668,7 +678,7 @@ class AccountBankStatementLine(models.Model):
             'amount_currency': amount_currency or 0.0,
             'company_id': invoice.company_id.id,
         }))
-        if payment_difference and writeoff_acc_id:
+        if payment_difference and writeoff_acc_id and writeoff_difference:
             move_lines.append((0, 0, {
                 'name': name,
                 'debit': payment_difference < 0 and -payment_difference,
@@ -716,7 +726,12 @@ class AccountBankStatementLine(models.Model):
             if line.account_id == invoice.account_id:
                 lines2rec += line
 
-        if not payment_difference or (payment_difference != 0 and writeoff_acc_id):
+        if payment_difference and writeoff_difference and not writeoff_acc_id:
+            msg = "Please select account to writeoff differences"
+            self._handle_error(msg)
+            return False
+        elif not payment_difference or (payment_difference and writeoff_acc_id and writeoff_difference):
+            # Pay and reconcile invoice, book payment differences
             r_id = self.env['account.move.reconcile'].create(
                 {'type': 'auto',
                  'line_id': map(lambda x: (4, x, False), lines2rec.ids),
@@ -725,7 +740,12 @@ class AccountBankStatementLine(models.Model):
             )
             for id in move_ids:
                 workflow.trg_trigger(self._uid, 'account.move.line', id, self._cr)
-        else:
+        elif type == 'auto':
+            msg = "Cannot partially pay invoices when auto-matching"
+            self._handle_error(msg)
+            return False
+        else: # Payment difference, but do not writeoff_differences
+            # Partially pay invoice, leave invoice open
             code = invoice.currency_id.symbol
             msg = _("Invoice partially paid: %s%s of %s%s (%s%s remaining).") % \
                     (pay_amount, code, invoice.amount_total, code, payment_difference, code)
@@ -921,32 +941,38 @@ class AccountBankStatementLine(models.Model):
         if self.name and self.name != '/':
             invoice = self._match_get_object('account.invoice', self.name)
             if len(invoice) == 1:
+                default_writeoff_journal_id = self.env['account.journal'].browse([configs.get('match_writeoff_journal_id')])
                 if invoice.amount_total < 0:
-                    writeoff_acc_id = self.match_selected.writeoff_difference and (self.match_selected.writeoff_journal_id.default_debit_account_id.id or 0)
+                    writeoff_acc_id = self.match_selected.writeoff_difference and \
+                                      (self.match_selected.writeoff_journal_id.default_debit_account_id.id or 0) or \
+                                      (default_writeoff_journal_id.default_debit_account_id.id or 0)
                 else:
-                    writeoff_acc_id = self.match_selected.writeoff_difference and (self.match_selected.writeoff_journal_id.default_credit_account_id.id or 0)
+                    writeoff_acc_id = self.match_selected.writeoff_difference and \
+                                      (self.match_selected.writeoff_journal_id.default_credit_account_id.id or 0) or \
+                                      (default_writeoff_journal_id.default_credit_account_id.id or 0)
 
-                if self.match_selected.writeoff_difference and writeoff_acc_id:
-                    move_entry = self.pay_invoice_and_reconcile(invoice, writeoff_acc_id)
-                    if move_entry:
-                        # Need to invalidate cache, otherwise changes in name are ignored
-                        self.env.invalidate_all()
-                        data = {
-                            'journal_entry_id': move_entry.id,
-                            'name': self.name or '/',
-                            'so_ref': self.so_ref or '',
-                            'partner_id': invoice.partner_id.id or '',
-                        }
-                        self.write(data)
+                writeoff_difference = self.match_selected.writeoff_difference
+                if type=='auto': writeoff_difference = True
+                move_entry = self.pay_invoice_and_reconcile(invoice, writeoff_acc_id, writeoff_difference, type=type)
+                if move_entry:
+                    # Need to invalidate cache, otherwise changes in name are ignored
+                    self.env.invalidate_all()
+                    data = {
+                        'journal_entry_id': move_entry.id,
+                        'name': self.name or '/',
+                        'so_ref': self.so_ref or '',
+                        'partner_id': invoice.partner_id.id or '',
+                    }
+                    self.write(data)
                 else:
-                    msg = "Please select account to writeoff differences"
-                    self._handle_error(msg)
+                    return False
             else:
                 msg = "Unique invoice with number %s not found, cannot reconcile" % self.name
                 self._handle_error(msg)
-
+                return False
         else:
             _logger.warning("1200wd - No reference name specified, cannot reconcile")
+            return False
         return True
 
 
@@ -985,26 +1011,7 @@ class AccountBankStatementLine(models.Model):
     @api.model
     def create(self, vals):
         statement_line = super(AccountBankStatementLine, self).create(vals)
-        # TODO: Remove this method or fix it. Automatic matching on create statement not working as it should because self object is empty,
-        #           the vals variable should be passed to all methods...
-        #
-        # configs = self.env['account.config.settings'].get_default_bank_match_configuration(self)
-        # # Only run match code when self object is known and when configured in settings
-        # if self.id and configs.get('match_when_created'):
-        #     statement_line.show_errors = False
-        #     vals_new = statement_line.match(vals)
-        #     if vals_new['name'] != '/':
-        #         statement_line.write(vals_new)
-        #         line_match_ids = [l.id for l in statement_line.match_ids]
-        #         line_match = line_match_ids and self.env['account.bank.match'].search([('id', 'in', line_match_ids), ('name','=',vals_new['name'])])
-        #         if line_match_ids and len(line_match) and line_match.model == 'account.account':
-        #             account_id = int(vals_new['name']) or 0
-        #             statement_line.create_account_move(account_id)
-        #         else:
-        #             statement_line.auto_reconcile()
-        #         _logger.info("1200wd - Matched bank statement line %s with %s" % (self['id'], vals_new['name']))
-        # else:
-        #     _logger.info("1200wd - automatic matching disabled")
+        # TODO: Remove this method.
         return statement_line
 
 
