@@ -63,6 +63,7 @@ class AccountBankStatementLine(models.Model):
     match_selected = fields.Many2one('account.bank.match', string="Winning Match", ondelete='cascade')
 
     show_errors = False
+    error_str = ""
 
     statement_text = ''
 
@@ -80,6 +81,7 @@ class AccountBankStatementLine(models.Model):
             raise Warning(message)
         else:
             _logger.error("1200wd - %s" % message)
+            self.error_str += message + '/n'
 
 
     @api.model
@@ -1026,7 +1028,7 @@ class AccountBankStatement(models.Model):
     _inherit = "account.bank.statement"
 
     @api.one
-    def action_statement_match(self):
+    def action_statement_match(self, show_errors=True):
         """
         Match all lines of this bank statement, if a winning match is found then process payment.
         If match_automatic_reconcile is set to true also reconcile.
@@ -1039,25 +1041,46 @@ class AccountBankStatement(models.Model):
         @return: Always True, to avoid errors when calling to function with an RPC
         """
         _logger.info("1200wd - Match bank statement %d" % self.id)
+        match_errors = []
         for line in [l for l in self.line_ids]:
             line.show_errors = False
             vals = line.read(['name', 'so_ref', 'match_selected', 'journal_entry_id'], False)[0]
             if not vals or vals['journal_entry_id']:
                 continue
-            vals_new = line.match(vals)
+            try:
+                vals_new = line.match(vals)
+            except Exception, e:
+                match_errors.append((line.id, line.ref, line.so_ref, e.message))
+                continue
             if vals_new['name'] != '/':
-                # line.show_errors = True
                 line.write(vals_new)
                 line_match_ids = [l.id for l in line.match_ids]
                 line_match = line_match_ids and self.env['account.bank.match'].search([('id', 'in', line_match_ids), ('name','=',vals_new['name'])])
                 if line_match_ids and len(line_match) and line_match.model == 'account.account':
                     account_id = int(vals_new['name']) or 0
-                    line.create_account_move(account_id)
+                    try:
+                        line.create_account_move(account_id)
+                    except Exception, e:
+                        match_errors.append((line.id, line.ref, line.so_ref, e.message))
+                        continue
                 else:
-                    line.auto_reconcile()
+                    try:
+                        line.auto_reconcile()
+                    except Exception, e:
+                        match_errors.append((line.id, line.ref, line.so_ref, e.message))
+                        continue
+
                 _logger.info("1200wd - Matched bank statement line %s with %s" % (line.id, vals_new['name']))
 
-        #TODO: Show popup with results
+        match_errors_str = ""
+        for err in match_errors:
+            match_errors_str += "Line ID: %d; Reference: %s, %s; Message: %s\n\n" % (err[0], err[1], err[2],err[3])
+        if match_errors_str:
+            if show_errors:
+                raise Warning("Matching finished\nErrors matching the following statement lines:\n\n" + match_errors_str)
+            else:
+                return match_errors_str
+
         return True
 
 
