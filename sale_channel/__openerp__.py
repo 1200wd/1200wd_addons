@@ -34,7 +34,7 @@
     'author': "1200 Web Development",
     'website': "http://www.1200wd.com",
     'category': 'Sales',
-    'version': '8.0.1.0',
+    'version': '8.0.1.1',
     'depends': [
         'sale',
         'account',
