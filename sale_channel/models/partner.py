@@ -42,7 +42,8 @@ class ResPartner(models.Model):
     def sales_channel_change(self):
         if self.sales_channel_id.property_product_pricelist:
             self.property_product_pricelist = self.sales_channel_id.property_product_pricelist
-        self._update_fiscal_position()
+        if getattr(self, "_update_fiscal_position", False):
+            self._update_fiscal_position()
 
     def _commercial_fields(self, cr, uid, context=None):
         return super(ResPartner, self)._commercial_fields(cr, uid, context=context) + ['sales_channel_id']
