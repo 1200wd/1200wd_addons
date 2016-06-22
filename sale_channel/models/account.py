@@ -34,3 +34,7 @@ class AccountTax(models.Model):
 
     sales_channel_id = fields.Many2one('res.partner', string="Sales channel",
                                        ondelete='set null', domain=_get_sales_channel_domain)
+
+    _sql_constraints = [
+        ('name_company_uniq', 'unique(name, company_id, sales_channel_id)', 'Tax Name must be unique per company and sales channel!'),
+    ]
