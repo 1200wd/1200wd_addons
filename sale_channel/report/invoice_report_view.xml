@@ -2,6 +2,18 @@
 <openerp>
 <data>
 
+    <record id="account.view_account_invoice_report_graph" model="ir.ui.view">
+        <!--<field name="inherit_id" ref="account.view_account_invoice_report_graph"/>-->
+        <field name="model">account.invoice.report</field>
+        <field name="arch" type="xml">
+             <graph string="Invoices Analysis" type="pivot">
+                 <field name="sales_channel_id" type="row"/>
+                 <field name="date" type="col" interval="month"/>
+                 <field name="price_total" type="measure"/>
+             </graph>
+        </field>
+    </record>
+
     <record id="view_account_invoice_report_search_view_inherit" model="ir.ui.view">
         <field name="inherit_id" ref="account.view_account_invoice_report_search"/>
         <field name="model">account.invoice.report</field>
