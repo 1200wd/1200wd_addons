@@ -77,16 +77,24 @@ class AccountBankMatchConfiguration(models.Model):
             if (not seq.prefix and not seq.suffix):
                 continue
             ref_pat = (seq.prefix or '') + '[0-9]{' + str(seq.padding) + '}' + (seq.suffix or '')
-            if not self.env['account.bank.match.reference'].search_count([('name', '=', ref_pat)]):
-                ref_seq = 10
-                if 'refund' in journal.type: ref_seq += 5
-                data = {
-                    'name': ref_pat,
-                    'model': 'account.invoice',
-                    'sequence': ref_seq,
-                    'score': 70,
-                    'score_item': 20,
-                    'company_id': journal.company_id.id,
-                }
+
+            ref_obj = self.env['account.bank.match.reference'].search([('name', '=', ref_pat), ('company_id', '=', journal.company_id.id)])
+            ref_seq = 10
+            if 'refund' in journal.type: ref_seq += 5
+            data = {
+                'name': ref_pat,
+                'model': 'account.invoice',
+                'sequence': ref_seq,
+                'score': 75,
+                'score_item': 20,
+                'company_id': journal.company_id.id,
+            }
+            if not len(ref_obj):
                 _logger.debug("1200wd - Create match reference %s" % data)
                 self.env['account.bank.match.reference'].create(data)
+            elif len(ref_obj) == 1:
+                _logger.debug("1200wd - Update match reference %s" % data)
+                ref_obj.write(data)
+            else:
+                _logger.warning("1200wd - More then 1 match reference already exist: %s" % data)
+

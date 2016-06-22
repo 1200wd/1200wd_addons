@@ -49,6 +49,7 @@ class AccountBankMatchReference(models.Model):
         ], select=True, required=True
     )
     sequence = fields.Integer('Sequence')
+    active = fields.Boolean('Active', default=True, help='Set to inactive to disable Match Reference')
     account_journal_id = fields.Many2one('account.journal', string='Journal Filter',
         help='Match only applies to selected journal. Leave empty to match all journals.', ondelete="cascade")
     score = fields.Integer("Score to Share", default=0, required=True, help="Total score to share among all matches of this rule. If 3 matches are found and the score to share is 30 then every match gets a score of 10.")
@@ -121,7 +122,6 @@ class AccountBankMatch(models.Model):
         [
             ('sale.order', 'Sale Order'),
             ('account.invoice', 'Invoice'),
-            # ('account.move.line', 'Account Move Line'),
             ('account.account', 'Account'),
         ], select=True, required=True
     )
@@ -162,9 +162,6 @@ class AccountBankMatch(models.Model):
             vals['name'] = '/'
         elif self.model == 'account.invoice':
             vals['name'] = self.name or '/'
-        # elif self.model == 'account.move.line':
-        #     vals['so_ref'] = ''
-        #     vals['name'] = self.name or '/'
         elif self.model == 'account.account':
             account_id = int(self.name) or 0
             self.statement_line_id.create_account_move(account_id)
