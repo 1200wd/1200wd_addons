@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<openerp>
+    <data>
+
+        <record model="ir.ui.view" id="account_margin_invoice_form">
+            <field name="name">account.margin.invoice.form</field>
+            <field name="model">account.invoice</field>
+            <field name="inherit_id" ref="account.invoice_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='payment_term']" position="after">
+                    <field name="actual_cost_total" widget='monetary' options="{'currency_field': 'currency_id'}" groups="account.group_account_manager"/>
+                    <field name="margin_perc" groups="account.group_account_user,account.group_account_manager"/>
+                </xpath>
+                <xpath expr="//field[@name='invoice_line']/tree//field[@name='invoice_line_tax_id']" position="after">
+                    <field name="margin_perc" groups="account.group_account_user,account.group_account_manager"/>
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</openerp>
