@@ -88,7 +88,7 @@ class AccountBankMatchReferenceCreate(models.TransientModel):
         help='Match only applies to selected journal. Leave empty to match all journals.')
     company_id = fields.Many2one('res.company', string='Company', required=True, ondelete="cascade")
     account_account_id = fields.Many2one('account.account', string="Resulting Account", ondelete="cascade",
-                                         domain="[('type', '=', 'other'), ('company_id', '=', company_id)]")
+                                         domain="[('type', 'in', ['other','receivable','liquidity','payable']), ('company_id', '=', company_id)]")
 
     @api.multi
     def action_match_reference_save(self):
