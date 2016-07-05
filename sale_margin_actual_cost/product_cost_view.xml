@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<openerp>
+    <data>
+
+        <record model="ir.ui.view" id="view_product_cost_form">
+            <field name="name">view.product.cost.form</field>
+            <field name="model">product.cost</field>
+            <field name="arch" type="xml">
+                <form string="Product Extra Costs Form">
+                    <sheet>
+                        <group name="group_top">
+                            <field name="product_tmpl_id" options="{'no_create': True}"/>
+                            <field name="type" options="{'no_open': True, 'no_create': True}"/>
+                            <field name="costs"/>
+                            <field name="name"/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record model="ir.ui.view" id="view_product_cost_tree">
+            <field name="name">view.product.cost.tree</field>
+            <field name="model">product.cost</field>
+            <field name="arch" type="xml">
+                <tree string="Product Extra Costs Tree">
+                    <field name="product_tmpl_id" options="{'no_open': True, 'no_create': True}"/>
+                    <field name="type" options="{'no_open': True, 'no_create': True}"/>
+                    <field name="costs"/>
+                    <field name="name"/>
+                </tree>
+            </field>
+        </record>
+
+        <record model="ir.ui.view" id="view_product_cost_type_tree">
+            <field name="name">view.product.cost.type.tree</field>
+            <field name="model">product.cost.type</field>
+            <field name="arch" type="xml">
+                <tree string="Product Extra Costs Type Tree">
+                    <field name="name"/>
+                    <field name="default_costs"/>
+                    <field name="active"/>
+                </tree>
+            </field>
+        </record>
+
+        <record id="view_product_cost_filter" model="ir.ui.view">
+            <field name="name">view.product.cost.filter</field>
+            <field name="model">product.cost</field>
+            <field name="arch" type="xml">
+                <search string="Search Product Cost">
+                    <field name="product_tmpl_id"/>
+                    <field name="name" string="Description"/>
+                    <field name="type"/>
+                    <group expand="0" string="Group By">
+                        <filter string="Product" domain="[]" context="{'group_by':'product_tmpl_id'}"/>
+                        <filter string="Type" domain="[]" context="{'group_by':'type'}"/>
+                    </group>
+               </search>
+            </field>
+        </record>
+
+        <record id="action_product_cost_view" model="ir.actions.act_window">
+            <field name="name">Product Extra Costs</field>
+            <field name="res_model">product.cost</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+            <field name="view_id" ref="view_product_cost_tree"/>
+            <field name="help" type="html">
+                <p class="oe_view_nocontent_create">Add Extra Costs to the Product Price
+                </p>
+            </field>
+        </record>
+
+        <menuitem id="menu_products_cost"
+            action="sale_margin_actual_cost.action_product_cost_view"
+            parent="stock.menu_stock_product"
+            groups="account.group_account_manager"
+            sequence="41"/>
+
+        <record id="action_product_cost_type_view" model="ir.actions.act_window">
+            <field name="name">Extra Costs Type</field>
+            <field name="res_model">product.cost.type</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+            <field name="view_id" ref="view_product_cost_type_tree"/>
+            <field name="help" type="html">
+                <p class="oe_view_nocontent_create">Create Product Extra Costs Type
+                </p>
+            </field>
+        </record>
+
+        <menuitem id="menu_products_cost_type"
+            action="sale_margin_actual_cost.action_product_cost_type_view"
+            parent="stock.menu_product_in_config_stock"
+            groups="account.group_account_manager"
+            sequence="41"/>
+
+    </data>
+</openerp>

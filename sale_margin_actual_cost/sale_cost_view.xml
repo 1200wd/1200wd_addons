@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<openerp>
+    <data>
+
+        <record model="ir.ui.view" id="sale_cost_sale_order">
+            <field name="name">sale.order.cost.view.form</field>
+            <field name="model">sale.order</field>
+            <field name="inherit_id" ref="sale.view_order_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//group[@name='sale_total']" position="after">
+                    <group name="sale_cost_grp">
+                        <field name="actual_cost_total" widget='monetary' options="{'currency_field': 'currency_id'}" groups="account.group_account_manager"/>
+                        <field name="margin_perc" groups="account.group_account_user,account.group_account_manager"/>
+                    </group>
+                </xpath>
+                <xpath expr="//field[@name='order_line']/form//field[@name='price_unit']" position="after">
+                    <field name="margin_perc" groups="account.group_account_user,account.group_account_manager"/>
+                    <field name="actual_cost" groups="account.group_account_manager"/>
+                </xpath>
+               <xpath expr="//field[@name='order_line']/tree//field[@name='price_subtotal']" position="before">
+                    <field name="margin_perc" groups="account.group_account_user,account.group_account_manager"/>
+                    <field name="actual_cost" groups="account.group_account_manager"/>
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</openerp>
