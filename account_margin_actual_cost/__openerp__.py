@@ -2,7 +2,7 @@
 ##############################################################################
 #
 #    Account Invoice - Actual Costs and Margins
-#    Copyright (C) 2015 December
+#    Copyright (C) 2016 July
 #    1200 Web Development
 #    http://1200wd.com/
 #
@@ -23,14 +23,14 @@
 
 {
     'name': "Account Invoice - Margins",
-    'summary': """Use the actual product price to calculate margins on invoices.""",
+    'summary': """Use the actual product price to calculate margins on invoices""",
     'description': """
     * Depends on the sale_margin_actual_cost module
     """,
     'author': "1200 Web Development",
     'website': "http://www.1200wd.com",
-    'category': 'Products',
-    'version': '8.0.1.0',
+    'category': 'Accounting & Finance',
+    'version': '8.0.1.1',
     'depends': [
         'sale_margin_actual_cost',
     ],
@@ -42,4 +42,6 @@
     'installable': True,
     'auto_install': False,
     'application': False,
+    'price': 10.00,
+    'currency': 'EUR',
 }

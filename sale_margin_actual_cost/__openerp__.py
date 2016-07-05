@@ -2,7 +2,7 @@
 ##############################################################################
 #
 #    Sales - Actual Costs and Margins
-#    Copyright (C) 2015 November
+#    Copyright (C) 2016 July
 #    1200 Web Development
 #    http://1200wd.com/
 #
@@ -32,8 +32,8 @@
     """,
     'author': "1200 Web Development",
     'website': "http://www.1200wd.com",
-    'category': 'Products',
-    'version': '8.0.1.0',
+    'category': 'Sales',
+    'version': '8.0.1.1',
     'depends': [
         'product',
         'sale',
@@ -50,4 +50,6 @@
     'installable': True,
     'auto_install': False,
     'application': False,
+    'price': 10.00,
+    'currency': 'EUR',
 }
