@@ -1,0 +1,131 @@
+<openerp>
+    <data>
+
+        <!-- Margin reports for Invoices -->
+        <record model="ir.ui.view" id="view_account_margin_invoice">
+            <field name="name">view_account_margin_invoice</field>
+            <field name="model">account.invoice</field>
+            <field name="priority">50</field>
+            <field name="arch" type="xml">
+                <tree string="Invoice Margins">
+                    <field name="number"/>
+                    <field name="partner_id" groups="base.group_user"/>
+                    <field name="date_invoice"/>
+                    <field name="company_id" groups="base.group_multi_company" widget="selection"/>
+                    <field name="sales_channel_id"/>
+                    <field name="user_id" string="Responsible"/>
+                    <field name="amount_untaxed" sum="Untaxed Amount"/>
+                    <field name="actual_cost_total" sum="Actual Cost Total" groups="account.group_account_user,account.group_account_manager"/>
+                    <field name="margin_perc" avg="Average Margin" groups="account.group_account_user,account.group_account_manager"/>
+                    <field name="state"/>
+                </tree>
+            </field>
+        </record>
+
+        <record id="view_filter_account_margin_invoice" model="ir.ui.view">
+            <field name="name">account.invoice.margin.filter</field>
+            <field name="model">account.invoice</field>
+            <field name="priority">50</field>
+            <field name="arch" type="xml">
+                <search string="Search Invoice">
+                    <field name="number" string="Invoice" filter_domain="['|','|','|', ('number','ilike',self), ('origin','ilike',self), ('supplier_invoice_number', 'ilike', self), ('partner_id', 'child_of', self)]"/>
+                    <field name="partner_id" operator="child_of"/>
+                    <field name="user_id" string="Salesperson"/>
+                    <field name="period_id" string="Period"/>
+                    <separator/>
+                    <filter domain="[('user_id','=',uid)]" help="My Invoices"/>
+                    <group expand="0" string="Group By">
+                        <filter string="Salesperson" context="{'group_by':'user_id'}"/>
+                        <filter string="Status" context="{'group_by':'state'}"/>
+                        <separator/>
+                        <filter string="Period" context="{'group_by':'period_id'}"/>
+                    </group>
+               </search>
+            </field>
+        </record>
+
+        <record id="action_account_margin_invoice" model="ir.actions.act_window">
+            <field name="name">Invoice Margins</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">account.invoice</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+            <field name="view_id" ref="view_account_margin_invoice"/>
+            <field name="search_view_id" ref="view_filter_account_margin_invoice"/>
+            <field name="domain">[('type','=','out_invoice'), ('state','not in',['draft','cancel','proforma2'])]</field>
+        </record>
+
+
+        <!-- Margin Reports for Invoice Lines -->
+        <record model="ir.ui.view" id="view_account_margin_invoice_line">
+            <field name="name">view_account_margin_invoice</field>
+            <field name="model">account.invoice.line</field>
+            <field name="priority">50</field>
+            <field name="arch" type="xml">
+                <tree string="Invoice Lines">
+                    <field name="name"/>
+                    <field name="origin"/>
+                    <field name="quantity"/>
+                    <field name="uos_id" groups="product.group_uom"/>
+                    <field name="price_unit"/>
+                    <field name="discount" groups="sale.group_discount_per_so_line"/>
+                    <field name="price_subtotal"/>
+                    <field name="actual_cost"/>
+                    <field name="margin_perc"/>
+                </tree>
+            </field>
+        </record>
+
+        <record id="view_filter_account_invoice_line" model="ir.ui.view">
+            <field name="name">view_filter_account_invoice_line</field>
+            <field name="model">account.invoice.line</field>
+            <field name="sequence" eval="1"/>
+            <field name="arch" type="xml">
+                <search string="Search Invoice Lines">
+                    <field name="product_id"/>
+                    <field name="name"/>
+                    <field name="origin"/>
+                    <field name="partner_id" operator="child_of"/>
+                    <group expand="0" string="Group By">
+                        <filter string="Product" context="{'group_by':'product_id'}"/>
+                        <filter string="Partner" context="{'group_by':'partner_id'}"/>
+                    </group>
+               </search>
+            </field>
+        </record>
+
+        <record id="action_account_margin_invoice_line" model="ir.actions.act_window">
+            <field name="name">Invoice Line Margins</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">account.invoice.line</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+            <field name="view_id" ref="view_account_margin_invoice_line"/>
+            <field name="search_view_id" ref="view_filter_account_invoice_line"/>
+            <field name="domain">[('invoice_id.type','=','out_invoice'),
+                ('invoice_id.state','not in',['draft','cancel','proforma2']),
+                ('actual_cost','!=',0)]</field>
+        </record>
+
+
+        <!-- Menu items for Margin reports in Account Tab -->
+        <menuitem id='menu_account_margin_reports'
+                  name='Margin Reports'
+                  parent='account.menu_finance_reports'
+                  sequence="41"
+                  groups="account.group_account_user,account.group_account_manager"/>
+
+        <menuitem id="menu_account_margin_invoice"
+                  action="account_margin_actual_cost.action_account_margin_invoice"
+                  parent="account_margin_actual_cost.menu_account_margin_reports"
+                  sequence="10"
+                  groups="account.group_account_user,account.group_account_manager"/>
+
+        <menuitem id="menu_account_margin_invoice_line"
+                  action="account_margin_actual_cost.action_account_margin_invoice_line"
+                  parent="account_margin_actual_cost.menu_account_margin_reports"
+                  sequence="20"
+                  groups="account.group_account_user,account.group_account_manager"/>
+
+    </data>
+</openerp>

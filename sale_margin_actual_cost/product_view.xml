@@ -1,0 +1,37 @@
+<openerp>
+    <data>
+
+        <record model="ir.ui.view" id="view_product_form_margins">
+            <field name="name">view.product.form.margins</field>
+            <field name="model">product.template</field>
+            <field name="inherit_id" ref="stock_account.view_template_property_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//label[@string='Cost Price']/following-sibling::div" position="after">
+                    <label string="Extra costs" for="extra_costs" align="1.0" groups="account.group_account_manager"/>
+                    <div>
+                        <field name="extra_costs" class="oe_inline" groups="account.group_account_manager"/>
+                        <button name="%(action_product_cost_view)d" string="⇒ edit" type="action"
+                                context="{'search_default_product_tmpl_id': active_id, 'default_product_tmpl_id': active_id}"
+                                class="oe_link" groups="account.group_account_manager"/>
+                    </div>
+                    <field name="actual_cost"/>
+                </xpath>
+
+                <!-- Some cosmetic and security changes to Standard Price field -->
+                <xpath expr="//label[@string='Cost Price']" position="attributes">
+                    <attribute name="groups">account.group_account_manager</attribute>
+                </xpath>
+                <xpath expr="//field[@name='standard_price']" position="attributes">
+                    <attribute name="class">oe_inline</attribute>
+                    <attribute name="groups">account.group_account_manager</attribute>
+                </xpath>
+                <xpath expr="//button[@string='- update']" position="attributes">
+                    <attribute name="string">⇒ update</attribute>
+                    <attribute name="groups">account.group_account_manager</attribute>
+                </xpath>
+
+            </field>
+        </record>
+
+    </data>
+</openerp>
