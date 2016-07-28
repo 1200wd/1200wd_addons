@@ -115,7 +115,6 @@
                         <field name="so_ref" readonly="1"/>
                         <field name="partner_name" readonly="1"/>
                         <field name="partner_id" readonly="1"/>
-                        <field name="remote_account" readonly="1"/>
                         <field name="bank_account_id" readonly="1"/>
                         <field name="amount" readonly="1"/>
                     </group>

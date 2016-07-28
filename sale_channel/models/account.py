@@ -29,7 +29,11 @@ class AccountTax(models.Model):
 
     @api.model
     def _get_sales_channel_domain(self):
-        ids = self.env.ref('res_partner_category.sales_channel').ids
+        ids = []
+        try:
+            ids = self.env.ref('ari_sale.category_sales_channel').ids
+        except ValueError:
+            pass
         return [('category_id', 'in', ids)]
 
     sales_channel_id = fields.Many2one('res.partner', string="Sales channel",
