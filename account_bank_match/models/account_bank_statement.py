@@ -174,8 +174,9 @@ class AccountBankStatementLine(models.Model):
         Format {name, [sale order reference], model, [description], score total, score per item}
         """
         try:
+            remote_account = self.env['res.partner.bank'].search([('partner_id','=',self.partner_id.id)]).sanitized_acc_number
             statement_text = (self.name or '') + '_' + (self.partner_id.name or '') + '_' + (self.ref or '') + '_' + \
-                             (self.so_ref or '') + '_' + (self.remote_account or '')
+                             (self.so_ref or '') + '_' + remote_account or ''
         except Exception, e:
             msg = "Could not parse statement text for %s" % self.name
             self._handle_error(msg)
@@ -190,7 +191,7 @@ class AccountBankStatementLine(models.Model):
         search_domain = ['|', ('company_id', '=', False), ('company_id', '=', company_id),
                          '|', ('account_journal_id', '=', False), ('account_journal_id', '=',
                                                                    self.journal_id.id or self.statement_id.journal_id.id),
-                         '|', ('partner_bank_account', '=', False), ('partner_bank_account', '=', self.remote_account)]
+                         '|', ('partner_bank_account', '=', False), ('partner_bank_account', '=', remote_account)]
         match_refs = self.env['account.bank.match.reference'].search(search_domain)
         for match_ref in match_refs:
             try:
@@ -501,8 +502,9 @@ class AccountBankStatementLine(models.Model):
         company_id = self.env.user.company_id.id
 
         # Try to find partner through bank account number
-        if not self.partner_id and self.remote_account:
-            bank = self.env['res.partner.bank'].search([('search_account_number', '=', self.remote_account)])
+        remote_account = self.env['res.partner.bank'].search([('partner_id','=',self.partner_id.id)]).sanitized_acc_number
+        if not self.partner_id and remote_account:
+            bank = self.env['res.partner.bank'].search([('search_account_number', '=', remote_account)])
             if bank.partner_id:
                 self.partner_id = bank.partner_id
             else:
@@ -981,9 +983,10 @@ class AccountBankStatementLine(models.Model):
         st_line = self[0]
         ctx = self._context.copy()
         ref = re.sub(r"\s", "", st_line.ref).upper()
+        remote_account = self.env['res.partner.bank'].search([('partner_id','=',self.partner_id.id)]).sanitized_acc_number
         data = {
             'name': ref,
-            'partner_bank_account': st_line.remote_account or '',
+            'partner_bank_account': remote_account or '',
             'account_journal_id': st_line.journal_id.id,
             'company_id': st_line.company_id.id,
         }
