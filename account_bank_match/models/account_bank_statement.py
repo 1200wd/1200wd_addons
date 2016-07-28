@@ -67,13 +67,6 @@ class AccountBankStatementLine(models.Model):
 
     statement_text = ''
 
-    @api.one
-    def _get_iban_country_code(self):
-        if self.remote_account: self.remote_account_country_code = self.remote_account[:2]
-        else: self.remote_account_country_code = ''
-
-    remote_account_country_code = fields.Char(string="Remote IBAN country code", size=2, compute="_get_iban_country_code", readonly=True)
-
 
     def _handle_error(self, message):
         # global show_errors
