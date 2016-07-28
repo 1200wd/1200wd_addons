@@ -501,19 +501,6 @@ class AccountBankStatementLine(models.Model):
 
         company_id = self.env.user.company_id.id
 
-        # Try to find partner through bank account number
-        remote_account = self.env['res.partner.bank'].search([('partner_id','=',self.partner_id.id)]).sanitized_acc_number
-        if not self.partner_id and remote_account:
-            bank = self.env['res.partner.bank'].search([('search_account_number', '=', remote_account)])
-            if bank.partner_id:
-                self.partner_id = bank.partner_id
-            else:
-                # Look for other statement lines from the same remote bank account and see if any of those have partners and invoices linked
-                other_lines = self.env['account.bank.statement.line'].search(['|', ('company_id', '=', False), ('company_id', '=', company_id),
-                    ('remote_account','=',bank.search_account_number), ('id', '!=', self.id)], limit=1)
-                if 'partner_id' in other_lines and other_lines.partner_id:
-                    self.partner_id = other_lines.partner_id
-
         # Search matches with reference pattern
         company_id = self.env.user.company_id.id
         matches = []
