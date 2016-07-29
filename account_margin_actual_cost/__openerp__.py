@@ -30,7 +30,7 @@
     'author': "1200 Web Development",
     'website': "http://www.1200wd.com",
     'category': 'Accounting & Finance',
-    'version': '8.0.1.1',
+    'version': '8.0.1.2',
     'depends': [
         'sale_margin_actual_cost',
     ],
