@@ -12,7 +12,7 @@
                     <field name="partner_id" groups="base.group_user"/>
                     <field name="date_invoice"/>
                     <field name="company_id" groups="base.group_multi_company" widget="selection"/>
-                    <field name="sales_channel_id"/>
+                    <!-- TODO: Move to separate module <field name="sales_channel_id"/>-->
                     <field name="user_id" string="Responsible"/>
                     <field name="amount_untaxed" sum="Untaxed Amount"/>
                     <field name="actual_cost_total" sum="Actual Cost Total" groups="account.group_account_user,account.group_account_manager"/>
