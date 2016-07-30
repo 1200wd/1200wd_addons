@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 ##############################################################################
 #
-#    Change menu color
-#    Copyright (C) 2016 July
-#    1200 Web Development
-#    http://1200wd.com/
+#    Delivery Transsmart Ingegration - Address Consolidation
+#    Copyright (C) 2016 1200 Web Development (<http://1200wd.com/>)
+#              (C) 2015 ONESTEiN BV (<http://www.onestein.nl>)
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -22,24 +21,29 @@
 ##############################################################################
 
 {
-    'name': "Change menu color",
-    'summary': """Change Odoo main menu color""",
+    'name': "Transsmart Address Consolidation",
+    'summary': """Address Consolidation support for Transsmart integration""",
     'description': """
-    Change color of Odoo 8.0 menu
+    Integrates delivery_transsmart with address_consolidation
+    Uses the denormalized address from address_consolidation in all
+    stock_transsmart communication instead off the standard res_partner_address.
+
+    This module is based on Onestein's version but is compatible with the new Transsmart API and has many bug fixes and improvements.
     """,
     'author': "1200 Web Development",
     'website': "http://1200wd.com",
-    'category': 'Custom',
-    'version': '8.0.1.2',
-    'depends': [],
+    'category': 'Warehouse',
+    'version': '8.0.2.0',
+    'depends': [
+        'delivery_transsmart',
+        'address_consolidation'
+    ],
     'data': [
-         'change_menu_color.xml'
     ],
     'demo': [],
+    'price': 0.00,
+    'currency': 'EUR',
     'installable': True,
     'auto_install': False,
     'application': False,
-    'price': 0.00,
-    'currency': 'EUR',
-    'demo': [],
 }
