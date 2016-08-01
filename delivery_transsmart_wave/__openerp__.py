@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 ##############################################################################
 #
-#    Change menu color
-#    Copyright (C) 2016 July
-#    1200 Web Development
-#    http://1200wd.com/
+#    Delivery Transsmart Ingegration - Picking Waves
+#    Copyright (C) 2016 1200 Web Development (<http://1200wd.com/>)
+#              (C) 2015 ONESTEiN BV (<http://www.onestein.nl>).
+#              (C) 2015 1200 Web Development (<http://1200wd.com/>)
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -22,24 +22,24 @@
 ##############################################################################
 
 {
-    'name': "Change menu color",
-    'summary': """Change Odoo main menu color""",
+    'name': "Transsmart Wave",
+    'summary': """Picking Wave support for Transsmart integration""",
     'description': """
-    Change color of Odoo 8.0 menu
+This module allows the user to send delivvery orders to transsmart from using the Picking waves
     """,
     'author': "1200 Web Development",
     'website': "http://1200wd.com",
-    'category': 'Custom',
-    'version': '8.0.1.2',
-    'depends': [],
+    'category': 'Warehouse',
+    'version': '8.0.2.0',
+    'depends': [
+        'delivery_transsmart',
+        'stock_picking_wave'
+    ],
     'data': [
-         'change_menu_color.xml'
+        'delivery_transsmart_wave_views.xml'
     ],
     'demo': [],
     'installable': True,
     'auto_install': False,
     'application': False,
-    'price': 0.00,
-    'currency': 'EUR',
-    'demo': [],
 }

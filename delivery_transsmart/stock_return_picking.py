@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 ##############################################################################
 #
-#    Change menu color
-#    Copyright (C) 2016 July
-#    1200 Web Development
-#    http://1200wd.com/
+#    Delivery Transsmart Ingegration
+#    Copyright (C) 2016 1200 Web Development (<http://1200wd.com/>)
+#              (C) 2015 ONESTEiN BV (<http://www.onestein.nl>)
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -21,25 +20,17 @@
 #
 ##############################################################################
 
-{
-    'name': "Change menu color",
-    'summary': """Change Odoo main menu color""",
-    'description': """
-    Change color of Odoo 8.0 menu
-    """,
-    'author': "1200 Web Development",
-    'website': "http://1200wd.com",
-    'category': 'Custom',
-    'version': '8.0.1.2',
-    'depends': [],
-    'data': [
-         'change_menu_color.xml'
-    ],
-    'demo': [],
-    'installable': True,
-    'auto_install': False,
-    'application': False,
-    'price': 0.00,
-    'currency': 'EUR',
-    'demo': [],
-}
+from openerp import models, fields, api, _
+import logging
+
+_logger = logging.getLogger(__name__)
+
+
+class stock_return_picking(models.TransientModel):
+    _inherit = 'stock.return.picking'
+
+    @api.multi
+    def create_returns(self):
+        self = self.with_context(ingoing_override=True)
+        res = super(stock_return_picking, self).create_returns()
+        return res
