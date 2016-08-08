@@ -25,6 +25,7 @@ import logging
 
 _logger = logging.getLogger(__name__)
 
+#TODO Do not recalculate actual costs for closed or done invoices
 
 class account_invoice_line(models.Model):
     _inherit = "account.invoice.line"
@@ -67,6 +68,8 @@ class account_invoice(models.Model):
         for line in self.invoice_line:
             line.get_actual_costs()
             self.actual_cost_total += line.actual_cost or 0.0
+        if 'handling_costs' in self:
+            self.actual_cost_total += self.handling_costs
         if self.amount_untaxed and self.actual_cost_total:
             self.margin_perc = ( 1 - ( self.actual_cost_total / self.amount_untaxed) ) * 100
         _logger.debug("1200wd - Update invoice total actual costs {} and margin to {}%".

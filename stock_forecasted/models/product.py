@@ -34,7 +34,6 @@ days_reserve_sales = 31
 class ProductTemplate(models.Model):
     _inherit = "product.template"
 
-
     def _product_available(self, cr, uid, ids, name=None, arg=False, context=None):
         prod_available = {}
         product_ids = self.browse(cr, uid, ids, context=context)
