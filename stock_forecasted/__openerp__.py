@@ -4,7 +4,7 @@
 #    Stock Forecasted
 #    1200 Web Development
 #    http://1200wd.com/
-#    Copyright (C) 2016 January
+#    Copyright (C) 2016 August
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -25,12 +25,13 @@
     'name': "Stock Forecast",
     'summary': """Stock forecast based on stock moves and sale orders""",
     'description': """
-    IN DEVELOPMENT! TEST VERSION ONLY!
+    To calculate forecasted stock Odoo default only uses open stock moves.
+    This module allows you to also take open sale orders in the Forecasted stock calculation
     """,
     'author': "1200 Web Development",
     'website': "http://1200wd.com/",
     'category': 'Warehouse',
-    'version': '8.0.1.1',
+    'version': '8.0.1.2',
     'depends': [
         'sale',
         'stock',
@@ -40,7 +41,7 @@
         'views/product_view.xml',
         'views/stock_view.xml',
     ],
-    'price': 10.00,
+    'price': 50.00,
     'currency': 'EUR',
     'demo': [],
     'installable': True,

@@ -4,7 +4,7 @@
 #    Stock Forecasted
 #    1200 Web Development
 #    http://1200wd.com/
-#    Copyright (C) 2016 February
+#    Copyright (C) 2016 August
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -31,17 +31,17 @@ _logger = logging.getLogger(__name__)
 
 days_reserve_sales = 31
 
+
 class ProductTemplate(models.Model):
     _inherit = "product.template"
 
-
-    def _product_available(self, cr, uid, ids, name=None, arg=False, context=None):
+    def _product_available(self, name=None, arg=False):
         prod_available = {}
-        product_ids = self.browse(cr, uid, ids, context=context)
+        product_ids = self.browse()
         var_ids = []
         for product in product_ids:
             var_ids += [p.id for p in product.product_variant_ids]
-        variant_available = self.pool['product.product']._product_available(cr, uid, var_ids, context=context)
+        variant_available = self.pool['product.product']._product_available(var_ids)
 
         for product in product_ids:
             product.qty_available = 0
@@ -66,7 +66,8 @@ class ProductTemplate(models.Model):
                 "qty_forecasted": product.qty_forecasted,
                 "outgoing_sales_qty": product.outgoing_sales_qty,
             }
-        _logger.debug("1200wd - ProductTemplate._product_available, product ids %s, result %s" % (product_ids,prod_available))
+        _logger.debug("1200wd - ProductTemplate._product_available, product ids %s, result %s" %
+                      (product_ids, prod_available))
         return prod_available
 
     def _search_qty_forecasted(self, operator, value):
@@ -113,35 +114,41 @@ class ProductProduct(models.Model):
                                   compute='_product_available', store=True,
                                   help="Expected outgoing sales. Quantity is based on a certain percentage of recent sales orders.")
 
-    #TODO: Add dependencies to stock moves or find other solution to update Forecasted Stock
-    def _product_available(self, cr, uid, ids, field_names=None, arg=False, context=None):
+    @api.one
+    @api.depends()
+    def _product_available(self):
         global days_reserve_sales
-        context = context or {}
 
-        domain_products = [('product_id', 'in', ids)]
+        domain_products = [('product_id', 'in', self.ids)]
         domain_quant, domain_move_in, domain_move_out = [], [], []
-        domain_quant_loc, domain_move_in_loc, domain_move_out_loc = self._get_domain_locations(cr, uid, ids, context=context)
-        domain_move_in += self._get_domain_dates(cr, uid, ids, context=context) + [('state', 'not in', ('done', 'cancel', 'draft'))] + domain_products
-        domain_move_out += self._get_domain_dates(cr, uid, ids, context=context) + [('state', 'not in', ('done', 'cancel', 'draft'))] + domain_products
+        domain_quant_loc, domain_move_in_loc, domain_move_out_loc = self._get_domain_locations()
+        domain_move_in += self._get_domain_dates() + \
+            [('state', 'not in', ('done', 'cancel', 'draft'))] + domain_products
+        domain_move_out += self._get_domain_dates() + \
+            [('state', 'not in', ('done', 'cancel', 'draft'))] + domain_products
         domain_quant += domain_products
 
-        if context.get('lot_id'):
-            domain_quant.append(('lot_id', '=', context['lot_id']))
-        if context.get('owner_id'):
-            domain_quant.append(('owner_id', '=', context['owner_id']))
-            owner_domain = ('restrict_partner_id', '=', context['owner_id'])
+        if self._context.get('lot_id'):
+            domain_quant.append(('lot_id', '=', self._context['lot_id']))
+        if self._context.get('owner_id'):
+            domain_quant.append(('owner_id', '=', self._context['owner_id']))
+            owner_domain = ('restrict_partner_id', '=', self._context['owner_id'])
             domain_move_in.append(owner_domain)
             domain_move_out.append(owner_domain)
-        if context.get('package_id'):
-            domain_quant.append(('package_id', '=', context['package_id']))
+        if self._context.get('package_id'):
+            domain_quant.append(('package_id', '=', self._context['package_id']))
 
         domain_move_in += domain_move_in_loc
         domain_move_out += domain_move_out_loc
-        moves_in = self.pool.get('stock.move').read_group(cr, uid, domain_move_in, ['product_id', 'product_qty'], ['product_id'], context=context)
-        moves_out = self.pool.get('stock.move').read_group(cr, uid, domain_move_out, ['product_id', 'product_qty'], ['product_id'], context=context)
+        # self, cr, uid, domain, fields, groupby, offset=0, limit=None, context=None, orderby=False, lazy=True
+        moves_in = self.env['stock.move'].read_group(
+            domain=domain_move_in, fields=['product_id', 'product_qty'], groupby=['product_id'])
+        moves_out = self.env['stock.move'].read_group(
+            domain=domain_move_out, fields=['product_id', 'product_qty'], groupby=['product_id'])
 
         domain_quant += domain_quant_loc
-        quants = self.pool.get('stock.quant').read_group(cr, uid, domain_quant, ['product_id', 'qty'], ['product_id'], context=context)
+        quants = self.env['stock.quant'].read_group(
+            domain=domain_quant, fields=['product_id', 'qty'], groupby=['product_id'])
         quants = dict(map(lambda x: (x['product_id'][0], x['qty']), quants))
 
         moves_in = dict(map(lambda x: (x['product_id'][0], x['product_qty']), moves_in))
@@ -149,27 +156,34 @@ class ProductProduct(models.Model):
 
         # Get pending sales
         now = datetime.datetime.now()
-        domain_sales_date = [('create_date', '>=', ((now - datetime.timedelta(days=days_reserve_sales)).strftime('%Y-%m-%d')))]
+        domain_sales_date = \
+            [('create_date', '>=', ((now - datetime.timedelta(days=days_reserve_sales)).strftime('%Y-%m-%d')))]
         domain_sales_out = domain_sales_date + [('state', 'not in', ('cancel', 'done'))] + domain_products
-        sales_out = self.pool.get('sale.order.line').read_group(cr, uid, domain_sales_out, ['product_id', 'product_uos_qty'], ['product_id'], context=context)
+        sales_out = self.env['sale.order.line'].read_group(
+            domain_sales_out, ['product_id', 'product_uos_qty'], ['product_id'])
         sales_out = dict(map(lambda x: (x['product_id'][0], x['product_uos_qty']), sales_out))
-        _logger.debug("1200wd - Product %s pending sales %s (total execution time %dms)" % (ids, sales_out, (datetime.datetime.now()-now).total_seconds()*1000))
+        _logger.debug("1200wd - Product %s pending sales %s (total execution time %dms)" %
+                      (self.ids, sales_out, (datetime.datetime.now()-now).total_seconds()*1000))
 
         # Get almost incoming products
         domain_move_in_expected = domain_move_in + [('date_expected', '<=', ((now + datetime.timedelta(days=2)).strftime('%Y-%m-%d')))]
-        moves_in_expected = self.pool.get('stock.move').read_group(cr, uid, domain_move_in_expected, ['product_id', 'product_qty'], ['product_id'], context=context)
+        moves_in_expected = self.env['stock.move'].read_group(
+            domain_move_in_expected, ['product_id', 'product_qty'], ['product_id'])
         moves_in_expected = dict(map(lambda x: (x['product_id'][0], x['product_qty']), moves_in_expected))
 
         res = {}
-        for product in self.browse(cr, uid, ids, context=context):
+        for product in self.browse():
             id = product.id
             product.qty_available = float_round(quants.get(id, 0.0), precision_rounding=product.uom_id.rounding)
             product.incoming_qty = float_round(moves_in.get(id, 0.0), precision_rounding=product.uom_id.rounding)
             product.outgoing_qty = float_round(moves_out.get(id, 0.0), precision_rounding=product.uom_id.rounding)
             product.outgoing_sales_qty = float_round(sales_out.get(id, 0.0), precision_rounding=product.uom_id.rounding)
-            product.virtual_available = float_round(quants.get(id, 0.0) + moves_in.get(id, 0.0) - moves_out.get(id, 0.0), precision_rounding=product.uom_id.rounding)
+            product.virtual_available = \
+                float_round(quants.get(id, 0.0) + moves_in.get(id, 0.0) -
+                            moves_out.get(id, 0.0), precision_rounding=product.uom_id.rounding)
             in_expected = float_round(moves_in_expected.get(id, 0.0), precision_rounding=product.uom_id.rounding)
-            product.qty_forecasted = product.qty_available - (product.outgoing_qty + product.outgoing_sales_qty) + in_expected
+            product.qty_forecasted = \
+                product.qty_available - (product.outgoing_qty + product.outgoing_sales_qty) + in_expected
 
             res[id] = {
                 'qty_available': product.qty_available,
@@ -179,7 +193,7 @@ class ProductProduct(models.Model):
                 'qty_forecasted': product.qty_forecasted,
                 'outgoing_sales_qty': product.outgoing_sales_qty,
             }
-        _logger.debug("1200wd - ProductProduct._product_available, product ids %s, result %s" % (ids, res))
+        _logger.debug("1200wd - ProductProduct._product_available, product ids %s, result %s" % (self.ids, res))
         return res
 
     def action_view_pending_sale_order_lines(self, cr, uid, ids, context=None):
