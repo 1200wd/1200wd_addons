@@ -21,21 +21,22 @@
 #
 ##############################################################################
 
-from openerp import models, workflow, fields, api, _
-from openerp.exceptions import Warning
 import logging
 import re
 import ast
 from datetime import datetime, timedelta
 import pickle
 import itertools
+from openerp import models, workflow, fields, api, _
+from openerp.exceptions import Warning
+
 
 _logger = logging.getLogger(__name__)
 
 # Match module settings, normally there should be no need to change them...
 MATCH_MIN_SUCCESS_SCORE = 100
 MATCH_MAX_PER_REFERENCE = 100
-
+SIGN = {'out_invoice': -1, 'in_invoice': 1, 'out_refund': 1, 'in_refund': -1}
 
 class SaleAdvancePaymentInv(models.TransientModel):
     _inherit = "sale.advance.payment.inv"
@@ -52,21 +53,17 @@ class SaleAdvancePaymentInv(models.TransientModel):
         return res
 
 
-
 class AccountBankStatementLine(models.Model):
     _inherit = "account.bank.statement.line"
 
     so_ref = fields.Char('Sale Order Reference')
     name = fields.Char('Communication', required=True, default='/')
-
     match_ids = fields.One2many('account.bank.match', 'statement_line_id', "Matches")
     match_selected = fields.Many2one('account.bank.match', string="Winning Match", ondelete='cascade')
 
     show_errors = False
     error_str = ""
-
     statement_text = ''
-
 
     def _handle_error(self, message):
         # global show_errors
@@ -75,7 +72,6 @@ class AccountBankStatementLine(models.Model):
         else:
             _logger.error("1200wd - %s" % message)
             self.error_str += message + '/n'
-
 
     @api.model
     def _domain_reconciliation_proposition(self, st_line, excluded_ids=None):
@@ -89,7 +85,6 @@ class AccountBankStatementLine(models.Model):
                   ('id', 'not in', excluded_ids)]
         return domain
 
-
     @api.model
     def prepare_bs_line(self, invoice, vals):
         if invoice.number:
@@ -101,7 +96,6 @@ class AccountBankStatementLine(models.Model):
             msg = "Could not create or validate invoice for sale order %s" % vals['so_ref']
             self._handle_error(msg)
         return vals
-
 
     @api.model
     def create_invoice(self):
@@ -116,14 +110,12 @@ class AccountBankStatementLine(models.Model):
         invoice.signal_workflow('invoice_open')
         return invoice
 
-
     @api.model
     def _prepare_create_invoice(self, order, vals):
         self._context.update({"order_ids": order.ids})
         invoice = self.create_invoice()
         # Add invoice reference to bank statement line
         return self.prepare_bs_line(invoice, vals)
-
 
     @api.model
     def order_invoice_lookup(self, vals):
@@ -163,7 +155,6 @@ class AccountBankStatementLine(models.Model):
                 self._handle_error(msg)
         return vals
 
-
     @api.model
     def _extract_references(self):
         """
@@ -174,7 +165,8 @@ class AccountBankStatementLine(models.Model):
         Format {name, [sale order reference], model, [description], score total, score per item}
         """
         try:
-            remote_account = self.env['res.partner.bank'].search([('partner_id','=',self.partner_id.id)]).sanitized_acc_number
+            remote_account = self.env['res.partner.bank'].search(
+                [('partner_id', '=', self.partner_id.id)]).sanitized_acc_number
             statement_text = (self.name or '') + '_' + (self.partner_id.name or '') + '_' + (self.ref or '') + '_' + \
                              (self.so_ref or '') + '_' + remote_account or ''
         except Exception, e:
@@ -189,8 +181,8 @@ class AccountBankStatementLine(models.Model):
         count = 0
 
         search_domain = ['|', ('company_id', '=', False), ('company_id', '=', company_id),
-                         '|', ('account_journal_id', '=', False), ('account_journal_id', '=',
-                                                                   self.journal_id.id or self.statement_id.journal_id.id),
+                         '|', ('account_journal_id', '=', False),
+                              ('account_journal_id', '=', self.journal_id.id or self.statement_id.journal_id.id),
                          '|', ('partner_bank_account', '=', False), ('partner_bank_account', '=', remote_account)]
         match_refs = self.env['account.bank.match.reference'].search(search_domain)
         for match_ref in match_refs:
@@ -200,7 +192,8 @@ class AccountBankStatementLine(models.Model):
                     if match_ref.account_account_id:
                         name = match_ref.account_account_id.id
                     obj = self.env[match_ref.model].search([(self._match_get_field_name(match_ref.model), '=', name)])
-                    description = "%s; Partner bank %s" % (self._match_description(obj, match_ref.model), match_ref.partner_bank_account)
+                    description = "%s; Partner bank %s" % \
+                                  (self._match_description(obj, match_ref.model), match_ref.partner_bank_account)
                     matches.append(
                         {'name': name,
                          'so_ref': '',
@@ -216,9 +209,12 @@ class AccountBankStatementLine(models.Model):
                         name = match_ref.account_account_id.id
                     obj = self.env[match_ref.model].search([(self._match_get_field_name(match_ref.model), '=', name)])
                     description = self._match_description(obj, match_ref.model)
-                    if match_ref.model == 'account.invoice': so_ref = obj.origin or ''
-                    elif match_ref.model == 'sale.order': so_ref = name
-                    else: so_ref = ''
+                    if match_ref.model == 'account.invoice':
+                        so_ref = obj.origin or ''
+                    elif match_ref.model == 'sale.order':
+                        so_ref = name
+                    else:
+                        so_ref = ''
                     matches.append(
                         {'name': name,
                          'so_ref': so_ref,
@@ -229,12 +225,13 @@ class AccountBankStatementLine(models.Model):
                          })
                     _logger.info("1200wd - Match %s found" % name)
                     count += 1
-                    if count > MATCH_MAX_PER_REFERENCE: break
+                    if count > MATCH_MAX_PER_REFERENCE:
+                        break
             except Exception, e:
-                msg = "Please check Bank Match Reference patterns an error occured while parsing '%s'. Error: %s" % (match_ref.name, e.args[0])
+                msg = "Please check Bank Match Reference patterns an error occured while parsing '%s'. " \
+                      "Error: %s" % (match_ref.name, e.args[0])
                 self._handle_error(msg)
         return matches
-
 
     @api.model
     def _parse_rule(self, rule):
@@ -274,13 +271,14 @@ class AccountBankStatementLine(models.Model):
                             numofdays = int(rs.group(3))
                             field_value = eval("self." + field)
                             ndate = datetime.strptime(field_value,'%Y-%m-%d')
-                            if sign=='-':
+                            if sign == '-':
                                  ndate -= timedelta(days=numofdays)
                             else:
                                 ndate += timedelta(days=numofdays)
                             new_value = ndate.strftime('%Y-%m-%d')
                         except Exception, e:
-                            msg = "Rule '%s'. Error matching odoo expression '%s' %s" % (rule.rule, found_odoo_expression, e.message)
+                            msg = "Rule '%s'. Error matching odoo expression '%s' %s" % \
+                                  (rule.rule, found_odoo_expression, e.message)
                             self._handle_error(msg)
                             return False
                     else:
@@ -292,7 +290,8 @@ class AccountBankStatementLine(models.Model):
                                 rule_list_new.append(('id', '=', False))  # Always False
                                 continue
                         except Exception, e:
-                            msg = "Rule '%s'. Error matching odoo expression '%s' %s" % (rule.rule, odoo_expression, e.message)
+                            msg = "Rule '%s'. Error matching odoo expression '%s' %s" % \
+                                  (rule.rule, odoo_expression, e.message)
                             self._handle_error(msg)
                             return False
             if new_value:
@@ -302,7 +301,6 @@ class AccountBankStatementLine(models.Model):
 
         # _logger.debug("1200wd - Parsing rule result %s" % rule_list_new)
         return rule_list_new
-
 
     @api.model
     def _update_match_list(self, match, add_score, matches=[]):
@@ -315,13 +313,9 @@ class AccountBankStatementLine(models.Model):
         @return: Updated match list
         """
         if not 'so_ref' in match:
-            msg ="_update_match_list: Missing so_ref in match"
+            msg = "_update_match_list: Missing so_ref in match"
             self._handle_error(msg)
             return matches
-
-        # If match is an account move line ...
-        # if match['model'] == 'account.move.line':
-            # aml = self._match_get_object('account.move.line', match['name'])
 
         # If match is a partner replace match with open invoices of this partner
         elif match['model'] == 'res.partner':
@@ -330,8 +324,11 @@ class AccountBankStatementLine(models.Model):
             for invoice in open_invoices:
                 description = self._match_description(invoice, 'account.invoice')
                 sc = add_score / len(open_invoices)
-                matches = self._update_match_list({'name': invoice.number, 'model': 'account.invoice',
-                                                   'description': description, 'so_ref': invoice.origin or ''}, sc, matches)
+                matches = self._update_match_list({
+                    'name': invoice.number,
+                    'model': 'account.invoice',
+                    'description': description, 'so_ref': invoice.origin or ''
+                }, sc, matches)
             open_orders = [o for o in partner.sale_order_ids if o.state in ['draft', 'wait_payment', 'sent']]
             for order in open_orders:
                 description = self._match_description(order, 'sale.order')
@@ -352,28 +349,29 @@ class AccountBankStatementLine(models.Model):
 
         # Remove duplicates and sum up scores
         if match['name'] not in [d['name'] for d in matches]:
-            matches.append(
-                {'name': match['name'],
-                 'model': match['model'],
-                 'score': add_score,
-                 'description': match.get('description', ''),
-                 'so_ref': match.get('so_ref', ''),})
+            matches.append({
+                'name': match['name'],
+                'model': match['model'],
+                'score': add_score,
+                'description': match.get('description', ''),
+                'so_ref': match.get('so_ref', ''),
+            })
         else:
             # Adapt score for subsequent matches to avoid extreme high scores
-            score_current = [d['score'] for d in matches if d['name']==match['name']][0]
-            weight_factor = 1.0 / max(1.0, max(score_current-50,1)/25.0)
+            score_current = [d['score'] for d in matches if d['name'] == match['name']][0]
+            weight_factor = 1.0 / max(1.0, max(score_current-50, 1) / 25.0)
             add_score = int(add_score * weight_factor)
             [
-                d.update(
-                    {'score': d['score'] + add_score,
-                     'so_ref': d['so_ref'] or '',
-                     'description': d['description']})
+                d.update({
+                    'score': d['score'] + add_score,
+                    'so_ref': d['so_ref'] or '',
+                    'description': d['description']
+                })
                 for d in matches if d['name'] == match['name']
             ]
         _logger.info("1200wd - Found match %s score %s" % (match['name'], add_score))
 
         return matches
-
 
     @api.model
     def _match_description(self, object, model):
@@ -389,24 +387,22 @@ class AccountBankStatementLine(models.Model):
             if 'currency_id' in object:
                 currency_symbol = object.currency_id.name or ''
             if model == 'account.invoice':
-                description = (object.number or 'Not found') + "; " + (object.origin or '') + "; " + (object.supplier_invoice_number or '') + "; " + (object.date_invoice or '') + "; " + (object.partner_id.name or '') + "; " + \
+                description = (object.number or 'Not found') + "; " + (object.origin or '') + "; " + \
+                              (object.supplier_invoice_number or '') + "; " + (object.date_invoice or '') + "; " + \
+                              (object.partner_id.name or '') + "; " + \
                               (object.state or '') + "; " + currency_symbol + " " + str(object.amount_total or '')
-            # elif model == 'account.move.line':
-            #     description = (object.ref or 'Not found') + "; " + (object.date or '') + "; " + (object.partner_id.name or '') + "; " + \
-            #                   (object.state or '') + "; " + currency_symbol + " " + str(object.debit or '')
             elif model == 'sale.order':
                 description = (object.date_order or 'Not found') + "; " + (object.partner_id.name or '') + "; " + \
                               (object.state or '') + "; " + currency_symbol + " " + str(object.amount_total)
             elif model == 'account.account':
                 description = "Book full amount on account %s - %s" % (object.code, object.name)
             while "; ;" in description:
-                description = description.replace("; ;",";")
+                description = description.replace("; ;", ";")
 
         except Exception, e:
             msg = "Could not construct match description. Error %s" % e.args[0]
             self._handle_error(msg)
         return description
-
 
     @api.model
     def _match_get_name(self, object, model):
@@ -417,7 +413,6 @@ class AccountBankStatementLine(models.Model):
         else:
             return str(object.id)
 
-
     @api.model
     def _match_get_field_name(self, model):
         if model == 'account.invoice':
@@ -427,17 +422,14 @@ class AccountBankStatementLine(models.Model):
         else:
             return 'id'
 
-
     @api.model
     def _match_get_datefield_name(self, model):
         if model == 'account.invoice':
             return 'date_invoice'
-        # elif model == 'account.move.line':
-        #     return 'date'
         elif model == 'sale.order':
             return 'date_order'
-        else: return ''
-
+        else:
+            return ''
 
     @api.model
     def _match_get_base_domain(self, model):
@@ -456,14 +448,11 @@ class AccountBankStatementLine(models.Model):
         elif model == 'account.invoice':
             domain.extend([('date_invoice', '>', daysback),
                            ('state', 'in', ['open'])])
-        # elif model == 'account.move.line':
-        #     domain.extend([('date', '>', daysback), ('reconcile_ref', '=', False)])
 
         return domain
 
-
     @api.model
-    def _match_get_object(self, model, ref, domain = None):
+    def _match_get_object(self, model, ref, domain=None):
         if domain is None:
             domain = []
         try:
@@ -479,7 +468,6 @@ class AccountBankStatementLine(models.Model):
             msg = "Could not open model %s with reference %s. Error %s" % (model, ref, e.args[0])
             self._handle_error(msg)
         return False
-
 
     @api.model
     def match_search(self):
@@ -499,8 +487,6 @@ class AccountBankStatementLine(models.Model):
         except AttributeError:
             return False
 
-        company_id = self.env.user.company_id.id
-
         # Search matches with reference pattern
         company_id = self.env.user.company_id.id
         matches = []
@@ -514,18 +500,21 @@ class AccountBankStatementLine(models.Model):
         ref_matches = []
         supplier_inv_list = self.env['account.invoice'].search_read([
             ('supplier_invoice_number', '!=', False),
-            ('state', '=', 'open')],['number', 'supplier_invoice_number'])
+            ('state', '=', 'open')], ['number', 'supplier_invoice_number'])
         for supplier_inv in supplier_inv_list:
             supplier_ref = supplier_inv['supplier_invoice_number']
-            if len(supplier_ref)<3: continue
+            if len(supplier_ref) < 3:
+                continue
             if supplier_ref in self.statement_text:
                 inv_number = supplier_inv['number']
-                obj = self.env['account.invoice'].search([('number', '=',inv_number)])
+                obj = self.env['account.invoice'].search([('number', '=', inv_number)])
                 description = self._match_description(obj, 'account.invoice')
                 # Add bonus, increase score depending on number of characters of supplier reference
-                score = 40 + min(50,(len(supplier_ref)-3)*10)
-                ref_matches.append(
-                    {'name': inv_number, 'so_ref': '', 'model': 'account.invoice', 'description': description, 'score': 0, 'score_item': score,})
+                score = 40 + min(50, (len(supplier_ref) - 3) * 10)
+                ref_matches.append({
+                    'name': inv_number, 'so_ref': '', 'model': 'account.invoice', 'description': description,
+                    'score': 0, 'score_item': score,
+                })
                 _logger.debug("1200wd - Supplier reference %s found for invoice %s" % (supplier_ref, inv_number))
         if ref_matches:
             for ref_match in ref_matches:
@@ -534,30 +523,34 @@ class AccountBankStatementLine(models.Model):
         # Run match rules on invoices, sale orders
         for rule in self.env['account.bank.match.rule'].search(
                 ['|', ('company_id', '=', False), ('company_id', '=', company_id),
-                ('type', '=', 'extraction')]):
+                 ('type', '=', 'extraction')]):
             rule_domain = self._parse_rule(rule)
-            # _logger.debug("1200wd - Running rule %s domain %s" % (rule.name, rule_domain))
-            if not rule_domain: # stop running rule if empty domain is returned to avoid useless matches on rule parsing errors
+            # stop running rule if empty domain is returned to avoid useless matches on rule parsing errors
+            if not rule_domain:
                 continue
             base_domain = self._match_get_base_domain(rule['model'])
             orderby_field = self._match_get_datefield_name(rule['model'])
-            if orderby_field: orderby_field += ' DESC'
+            if orderby_field:
+                orderby_field += ' DESC'
             rule_matches = self.env[rule['model']].search(base_domain + rule_domain, limit=25, order=orderby_field)
             if rule_matches:
                 _logger.info("1200wd - %d matches found for %s" % (len(rule_matches), rule.name))
                 add_score = rule.score_item + (rule.score / len(rule_matches))
                 for rule_match in rule_matches:
                     name = self._match_get_name(rule_match, rule.model)
-                    if rule.model == 'account.invoice': so_ref = rule_match.origin or ''
-                    elif rule.model == 'sale.order': so_ref = rule_match.name
-                    else: so_ref = ''
+                    if rule.model == 'account.invoice':
+                        so_ref = rule_match.origin or ''
+                    elif rule.model == 'sale.order':
+                        so_ref = rule_match.name
+                    else:
+                        so_ref = ''
                     description = self._match_description(rule_match, rule.model)
-                    matches = self._update_match_list(
-                        {'name': name,
-                         'model': rule.model,
-                         'description': description,
-                         'so_ref': so_ref,},
-                        add_score, matches)
+                    matches = self._update_match_list({
+                        'name': name,
+                        'model': rule.model,
+                        'description': description,
+                        'so_ref': so_ref,
+                    }, add_score, matches)
 
         # Hide unknown references
         for match in [m for m in matches]:
@@ -568,19 +561,19 @@ class AccountBankStatementLine(models.Model):
         # Calculate bonuses for already found matches
         for rule in self.env['account.bank.match.rule'].search(
                 ['|', ('company_id', '=', False), ('company_id', '=', company_id),
-                ('type', '=', 'bonus')]):
+                 ('type', '=', 'bonus')]):
             rule_domain = self._parse_rule(rule)
             for match in [m for m in matches if m['model'] == rule.model]:
                 if self._match_get_object(match['model'], match['name'], rule_domain):
                     match['score'] += rule.score_item
-                    _logger.info("1200wd - Bonus found for %s match %s score %s" % (rule.name, match['name'], rule.score_item))
+                    _logger.info("1200wd - Bonus found for %s match %s score %s" %
+                                 (rule.name, match['name'], rule.score_item))
 
         # Sort and cleanup and return results
         matches = sorted(matches, key=lambda k: k['score'], reverse=True)
         matches = [m for m in matches if m['score'] > 0]
 
         return matches
-
 
     # Check if there is a winning match. Assumes sorted list on descending score
     @api.model
@@ -590,12 +583,11 @@ class AccountBankStatementLine(models.Model):
         @return: Sale order reference and invoice reference of winning match
         """
         if matches and matches[0]['score'] >= MATCH_MIN_SUCCESS_SCORE and \
-                (len(matches) == 1 or matches[1]['score'] <=MATCH_MIN_SUCCESS_SCORE or
-                matches[1]['score'] < (matches[0]['score']-(MATCH_MIN_SUCCESS_SCORE / 2))):
+                (len(matches) == 1 or matches[1]['score'] <= MATCH_MIN_SUCCESS_SCORE or
+                 matches[1]['score'] < (matches[0]['score']-(MATCH_MIN_SUCCESS_SCORE / 2))):
             return (matches[0]['so_ref'], matches[0]['name'])
         else:
             return ('', '')
-
 
     @api.model
     def pay_invoice_and_reconcile(self, invoice, writeoff_acc_id, writeoff_difference=True, type=''):
@@ -612,7 +604,6 @@ class AccountBankStatementLine(models.Model):
             self._handle_error("Invoice %s has been payed already" % invoice.number or '')
             return False
 
-        SIGN = {'out_invoice': -1, 'in_invoice': 1, 'out_refund': 1, 'in_refund': -1}
         inv_direction = SIGN[invoice.type]
         date = self.date or self._context.get('date_p') or fields.Date.context_today(self)
 
@@ -643,7 +634,7 @@ class AccountBankStatementLine(models.Model):
         # Skip reconciling if auto-matching and difference is too big
         configs = self.env['account.config.settings'].get_default_bank_match_configuration(self)
         writeoff_max_perc = configs.get('match_writeoff_max_perc')
-        if writeoff_difference and type=='auto' and \
+        if writeoff_difference and type == 'auto' and \
                         (abs(payment_difference / invoice_total) * 100) > writeoff_max_perc:
             msg = "Payment difference too big to automatically reconcile"
             self._handle_error(msg)
@@ -716,30 +707,28 @@ class AccountBankStatementLine(models.Model):
             return False
         elif not payment_difference or (payment_difference and writeoff_acc_id and writeoff_difference):
             # Pay and reconcile invoice, book payment differences
-            r_id = self.env['account.move.reconcile'].create(
-                {'type': 'auto',
-                 'line_id': map(lambda x: (4, x, False), lines2rec.ids),
-                 'line_partial_ids': map(lambda x: (3, x, False), lines2rec.ids)
-                 }
-            )
+            self.env['account.move.reconcile'].create({
+                'type': 'auto',
+                'line_id': map(lambda x: (4, x, False), lines2rec.ids),
+                'line_partial_ids': map(lambda x: (3, x, False), lines2rec.ids),
+            })
             for id in move_ids:
                 workflow.trg_trigger(self._uid, 'account.move.line', id, self._cr)
         elif type == 'auto':
             msg = "Cannot partially pay invoices when auto-matching"
             self._handle_error(msg)
             return False
-        else: # Payment difference, but do not writeoff_differences
-            # Partially pay invoice, leave invoice open
+        else:
+            # Payment difference, but do not writeoff_differences. Partially pay invoice, leave invoice open
             code = invoice.currency_id.symbol
             msg = _("Invoice partially paid: %s%s of %s%s (%s%s remaining).") % \
-                    (pay_amount, code, invoice.amount_total, code, payment_difference, code)
+                (pay_amount, code, invoice.amount_total, code, payment_difference, code)
             invoice.message_post(body=msg)
             lines2rec.reconcile_partial('manual')
 
         # Update the stored value (fields.function), so we write to trigger recompute
         invoice.write({})
         return move
-
 
     @api.model
     def create_account_move(self, account_id):
@@ -802,7 +791,6 @@ class AccountBankStatementLine(models.Model):
         self.journal_entry_id = move.id
         return move
 
-
     @api.multi
     def account_bank_match(self, always_refresh=True):
         """
@@ -822,10 +810,12 @@ class AccountBankStatementLine(models.Model):
             configs = self.env['account.config.settings'].get_default_bank_match_configuration(self)
             match_cache_time = configs.get('match_cache_time')
             if match_cache_time != -1:
-                to_old =  ((datetime.now() - timedelta(seconds=match_cache_time)).strftime('%Y-%m-%d %H:%M:%S'))
-                matches_found = self.env['account.bank.match'].search_count([('statement_line_id', '=', sl.id), ('create_date', '>', to_old)])
+                to_old = ((datetime.now() - timedelta(seconds=match_cache_time)).strftime('%Y-%m-%d %H:%M:%S'))
+                matches_found = self.env['account.bank.match'].search_count(
+                    [('statement_line_id', '=', sl.id), ('create_date', '>', to_old)])
             if matches_found and not always_refresh:
-                matches = self.env['account.bank.match'].search_read([('statement_line_id', '=', sl.id)], order='score DESC', limit=2)
+                matches = self.env['account.bank.match'].search_read(
+                    [('statement_line_id', '=', sl.id)], order='score DESC', limit=2)
 
             # ... otherwise search for matches add them to database
             else:
@@ -841,12 +831,12 @@ class AccountBankStatementLine(models.Model):
                             'so_ref': match['so_ref'],
                             'score': match['score'] or 0,
                         }
-                        _logger.info("1200wd - Match found %s: %s, score %d" % (match['name'], match.get('description', False), match['score'] or 0))
+                        _logger.info("1200wd - Match found %s: %s, score %d" %
+                                     (match['name'], match.get('description', False), match['score'] or 0))
                         self.env['account.bank.match'].create(data)
 
             so_ref, invoice_ref = sl._get_winning_match(matches)
         return {'matches_found': matches_found, 'so_ref': so_ref, 'name': invoice_ref}
-
 
     @api.multi
     def action_match_refresh(self):
@@ -867,7 +857,7 @@ class AccountBankStatementLine(models.Model):
             'active_id': st_line.id,
             'active_ids': [st_line.id],
             'statement_line_id': st_line.id,
-            })
+        })
         view = self.env.ref('account_bank_match.view_account_bank_statement_line_matches_form')
         match_result = self.account_bank_match(always_refresh=always_refresh)
 
@@ -884,7 +874,6 @@ class AccountBankStatementLine(models.Model):
             }
         act_move['context'] = dict(ctx, wizard_action=pickle.dumps(act_move))
         return act_move
-
 
     @api.model
     def match(self, vals):
@@ -906,7 +895,6 @@ class AccountBankStatementLine(models.Model):
                 vals = self.order_invoice_lookup(vals)
         return vals
 
-
     @api.model
     def auto_reconcile(self, type='auto'):
         """
@@ -925,7 +913,8 @@ class AccountBankStatementLine(models.Model):
         if self.name and self.name != '/':
             invoice = self._match_get_object('account.invoice', self.name)
             if len(invoice) == 1:
-                default_writeoff_journal_id = self.env['account.journal'].browse([configs.get('match_writeoff_journal_id')])
+                default_writeoff_journal_id = self.env['account.journal'].browse(
+                    [configs.get('match_writeoff_journal_id')])
                 if invoice.amount_total < 0:
                     writeoff_acc_id = self.match_selected.writeoff_difference and \
                                       (self.match_selected.writeoff_journal_id.default_debit_account_id.id or 0) or \
@@ -936,7 +925,8 @@ class AccountBankStatementLine(models.Model):
                                       (default_writeoff_journal_id.default_credit_account_id.id or 0)
 
                 writeoff_difference = self.match_selected.writeoff_difference
-                if type=='auto': writeoff_difference = True
+                if type == 'auto':
+                    writeoff_difference = True
                 move_entry = self.pay_invoice_and_reconcile(invoice, writeoff_acc_id, writeoff_difference, type=type)
                 if move_entry:
                     # Need to invalidate cache, otherwise changes in name are ignored
@@ -959,7 +949,6 @@ class AccountBankStatementLine(models.Model):
             return False
         return True
 
-
     @api.multi
     def action_match_reference_create(self):
         """
@@ -970,7 +959,8 @@ class AccountBankStatementLine(models.Model):
         st_line = self[0]
         ctx = self._context.copy()
         ref = re.sub(r"\s", "", st_line.ref).upper()
-        remote_account = self.env['res.partner.bank'].search([('partner_id','=',self.partner_id.id)]).sanitized_acc_number
+        remote_account = self.env['res.partner.bank'].search(
+            [('partner_id', '=' ,self.partner_id.id)]).sanitized_acc_number
         data = {
             'name': ref,
             'partner_bank_account': remote_account or '',
@@ -992,7 +982,6 @@ class AccountBankStatementLine(models.Model):
         act_move['context'] = dict(ctx, wizard_action=pickle.dumps(act_move))
         return act_move
 
-
     @api.model
     def create(self, vals):
         statement_line = super(AccountBankStatementLine, self).create(vals)
@@ -1004,7 +993,6 @@ class AccountBankStatementLine(models.Model):
     def write(self, vals):
         # FIXME: Values are not saved anymore when removing this method
         return super(AccountBankStatementLine, self).write(vals)
-
 
 
 class AccountBankStatement(models.Model):
@@ -1038,7 +1026,8 @@ class AccountBankStatement(models.Model):
             if vals_new['name'] != '/':
                 line.write(vals_new)
                 line_match_ids = [l.id for l in line.match_ids]
-                line_match = line_match_ids and self.env['account.bank.match'].search([('id', 'in', line_match_ids), ('name','=',vals_new['name'])])
+                line_match = line_match_ids and self.env['account.bank.match'].search(
+                    [('id', 'in', line_match_ids), ('name','=',vals_new['name'])])
                 if line_match_ids and len(line_match) and line_match.model == 'account.account':
                     account_id = int(vals_new['name']) or 0
                     try:
@@ -1060,16 +1049,17 @@ class AccountBankStatement(models.Model):
             match_errors_str += "Line ID: %d; Reference: %s, %s; Message: %s\n\n" % (err[0], err[1], err[2],err[3])
         if match_errors_str:
             if show_errors:
-                raise Warning("Matching finished\nErrors matching the following statement lines:\n\n" + match_errors_str)
+                raise Warning(
+                    "Matching finished\nErrors matching the following statement lines:\n\n" + match_errors_str)
             else:
                 return match_errors_str
 
         return True
 
-
     @api.model
     def create(self, vals):
-        #FIXME: This is a quick fix to solve problems with a incorrect period in the bank statement. Find out why Odoo uses wrong period sometimes...
+        # FIXME: This is a quick fix to solve problems with a incorrect period in the bank statement.
+        # Find out why Odoo uses wrong period sometimes...
         try:
             period_id = self.onchange_date(vals['date'], self.env.user.company_id.id)['value']['period_id']
             vals['period_id'] = period_id

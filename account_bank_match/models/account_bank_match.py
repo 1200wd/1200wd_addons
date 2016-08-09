@@ -23,16 +23,16 @@
 
 # TODO: Do not open old reconcile view when importing bank statements
 
-from openerp.tools.translate import _
 import logging
-
+import re
+from openerp.tools.translate import _
 from openerp import models, fields, api
 import openerp.addons.decimal_precision as dp
 from openerp.exceptions import ValidationError
-import re
+
 
 _logger = logging.getLogger(__name__)
-
+SIGN = {'out_invoice': -1, 'in_invoice': 1, 'out_refund': 1, 'in_refund': -1}
 
 # Object to store reference patterns of orders and invoices to look for in statement lines
 class AccountBankMatchReference(models.Model):
@@ -52,7 +52,9 @@ class AccountBankMatchReference(models.Model):
     sequence = fields.Integer('Sequence')
     active = fields.Boolean('Active', default=True, help='Set to inactive to disable Match Reference')
     account_journal_id = fields.Many2one('account.journal', string='Journal Filter',
-        help='Match only applies to selected journal. Leave empty to match all journals.', ondelete="cascade")
+                                         help='Match only applies to selected journal. Leave empty to match all '
+                                              'journals.', 
+                                         ondelete="cascade")
     score = fields.Integer("Score to Share", default=0, required=True,
                            help="Total score to share among all matches of this rule. If 3 matches are found and the "
                                 "score to share is 30 then every match gets a score of 10.")
@@ -91,8 +93,9 @@ class AccountBankMatchReferenceCreate(models.TransientModel):
                        help="Regular expression pattern to match reference. Leave emtpy to only match on Bank Account")
     partner_bank_account = fields.Char(string="Partner Bank Account", size=64,
                                        help="Remote owner bank account number to match")
-    account_journal_id = fields.Many2one('account.journal', string='Journal Filter', ondelete="cascade",
-        help='Match only applies to selected journal. Leave empty to match all journals.')
+    account_journal_id = fields.Many2one('account.journal', string='Journal Filter', ondelete="cascade", 
+                                         help='Match only applies to selected journal. '
+                                              'Leave empty to match all journals.')
     company_id = fields.Many2one('res.company', string='Company', required=True, ondelete="cascade")
     account_account_id = fields.Many2one('account.account', string="Resulting Account", ondelete="cascade",
                                          domain="[('type', 'in', ['other','receivable','liquidity','payable']), "
@@ -117,6 +120,11 @@ class AccountBankMatchReferenceCreate(models.TransientModel):
 class AccountBankMatch(models.Model):
     _name = "account.bank.match"
 
+    @api.model
+    def _get_default_writeoff(self):
+        configs = self.env['account.config.settings'].get_default_bank_match_configuration(self)
+        return configs.get('match_writeoff_journal_id') or 0
+    
     name = fields.Char(string="Reference", size=32, required=True,
                        help="Reference of match to order, invoice or account")
     so_ref = fields.Char('Sale Order Reference')
@@ -135,16 +143,9 @@ class AccountBankMatch(models.Model):
                                           default=_get_default_writeoff)
     writeoff_difference = fields.Boolean("Write-off Payment Difference", default=True)
 
-
-    @api.model
-    def _get_default_writeoff(self):
-        configs = self.env['account.config.settings'].get_default_bank_match_configuration(self)
-        return configs.get('match_writeoff_journal_id') or 0
-
     @api.one
     def compute_payment_difference(self):
         if self.model == 'account.invoice':
-            SIGN = {'out_invoice': -1, 'in_invoice': 1, 'out_refund': 1, 'in_refund': -1}
             invoice = self.env[self.model].search([('number', '=', self.name)])
             if not invoice:
                 _logger.debug("1200wd - compute_payment_difference - invoice %s not found" % self.name)
@@ -158,7 +159,6 @@ class AccountBankMatch(models.Model):
 
     payment_difference = fields.Float(string="Payment Difference", digits=dp.get_precision('Account'),
                                       readonly=True, compute='compute_payment_difference')
-
 
     @api.one
     def action_match_confirm(self):
@@ -196,13 +196,15 @@ class AccountBankMatchRule(models.Model):
         [
             ('sale.order', 'Sale Order'),
             ('account.invoice', 'Invoice'),
-            # ('account.move.line', 'Account Move'),
             ('res.partner', 'Partner'),
-            ('account.bank.statement.line','Bank Statement Line'),
+            ('account.bank.statement.line', 'Bank Statement Line'),
         ], select=True, required=True, help="Model used for search rule"
     )
-    score = fields.Integer("Score to Share", default=0, required=True, help="Total score to share among all matches of this rule. If 3 matches are found and the score to share is 30 then every match gets a score of 10.")
-    score_item = fields.Integer("Score per Match", default=0, required=True, help="Score for each match. Will be added to the shared score.")
+    score = fields.Integer("Score to Share", default=0, required=True, 
+                           help="Total score to share among all matches of this rule. If 3 matches are found and the "
+                                "score to share is 30 then every match gets a score of 10.")
+    score_item = fields.Integer("Score per Match", default=0, required=True, 
+                                help="Score for each match. Will be added to the shared score.")
     active = fields.Boolean('Active', default=True, help='Set to inactive to disable rule')
     type = fields.Selection(
         [
@@ -210,7 +212,9 @@ class AccountBankMatchRule(models.Model):
             ('bonus', 'Bonus'),
         ], select=True, required=True, default='extraction')
     rule = fields.Text(string="Match Rule", required=True,
-                       help="Rule to match a bank statement line to a sale order, invoice or account move. The rules should follow the Odoo style domain format.")
+                       help="Rule to match a bank statement line to a sale order, invoice or account move. "
+                            "The rules should follow the Odoo style domain format.")
     script = fields.Text(string="Run Script",
-                         help="Run Python code after rule matched. Be carefull what you enter here, wrong code could damage your Odoo database")
+                         help="Run Python code after rule matched. Be carefull what you enter here,"
+                              " wrong code could damage your Odoo database")
     company_id = fields.Many2one('res.company', string='Company', ondelete="cascade", required=False)

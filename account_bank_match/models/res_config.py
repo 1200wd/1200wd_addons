@@ -41,12 +41,15 @@ class AccountBankMatchConfiguration(models.Model):
         help="Store matches in cache and only recalculate if this number of seconds has passed. Enter -1 to "
              "disable caching.",
     )
-    match_writeoff_journal_id = fields.Many2one('account.journal',
+    match_writeoff_journal_id = fields.Many2one(
+        'account.journal',
         string="Account journal to write of small differences", required=False,
         help="Small differences are automatically booked on this journal.",
     )
-    match_writeoff_max_perc = fields.Float(string="% maximum difference writeoff", digits=dp.get_precision('Account'),
-        help="Maximum percentage which will be write off automatically on specified journal")
+    match_writeoff_max_perc = fields.Float(
+        string="% maximum difference writeoff", digits=dp.get_precision('Account'),
+        help="Maximum percentage which will be write off automatically "
+             "on specified journal")
 
     @api.model
     def get_default_bank_match_configuration(self, fields):
