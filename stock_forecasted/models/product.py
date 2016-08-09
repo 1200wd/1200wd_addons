@@ -75,10 +75,10 @@ class ProductTemplate(models.Model):
         return [('product_variant_ids', 'in', product_variant_ids.ids)]
 
     qty_forecasted = fields.Float(string="Forecasted Stock", digits=dp.get_precision('Product Unit of Measure'),
-                                  compute='_product_available', search='_search_qty_forecasted',
+                                  compute='_product_available', store=True,
                                   help="Forecasted quantity of products after delivery of orders.")
     outgoing_sales_qty = fields.Float(string="Outgoing Sales", digits=dp.get_precision('Product Unit of Measure'),
-                                  compute='_product_available',
+                                  compute='_product_available', store=True,
                                   help="Expected outgoing sales. Quantity is based on a certain percentage of recent sales orders.")
 
     def action_view_pending_sale_order_lines(self, cr, uid, ids, context=None):
@@ -110,7 +110,7 @@ class ProductProduct(models.Model):
                                   compute='_product_available', store=True,
                                   help="Forecasted product quantity. Based on incoming and outgoing stock moves and pending sales orders.")
     outgoing_sales_qty = fields.Float(string="Outgoing Sales", digits=dp.get_precision('Product Unit of Measure'),
-                                  compute='_product_available',
+                                  compute='_product_available', store=True,
                                   help="Expected outgoing sales. Quantity is based on a certain percentage of recent sales orders.")
 
     #TODO: Add dependencies to stock moves or find other solution to update Forecasted Stock
