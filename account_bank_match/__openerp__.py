@@ -45,6 +45,7 @@ If one correct match is found automatically link and reconcile the statement lin
         'views/account_bank_statement_view.xml',
         'data/account.bank.match.rule.csv',
     ],
+    "post_init_hook": "post_init_hook",
     'price': 0.00,
     'currency': 'EUR',
     'demo': [],

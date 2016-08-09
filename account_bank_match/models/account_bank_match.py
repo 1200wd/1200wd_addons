@@ -33,6 +33,7 @@ import re
 
 _logger = logging.getLogger(__name__)
 
+
 # Object to store reference patterns of orders and invoices to look for in statement lines
 class AccountBankMatchReference(models.Model):
     _name = "account.bank.match.reference"
@@ -52,23 +53,29 @@ class AccountBankMatchReference(models.Model):
     active = fields.Boolean('Active', default=True, help='Set to inactive to disable Match Reference')
     account_journal_id = fields.Many2one('account.journal', string='Journal Filter',
         help='Match only applies to selected journal. Leave empty to match all journals.', ondelete="cascade")
-    score = fields.Integer("Score to Share", default=0, required=True, help="Total score to share among all matches of this rule. If 3 matches are found and the score to share is 30 then every match gets a score of 10.")
-    score_item = fields.Integer("Score per Match", default=0, required=True, help="Score for each match. Will be added to the shared score.")
+    score = fields.Integer("Score to Share", default=0, required=True,
+                           help="Total score to share among all matches of this rule. If 3 matches are found and the "
+                                "score to share is 30 then every match gets a score of 10.")
+    score_item = fields.Integer("Score per Match", default=0, required=True,
+                                help="Score for each match. Will be added to the shared score.")
     company_id = fields.Many2one('res.company', string='Company', required=True, ondelete="cascade")
     account_account_id = fields.Many2one('account.account', string="Resulting Account", ondelete="cascade",
                                          domain="[('type', '=', 'other'), ('company_id', '=', company_id)]")
-    partner_bank_account = fields.Char(string="Partner Bank Account", size=64, help="Remote owner bank account number to match")
+    partner_bank_account = fields.Char(string="Partner Bank Account", size=64,
+                                       help="Remote owner bank account number to match")
 
     # FIXME: Disabled because it causes problems when matching with account_journal_id and empty names
     # _sql_constraints = [
-    #     ('reference_pattern_name_company_unique', 'unique (name, model, company_id)', 'Use reference pattern only once for each model and for each Company')
+    #     ('reference_pattern_name_company_unique', 'unique (name, model, company_id)',
+    # 'Use reference pattern only once for each model and for each Company')
     # ]
 
     @api.one
     @api.constrains('name')
     def _check_name_format(self):
         if self.name and re.search(r"\s", self.name):
-            raise ValidationError('Please enter reference pattern without any whitespace character such as space or tab')
+            raise ValidationError(
+                'Please enter reference pattern without any whitespace character such as space or tab')
 
     @api.one
     def copy(self, default=None):
@@ -77,18 +84,19 @@ class AccountBankMatchReference(models.Model):
         return super(AccountBankMatchReference, self).copy(default)
 
 
-
 class AccountBankMatchReferenceCreate(models.TransientModel):
     _name = "account.bank.match.reference.create"
 
     name = fields.Char(string="Reference Pattern", size=256,
                        help="Regular expression pattern to match reference. Leave emtpy to only match on Bank Account")
-    partner_bank_account = fields.Char(string="Partner Bank Account", size=64, help="Remote owner bank account number to match")
+    partner_bank_account = fields.Char(string="Partner Bank Account", size=64,
+                                       help="Remote owner bank account number to match")
     account_journal_id = fields.Many2one('account.journal', string='Journal Filter', ondelete="cascade",
         help='Match only applies to selected journal. Leave empty to match all journals.')
     company_id = fields.Many2one('res.company', string='Company', required=True, ondelete="cascade")
     account_account_id = fields.Many2one('account.account', string="Resulting Account", ondelete="cascade",
-                                         domain="[('type', 'in', ['other','receivable','liquidity','payable']), ('company_id', '=', company_id)]")
+                                         domain="[('type', 'in', ['other','receivable','liquidity','payable']), "
+                                                "('company_id', '=', company_id)]")
 
     @api.multi
     def action_match_reference_save(self):
@@ -105,15 +113,9 @@ class AccountBankMatchReferenceCreate(models.TransientModel):
         self.env['account.bank.match.reference'].create(data)
 
 
-
 # Object to store found matches to orders/invoices in statement lines
 class AccountBankMatch(models.Model):
     _name = "account.bank.match"
-
-    @api.model
-    def _get_default_writeoff(self):
-        configs = self.env['account.config.settings'].get_default_bank_match_configuration(self)
-        return configs.get('match_writeoff_journal_id') or 0
 
     name = fields.Char(string="Reference", size=32, required=True,
                        help="Reference of match to order, invoice or account")
@@ -133,6 +135,11 @@ class AccountBankMatch(models.Model):
                                           default=_get_default_writeoff)
     writeoff_difference = fields.Boolean("Write-off Payment Difference", default=True)
 
+
+    @api.model
+    def _get_default_writeoff(self):
+        configs = self.env['account.config.settings'].get_default_bank_match_configuration(self)
+        return configs.get('match_writeoff_journal_id') or 0
 
     @api.one
     def compute_payment_difference(self):
@@ -171,7 +178,6 @@ class AccountBankMatch(models.Model):
         if self.model != 'account.account':
             self.statement_line_id.auto_reconcile(type='manual')
         return True
-
 
 
 # Object to store found matches to orders/invoices in statement lines

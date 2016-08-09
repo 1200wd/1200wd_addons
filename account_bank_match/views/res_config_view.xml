@@ -28,9 +28,6 @@
                                 <field name="match_writeoff_max_perc" class="oe_inline"/>
                                 <label for="match_writeoff_max_perc"/>
                             </div>
-                            <div>
-                                <button name="action_generate_references" string="Create References from Sequences" type="object"/>
-                            </div>
                         </div>
                     </group>
 	            </xpath>
