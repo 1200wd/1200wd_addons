@@ -35,15 +35,16 @@ days_reserve_sales = 31
 class ProductTemplate(models.Model):
     _inherit = "product.template"
 
+    @api.multi
     def _product_available(self, name=None, arg=False):
-        prod_available = {}
-        product_ids = self.browse()
+        start = datetime.datetime.now()
+        res = {}
         var_ids = []
-        for product in product_ids:
+        for product in self:
             var_ids += [p.id for p in product.product_variant_ids]
-        variant_available = self.pool['product.product']._product_available(var_ids)
+        variant_available = self.env['product.product'].browse(var_ids)._product_available()
 
-        for product in product_ids:
+        for product in self:
             product.qty_available = 0
             product.virtual_available = 0
             product.incoming_qty = 0
@@ -58,7 +59,7 @@ class ProductTemplate(models.Model):
                 product.qty_forecasted += variant_available[p.id]['qty_forecasted']
                 product.outgoing_sales_qty += variant_available[p.id]['outgoing_sales_qty']
 
-            prod_available[product.id] = {
+            res[product.id] = {
                 "qty_available": product.qty_available,
                 "virtual_available": product.virtual_available,
                 "incoming_qty": product.incoming_qty,
@@ -66,9 +67,9 @@ class ProductTemplate(models.Model):
                 "qty_forecasted": product.qty_forecasted,
                 "outgoing_sales_qty": product.outgoing_sales_qty,
             }
-        _logger.debug("1200wd - ProductTemplate._product_available, product ids %s, result %s" %
-                      (product_ids, prod_available))
-        return prod_available
+        _logger.debug("1200wd - ProductTemplate._product_available, products %d, TOTAL execution time %dms" % (len(res), (datetime.datetime.now()-start).total_seconds()*1000))
+
+        return res
 
     def _search_qty_forecasted(self, operator, value):
         domain = [('qty_forecasted', operator, value)]
@@ -76,10 +77,10 @@ class ProductTemplate(models.Model):
         return [('product_variant_ids', 'in', product_variant_ids.ids)]
 
     qty_forecasted = fields.Float(string="Forecasted Stock", digits=dp.get_precision('Product Unit of Measure'),
-                                  compute='_product_available', store=True,
+                                  compute='_product_available',
                                   help="Forecasted quantity of products after delivery of orders.")
     outgoing_sales_qty = fields.Float(string="Outgoing Sales", digits=dp.get_precision('Product Unit of Measure'),
-                                  compute='_product_available', store=True,
+                                  compute='_product_available',
                                   help="Expected outgoing sales. Quantity is based on a certain percentage of recent sales orders.")
 
     def action_view_pending_sale_order_lines(self, cr, uid, ids, context=None):
@@ -96,7 +97,7 @@ class ProductTemplate(models.Model):
     def action_view_outgoing_stock_moves(self, cr, uid, ids, context=None):
         products = self._get_products(cr, uid, ids, context=context)
         result = self._get_act_window_dict(cr, uid, 'stock_forecasted.action_stock_move_outgoing_tree_forecasted', context=context)
-        domain_quant_loc, domain_move_in_loc, domain_move_out_loc = self.pool['product.product']._get_domain_locations(cr, uid, products, context=context)
+        domain_quant_loc, domain_move_in_loc, domain_move_out_loc = self.env['product.product']._get_domain_locations(cr, uid, products, context=context)
 
         result['domain'] = "[('product_id','in',[" + ','.join(map(str, products)) + "])," \
             "('state', 'not in', ('draft', 'cancel', 'done')), " + str(domain_move_out_loc)[1:][:-1] + "]"
@@ -108,15 +109,15 @@ class ProductProduct(models.Model):
     _inherit = "product.product"
 
     qty_forecasted = fields.Float(string="Forecasted Stock", digits=dp.get_precision('Product Unit of Measure'),
-                                  compute='_product_available', store=True,
+                                  compute='_product_available',
                                   help="Forecasted product quantity. Based on incoming and outgoing stock moves and pending sales orders.")
     outgoing_sales_qty = fields.Float(string="Outgoing Sales", digits=dp.get_precision('Product Unit of Measure'),
-                                  compute='_product_available', store=True,
+                                  compute='_product_available',
                                   help="Expected outgoing sales. Quantity is based on a certain percentage of recent sales orders.")
 
-    @api.one
-    @api.depends()
+    @api.multi
     def _product_available(self):
+        tstart = datetime.datetime.now()
         global days_reserve_sales
 
         domain_products = [('product_id', 'in', self.ids)]
@@ -140,39 +141,40 @@ class ProductProduct(models.Model):
 
         domain_move_in += domain_move_in_loc
         domain_move_out += domain_move_out_loc
-        # self, cr, uid, domain, fields, groupby, offset=0, limit=None, context=None, orderby=False, lazy=True
         moves_in = self.env['stock.move'].read_group(
             domain=domain_move_in, fields=['product_id', 'product_qty'], groupby=['product_id'])
         moves_out = self.env['stock.move'].read_group(
             domain=domain_move_out, fields=['product_id', 'product_qty'], groupby=['product_id'])
 
         domain_quant += domain_quant_loc
-        quants = self.env['stock.quant'].read_group(
-            domain=domain_quant, fields=['product_id', 'qty'], groupby=['product_id'])
+        quants = self.env['stock.quant'].read_group(domain=domain_quant, fields=['product_id', 'qty'], groupby=['product_id'])
         quants = dict(map(lambda x: (x['product_id'][0], x['qty']), quants))
 
         moves_in = dict(map(lambda x: (x['product_id'][0], x['product_qty']), moves_in))
         moves_out = dict(map(lambda x: (x['product_id'][0], x['product_qty']), moves_out))
 
+        t1 = datetime.datetime.now()
         # Get pending sales
-        now = datetime.datetime.now()
         domain_sales_date = \
-            [('create_date', '>=', ((now - datetime.timedelta(days=days_reserve_sales)).strftime('%Y-%m-%d')))]
+            [('create_date', '>=', ((tstart - datetime.timedelta(days=days_reserve_sales)).strftime('%Y-%m-%d')))]
         domain_sales_out = domain_sales_date + [('state', 'not in', ('cancel', 'done'))] + domain_products
         sales_out = self.env['sale.order.line'].read_group(
             domain_sales_out, ['product_id', 'product_uos_qty'], ['product_id'])
         sales_out = dict(map(lambda x: (x['product_id'][0], x['product_uos_qty']), sales_out))
-        _logger.debug("1200wd - Product %s pending sales %s (total execution time %dms)" %
-                      (self.ids, sales_out, (datetime.datetime.now()-now).total_seconds()*1000))
+        _logger.debug("1200wd - ProductProduct number of pending sales %s" % len(sales_out))
+
+        t2 = datetime.datetime.now()
 
         # Get almost incoming products
-        domain_move_in_expected = domain_move_in + [('date_expected', '<=', ((now + datetime.timedelta(days=2)).strftime('%Y-%m-%d')))]
-        moves_in_expected = self.env['stock.move'].read_group(
-            domain_move_in_expected, ['product_id', 'product_qty'], ['product_id'])
+        domain_move_in_expected = domain_move_in + [('date_expected', '<=', ((tstart + datetime.timedelta(days=2)).strftime('%Y-%m-%d')))]
+        import pdb; pdb.set_trace()
+        moves_in_expected = self.env['stock.move'].read_group(domain_move_in_expected, ['product_id', 'product_qty'], ['product_id'])
         moves_in_expected = dict(map(lambda x: (x['product_id'][0], x['product_qty']), moves_in_expected))
+        _logger.debug("1200wd - ProductProduct number of moves_in_expected %s" % len(moves_in_expected))
 
+        t3 = datetime.datetime.now()
         res = {}
-        for product in self.browse():
+        for product in self:
             id = product.id
             product.qty_available = float_round(quants.get(id, 0.0), precision_rounding=product.uom_id.rounding)
             product.incoming_qty = float_round(moves_in.get(id, 0.0), precision_rounding=product.uom_id.rounding)
@@ -193,14 +195,20 @@ class ProductProduct(models.Model):
                 'qty_forecasted': product.qty_forecasted,
                 'outgoing_sales_qty': product.outgoing_sales_qty,
             }
-        _logger.debug("1200wd - ProductProduct._product_available, product ids %s, result %s" % (self.ids, res))
+        extimes = "Execution times t1, t2, t3, total: %dms, %dms, %dms, %dms" % (
+            ((t1-tstart).total_seconds()*1000),
+            ((t2-tstart).total_seconds()*1000),
+            ((t3-tstart).total_seconds()*1000),
+            ((datetime.datetime.now()-tstart).total_seconds()*1000),)
+        _logger.debug("1200wd - ProductProduct._product_available, products %d" % (len(res)))
+        _logger.debug("1200wd - Execution times %s" % extimes)
         return res
 
     def action_view_pending_sale_order_lines(self, cr, uid, ids, context=None):
         global days_reserve_sales
         if isinstance(ids, (int, long)):
             ids = [ids]
-        result = self.pool['product.template']._get_act_window_dict(cr, uid, 'stock_forecasted.action_order_line_product_tree_forecasted', context=context)
+        result = self.env['product.template']._get_act_window_dict(cr, uid, 'stock_forecasted.action_order_line_product_tree_forecasted', context=context)
 
         date_from = ((datetime.datetime.now() - datetime.timedelta(days=days_reserve_sales)).strftime('%Y-%m-%d'))
         result['domain'] = "[('product_id','in',[" + ','.join(map(str, ids)) + "])," \
@@ -211,7 +219,7 @@ class ProductProduct(models.Model):
     def action_view_outgoing_stock_moves(self, cr, uid, ids, context=None):
         if isinstance(ids, (int, long)):
             ids = [ids]
-        result = self.pool['product.template']._get_act_window_dict(cr, uid, 'stock_forecasted.action_stock_move_outgoing_tree_forecasted', context=context)
+        result = self.env['product.template']._get_act_window_dict(cr, uid, 'stock_forecasted.action_stock_move_outgoing_tree_forecasted', context=context)
         domain_quant_loc, domain_move_in_loc, domain_move_out_loc = self._get_domain_locations(cr, uid, ids, context=context)
 
         result['domain'] = "[('product_id','in',[" + ','.join(map(str, ids)) + "])," \
