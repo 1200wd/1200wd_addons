@@ -15,18 +15,18 @@
             <field name="active">1</field>
         </record>
 
-        <record id="transsmart_default_carrier" model="ir.model.data">
-            <field name="name">transsmart_default_carrier</field>
-            <field name="model">res.partner</field>
-        </record>   
-        <record id="transsmart_default_service_level" model="ir.model.data">
-            <field name="name">transsmart_default_service_level</field>
-            <field name="model">delivery.service.level</field>
-        </record>        
-        <record id="transsmart_default_cost_center" model="ir.model.data">
-            <field name="name">transsmart_default_cost_center</field>
-            <field name="model">transsmart.cost.center</field>
-        </record>        
+        <!--<record id="transsmart_default_carrier" model="ir.model.data">-->
+            <!--<field name="name">transsmart_default_carrier</field>-->
+            <!--<field name="model">res.partner</field>-->
+        <!--</record>   -->
+        <!--<record id="transsmart_default_service_level" model="ir.model.data">-->
+            <!--<field name="name">transsmart_default_service_level</field>-->
+            <!--<field name="model">delivery.service.level</field>-->
+        <!--</record>        -->
+        <!--<record id="transsmart_default_cost_center" model="ir.model.data">-->
+            <!--<field name="name">transsmart_default_cost_center</field>-->
+            <!--<field name="model">transsmart.cost.center</field>-->
+        <!--</record>        -->
         
     </data>
 </openerp>
