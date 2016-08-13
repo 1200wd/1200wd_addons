@@ -77,10 +77,8 @@ class ProductTemplate(models.Model):
         return [('product_variant_ids', 'in', product_variant_ids.ids)]
 
     qty_forecasted = fields.Float(string="Forecasted Stock", digits=dp.get_precision('Product Unit of Measure'),
-                                  compute='_product_available',
                                   help="Forecasted quantity of products after delivery of orders.")
     outgoing_sales_qty = fields.Float(string="Outgoing Sales", digits=dp.get_precision('Product Unit of Measure'),
-                                  compute='_product_available',
                                   help="Expected outgoing sales. Quantity is based on a certain percentage of recent sales orders.")
 
     def action_view_pending_sale_order_lines(self, cr, uid, ids, context=None):
@@ -109,11 +107,10 @@ class ProductProduct(models.Model):
     _inherit = "product.product"
 
     qty_forecasted = fields.Float(string="Forecasted Stock", digits=dp.get_precision('Product Unit of Measure'),
-                                  compute='_product_available',
                                   help="Forecasted product quantity. Based on incoming and outgoing stock moves and pending sales orders.")
     outgoing_sales_qty = fields.Float(string="Outgoing Sales", digits=dp.get_precision('Product Unit of Measure'),
-                                  compute='_product_available',
                                   help="Expected outgoing sales. Quantity is based on a certain percentage of recent sales orders.")
+
 
     @api.multi
     def _product_available(self):
@@ -155,22 +152,22 @@ class ProductProduct(models.Model):
 
         t1 = datetime.datetime.now()
         # Get pending sales
-        domain_sales_date = \
-            [('create_date', '>=', ((tstart - datetime.timedelta(days=days_reserve_sales)).strftime('%Y-%m-%d')))]
-        domain_sales_out = domain_sales_date + [('state', 'not in', ('cancel', 'done'))] + domain_products
-        sales_out = self.env['sale.order.line'].read_group(
-            domain_sales_out, ['product_id', 'product_uos_qty'], ['product_id'])
-        sales_out = dict(map(lambda x: (x['product_id'][0], x['product_uos_qty']), sales_out))
-        _logger.debug("1200wd - ProductProduct number of pending sales %s" % len(sales_out))
+        # domain_sales_date = \
+        #     [('create_date', '>=', ((tstart - datetime.timedelta(days=days_reserve_sales)).strftime('%Y-%m-%d')))]
+        # domain_sales_out = domain_sales_date + [('state', 'not in', ('cancel', 'done'))] + domain_products
+        # sales_out = self.env['sale.order.line'].read_group(
+        #     domain_sales_out, ['product_id', 'product_uos_qty'], ['product_id'])
+        # sales_out = dict(map(lambda x: (x['product_id'][0], x['product_uos_qty']), sales_out))
+        # _logger.debug("1200wd - ProductProduct number of pending sales %s" % len(sales_out))
 
         t2 = datetime.datetime.now()
 
         # Get almost incoming products
-        domain_move_in_expected = domain_move_in + [('date_expected', '<=', ((tstart + datetime.timedelta(days=2)).strftime('%Y-%m-%d')))]
-        import pdb; pdb.set_trace()
-        moves_in_expected = self.env['stock.move'].read_group(domain_move_in_expected, ['product_id', 'product_qty'], ['product_id'])
-        moves_in_expected = dict(map(lambda x: (x['product_id'][0], x['product_qty']), moves_in_expected))
-        _logger.debug("1200wd - ProductProduct number of moves_in_expected %s" % len(moves_in_expected))
+        # domain_move_in_expected = domain_move_in + [('date_expected', '<=', ((tstart + datetime.timedelta(days=2)).strftime('%Y-%m-%d')))]
+        # import pdb; pdb.set_trace()
+        # moves_in_expected = self.env['stock.move'].read_group(domain_move_in_expected, ['product_id', 'product_qty'], ['product_id'])
+        # moves_in_expected = dict(map(lambda x: (x['product_id'][0], x['product_qty']), moves_in_expected))
+        # _logger.debug("1200wd - ProductProduct number of moves_in_expected %s" % len(moves_in_expected))
 
         t3 = datetime.datetime.now()
         res = {}
@@ -179,11 +176,13 @@ class ProductProduct(models.Model):
             product.qty_available = float_round(quants.get(id, 0.0), precision_rounding=product.uom_id.rounding)
             product.incoming_qty = float_round(moves_in.get(id, 0.0), precision_rounding=product.uom_id.rounding)
             product.outgoing_qty = float_round(moves_out.get(id, 0.0), precision_rounding=product.uom_id.rounding)
-            product.outgoing_sales_qty = float_round(sales_out.get(id, 0.0), precision_rounding=product.uom_id.rounding)
+            # product.outgoing_sales_qty = float_round(sales_out.get(id, 0.0), precision_rounding=product.uom_id.rounding)
+            product.outgoing_sales_qty = 2.0
             product.virtual_available = \
                 float_round(quants.get(id, 0.0) + moves_in.get(id, 0.0) -
                             moves_out.get(id, 0.0), precision_rounding=product.uom_id.rounding)
-            in_expected = float_round(moves_in_expected.get(id, 0.0), precision_rounding=product.uom_id.rounding)
+            # in_expected = float_round(moves_in_expected.get(id, 0.0), precision_rounding=product.uom_id.rounding)
+            in_expected = 10.0
             product.qty_forecasted = \
                 product.qty_available - (product.outgoing_qty + product.outgoing_sales_qty) + in_expected
 
