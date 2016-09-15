@@ -39,9 +39,19 @@ class delivery_transsmart_configuration(models.TransientModel):
 
     @api.multi
     def get_default_transsmart(self):
-        return {'carrier_id': self.env['ir.model.data'].xmlid_to_object('delivery_transsmart.transsmart_default_carrier').res_id,
-                'service_level_time_id': self.env['ir.model.data'].xmlid_to_object('delivery_transsmart.transsmart_default_service_level').res_id,
-            }
+        carrier_id = None
+        service_level_time_id = None
+        carrier = self.env['ir.model.data'].xmlid_to_object('delivery_transsmart.transsmart_default_carrier')
+        if carrier and 'res_id' in carrier:
+            carrier_id = carrier.res_id
+        service_level_time = self.env['ir.model.data'].\
+            xmlid_to_object('delivery_transsmart.transsmart_default_service_level')
+        if service_level_time and 'res_id' in service_level_time:
+            service_level_time_id = service_level_time.res_id
+        return {
+            'carrier_id': carrier_id,
+            'service_level_time_id': service_level_time_id,
+        }
    
     @api.multi
     def transsmart_default_carrier_id(self):
