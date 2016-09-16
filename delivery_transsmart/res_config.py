@@ -31,23 +31,18 @@ class delivery_transsmart_configuration(models.TransientModel):
     _name = 'delivery.transsmart.config.settings'
     _inherit = 'res.config.settings'
 
-    service_level_time_id = fields.Many2one('delivery.service.level.time', string='Default Prebooking Service Level Time',                        
-                                        help='Default service level time.')
-    carrier_id = fields.Many2one('res.partner', string='Default Prebooking Carrier',                        
+    service_level_time_id = fields.Many2one('delivery.service.level.time',
+                                            string='Default Prebooking Service Level Time',
+                                            help='Default service level time.')
+    carrier_id = fields.Many2one('res.partner', string='Default Prebooking Carrier',
                                  help='Default carrier.')
     disable = fields.Boolean('Disable')
 
     @api.multi
     def get_default_transsmart(self):
-        carrier_id = None
-        service_level_time_id = None
-        carrier = self.env['ir.model.data'].xmlid_to_object('delivery_transsmart.transsmart_default_carrier')
-        if carrier and 'res_id' in carrier:
-            carrier_id = carrier.res_id
-        service_level_time = self.env['ir.model.data'].\
-            xmlid_to_object('delivery_transsmart.transsmart_default_service_level')
-        if service_level_time and 'res_id' in service_level_time:
-            service_level_time_id = service_level_time.res_id
+        ir_values_obj = self.env['ir.values']
+        carrier_id = ir_values_obj.get_default('delivery.transsmart', 'transsmart_default_carrier')
+        service_level_time_id = ir_values_obj.get_default('delivery.transsmart', 'transsmart_default_service_level')
         return {
             'carrier_id': carrier_id,
             'service_level_time_id': service_level_time_id,
@@ -55,33 +50,31 @@ class delivery_transsmart_configuration(models.TransientModel):
    
     @api.multi
     def transsmart_default_carrier_id(self):
-        carrier = self.env['ir.model.data'].xmlid_to_object('delivery_transsmart.transsmart_default_carrier')
-        if carrier and 'res_id' in carrier:
-            carrier_id = carrier.res_id
+        ir_values_obj = self.env['ir.values']
+        carrier_id = ir_values_obj.get_default('delivery.transsmart', 'transsmart_default_carrier')
+        carrier = self.env['res.partner'].browse([carrier_id])
+        if carrier:
+            return carrier[0].transsmart_id
         else:
-            return None
-        carrier = self.env['res.partner'].browse([carrier_id])[0]
-        return carrier.transsmart_id
+            raise Warning(_('No default Default Prebooking Carrier found. Please change Transsmart settings'))
 
     @api.multi
     def transsmart_default_service_level_time_id(self):
-        service_level_time = self.env['ir.model.data'].\
-            xmlid_to_object('delivery_transsmart.transsmart_default_service_level')
-        if service_level_time and 'res_id' in service_level_time:
-            service_id = service_level_time.res_id
+        ir_values_obj = self.env['ir.values']
+        service_level_time_id = ir_values_obj.get_default('delivery.transsmart', 'transsmart_default_service_level')
+        service = self.env['delivery.service.level.time'].browse([service_level_time_id])
+        if service:
+            return service[0].transsmart_id
         else:
-            return None
-        service = self.env['delivery.service.level.time'].browse([service_id])[0]
-        return service.transsmart_id
+            raise Warning(_('No default Default Prebooking Carrier found. Please change Transsmart settings'))
 
     @api.multi
     def set_transsmart_defaults(self):
-        self.env['ir.model.data'].xmlid_to_object('delivery_transsmart.transsmart_default_carrier').write({
-            'res_id': self.carrier_id and self.carrier_id.id or None
-        })
-        self.env['ir.model.data'].xmlid_to_object('delivery_transsmart.transsmart_default_service_level').write({
-            'res_id': self.service_level_time_id and self.service_level_time_id.id or None
-        })
+        ir_values_obj = self.env['ir.values']
+        ir_values_obj.set_default('delivery.transsmart', 'transsmart_default_carrier',
+                                  self.carrier_id and self.carrier_id.id or None)
+        ir_values_obj.set_default('delivery.transsmart', 'transsmart_default_service_level',
+                                  self.service_level_time_id and self.service_level_time_id.id or None)
 
     def get_transsmart_service(self):
         return self.env['ir.model.data'].get_object('delivery_transsmart', 'web_service_transsmart')
