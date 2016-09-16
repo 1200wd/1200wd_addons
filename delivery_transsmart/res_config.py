@@ -66,7 +66,7 @@ class delivery_transsmart_configuration(models.TransientModel):
         if service:
             return service[0].transsmart_id
         else:
-            raise Warning(_('No default Default Prebooking Carrier found. Please change Transsmart settings'))
+            raise Warning(_('No default Prebooking Service Level Time found. Please change Transsmart settings'))
 
     @api.multi
     def set_transsmart_defaults(self):
