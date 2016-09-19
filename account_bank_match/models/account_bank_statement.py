@@ -73,7 +73,7 @@ class AccountBankStatementLine(models.Model):
         if self.show_errors:
             raise Warning(message)
         else:
-            _logger.error("1200wd - %s" % message)
+            _logger.warning("1200wd - %s" % message)
             self.error_str += message + '/n'
 
 
@@ -174,9 +174,12 @@ class AccountBankStatementLine(models.Model):
         Format {name, [sale order reference], model, [description], score total, score per item}
         """
         try:
-            remote_account = self.env['res.partner.bank'].search([('partner_id','=',self.partner_id.id)]).sanitized_acc_number
-            statement_text = (self.name or '') + '_' + (self.partner_id.name or '') + '_' + (self.ref or '') + '_' + \
-                             (self.so_ref or '') + '_' + remote_account or ''
+            remote_account = ''
+            if self.partner_id:
+                partner_bank = self.env['res.partner.bank'].search([('partner_id','=',self.partner_id.id)])
+                if partner_bank and 'sanitized_acc_number' in partner_bank:
+                    remote_account = partner_bank.sanitized_acc_number
+            statement_text = (self.name or '') + '_' + (self.partner_id.name or '') + '_' + (self.ref or '') + '_' + (self.so_ref or '') + '_' + remote_account
         except Exception, e:
             msg = "Could not parse statement text for %s" % self.name
             self._handle_error(msg)
