@@ -30,7 +30,7 @@ class sale_order_line(models.Model):
     _inherit = "sale.order.line"
 
     @api.one
-    @api.depends('actual_cost', 'price_unit', 'product_uos_qty')
+    @api.depends('price_unit', 'product_uos_qty')
     def get_actual_costs(self):
         if self.product_tmpl_id.actual_cost:
             self.actual_cost = 0
@@ -65,6 +65,7 @@ class sale_order(models.Model):
             self.margin_perc = ( 1 - ( self.actual_cost_total / self.amount_untaxed) ) * 100
         _logger.debug("1200wd - Update sale.order actual costs to {} and margin to {}".
                       format(self.actual_cost_total, self.margin_perc))
+        #FIXME: this returns [True] can probably be removed
         return True
 
     actual_cost_total = fields.Float(string="Total Actual Cost", readonly=True,
