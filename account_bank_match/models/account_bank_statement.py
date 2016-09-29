@@ -114,8 +114,8 @@ class AccountBankStatementLine(models.Model):
         invoice = inv_obj.browse(invoice_id)
         # Validate invoice
         invoice.signal_workflow('invoice_open')
-        _logger.debug("1200wd - Created invoice in %.1f seconds" %
-                      (datetime.now()-time_start).total_seconds())
+        _logger.debug("1200wd - Created invoice in %.0f milliseconds" %
+                      ((datetime.now()-time_start).total_seconds() * 1000))
         return invoice
 
 
@@ -126,8 +126,8 @@ class AccountBankStatementLine(models.Model):
         # Add invoice reference to bank statement line
         time_start = datetime.now()
         ret = self.prepare_bs_line(invoice, vals)
-        _logger.debug("1200wd - Prepare BS Line in %.1f seconds" %
-                      (datetime.now()-time_start).total_seconds())
+        _logger.debug("1200wd - Prepare BS Line in %.0f milliseconds" %
+                      ((datetime.now()-time_start).total_seconds() * 1000))
         return ret
 
 
@@ -469,14 +469,18 @@ class AccountBankStatementLine(models.Model):
     def _match_get_object(self, model, ref, domain = None):
         if domain is None:
             domain = []
+        # else:
+        #     import pdb; pdb.set_trace()
         try:
+
             m = self.env[model]
             if model == 'account.invoice':
-                return m.search(['|', ('number', '=', ref), ('reference', '=', ref)] + domain)
+                # return m.search(['|', ('number', '=', ref), ('reference', '=', ref)] + domain, limit=1)
+                return m.search([('number', '=', ref)] + domain, limit=1)
             elif model == 'sale.order':
-                return m.search([('name', '=', ref)] + domain)
+                return m.search([('name', '=', ref)] + domain, limit=1)
             else:
-                return m.search([('id', '=', ref)] + domain)
+                return m.search([('id', '=', ref)] + domain, limit=1)
 
         except Exception, e:
             msg = "Could not open model %s with reference %s. Error %s" % (model, ref, e.args[0])
@@ -502,8 +506,8 @@ class AccountBankStatementLine(models.Model):
             self.invalidate_cache()
         except AttributeError:
             return False
-        _logger.debug("1200wd - Search match - delete old %.1f seconds" %
-                      (datetime.now()-time_start).total_seconds())
+        _logger.debug("1200wd - Search matches - delete old %.0f milliseconds" %
+                      ((datetime.now()-time_start).total_seconds() * 1000))
 
         # Search matches with reference pattern
         time_start = datetime.now()
@@ -514,8 +518,8 @@ class AccountBankStatementLine(models.Model):
             base_score = sum([d['score'] for d in ref_matches]) / len(ref_matches)
             for ref_match in ref_matches:
                 matches = self._update_match_list(ref_match, base_score + ref_match['score_item'], matches)
-        _logger.debug("1200wd - Search matches - ref patterns - %.1f seconds" %
-                      (datetime.now()-time_start).total_seconds())
+        _logger.debug("1200wd - Search matches - ref patterns - %.0f milliseconds" %
+                      ((datetime.now()-time_start).total_seconds() * 1000))
 
         # Search supplier reference in bank statement line
         time_start = datetime.now()
@@ -537,8 +541,8 @@ class AccountBankStatementLine(models.Model):
         if ref_matches:
             for ref_match in ref_matches:
                 matches = self._update_match_list(ref_match, ref_match['score_item'], matches)
-        _logger.debug("1200wd - Search matches - search ref - %.1f seconds" %
-                      (datetime.now()-time_start).total_seconds())
+        _logger.debug("1200wd - Search matches - search ref - %.0f milliseconds" %
+                      ((datetime.now()-time_start).total_seconds() * 1000))
 
         # Run match rules on invoices, sale orders
         time_start = datetime.now()
@@ -551,7 +555,7 @@ class AccountBankStatementLine(models.Model):
             base_domain = self._match_get_base_domain(rule['model'])
             orderby_field = self._match_get_datefield_name(rule['model'])
             if orderby_field: orderby_field += ' DESC'
-            rule_matches = self.env[rule['model']].search(base_domain + rule_domain, limit=25, order=orderby_field)
+            rule_matches = self.env[rule['model']].search(base_domain + rule_domain, limit=15, order=orderby_field)
             if rule_matches:
                 add_score = rule.score_item + (rule.score / len(rule_matches))
                 for rule_match in rule_matches:
@@ -566,10 +570,11 @@ class AccountBankStatementLine(models.Model):
                          'description': description,
                          'so_ref': so_ref,},
                         add_score, matches)
-        _logger.debug("1200wd - Search matches - match rules - %.1f seconds" %
-                      (datetime.now()-time_start).total_seconds())
+        _logger.debug("1200wd - Search matches - match rules - %.0f milliseconds" %
+                      ((datetime.now()-time_start).total_seconds() * 1000))
 
-        # Hide unknown references
+        matches = [m for m in matches if m['score'] > 0]
+        # Punish unknown references
         time_start = datetime.now()
         for match in [m for m in matches]:
             if not self._match_get_object(match['model'], match['name']):
@@ -584,15 +589,15 @@ class AccountBankStatementLine(models.Model):
             for match in [m for m in matches if m['model'] == rule.model]:
                 if self._match_get_object(match['model'], match['name'], rule_domain):
                     match['score'] += rule.score_item
-        _logger.debug("1200wd - Search matches - bonus rules - %.1f seconds" %
-                      (datetime.now()-time_start).total_seconds())
+        _logger.debug("1200wd - Search matches - bonus rules - %.0f milliseconds" %
+                      ((datetime.now()-time_start).total_seconds() * 1000))
 
         # Sort and cleanup and return results
         time_start = datetime.now()
         matches = sorted(matches, key=lambda k: k['score'], reverse=True)
         matches = [m for m in matches if m['score'] > 0]
-        _logger.debug("1200wd - Search matches - cleanup - %.1f seconds" %
-                      (datetime.now()-time_start).total_seconds())
+        _logger.debug("1200wd - Search matches - cleanup - %.0f milliseconds" %
+                      ((datetime.now()-time_start).total_seconds() * 1000))
 
         return matches
 
@@ -972,8 +977,8 @@ class AccountBankStatementLine(models.Model):
         else:
             _logger.warning("1200wd - No reference name specified, cannot reconcile")
             return False
-        _logger.debug("1200wd - Autoreconcile in %.1f seconds" %
-                      (datetime.now()-time_start).total_seconds())
+        _logger.debug("1200wd - Autoreconcile in %.0f milliseconds" %
+                      ((datetime.now()-time_start).total_seconds() * 1000))
         return True
 
 
