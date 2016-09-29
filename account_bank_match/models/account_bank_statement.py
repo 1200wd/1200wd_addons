@@ -469,10 +469,7 @@ class AccountBankStatementLine(models.Model):
     def _match_get_object(self, model, ref, domain = None):
         if domain is None:
             domain = []
-        # else:
-        #     import pdb; pdb.set_trace()
         try:
-
             m = self.env[model]
             if model == 'account.invoice':
                 # return m.search(['|', ('number', '=', ref), ('reference', '=', ref)] + domain, limit=1)
@@ -483,7 +480,28 @@ class AccountBankStatementLine(models.Model):
                 return m.search([('id', '=', ref)] + domain, limit=1)
 
         except Exception, e:
-            msg = "Could not open model %s with reference %s. Error %s" % (model, ref, e.args[0])
+            msg = "Could not open model %s with reference %s. Error %s" % (model, ref, e)
+            self._handle_error(msg)
+        return False
+
+
+    @api.model
+    def _match_check_bonus(self, model, refs, domain = None):
+        if domain is None:
+            domain = []
+        try:
+            if type(refs) != list:
+                refs = [refs]
+            m = self.env[model]
+            if model == 'account.invoice':
+                return [res.number for res in m.search([('number', 'in', refs)] + domain)]
+            elif model == 'sale.order':
+                return  [res.name for res in m.search([('name', 'in', refs)] + domain)]
+            else:
+                return m.search([('id', 'in', refs)] + domain).ids
+
+        except Exception, e:
+            msg = "Could not open model %s with reference %s. Error %s" % (model, refs, e)
             self._handle_error(msg)
         return False
 
@@ -586,9 +604,15 @@ class AccountBankStatementLine(models.Model):
                 ['|', ('company_id', '=', False), ('company_id', '=', company_id),
                 ('type', '=', 'bonus')]):
             rule_domain = self._parse_rule(rule)
-            for match in [m for m in matches if m['model'] == rule.model]:
-                if self._match_get_object(match['model'], match['name'], rule_domain):
+            r_matches = [m['name'] for m in matches if m['model'] == rule.model]
+            mfound = self._match_check_bonus(rule.model, r_matches, rule_domain)
+            for match in matches:
+                if match['name'] in mfound:
                     match['score'] += rule.score_item
+                # import pdb; pdb.set_trace()
+            # for match in [m for m in matches if m['model'] == rule.model]:
+            #     if self._match_get_object(match['model'], match['name'], rule_domain):
+            #         match['score'] += rule.score_item
         _logger.debug("1200wd - Search matches - bonus rules - %.0f milliseconds" %
                       ((datetime.now()-time_start).total_seconds() * 1000))
 
