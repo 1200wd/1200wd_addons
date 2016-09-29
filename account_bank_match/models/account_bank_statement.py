@@ -59,8 +59,8 @@ class AccountBankStatementLine(models.Model):
     so_ref = fields.Char('Sale Order Reference')
     name = fields.Char('Communication', required=True, default='/')
 
-    match_ids = fields.One2many('account.bank.match', 'statement_line_id', "Matches")
-    match_selected = fields.Many2one('account.bank.match', string="Winning Match", ondelete='cascade')
+    match_ids = fields.One2many('account.bank.match', 'statement_line_id', "Matches", ondelete='set null')
+    match_selected = fields.Many2one('account.bank.match', string="Winning Match", ondelete='set null')
 
     show_errors = False
     error_str = ""
