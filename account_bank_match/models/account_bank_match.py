@@ -30,6 +30,7 @@ from openerp import models, fields, api
 import openerp.addons.decimal_precision as dp
 from openerp.exceptions import ValidationError
 import re
+from datetime import datetime, timedelta
 
 _logger = logging.getLogger(__name__)
 
@@ -132,6 +133,17 @@ class AccountBankMatch(models.Model):
     writeoff_journal_id = fields.Many2one('account.journal', string="Write-off Journal", ondelete="cascade",
                                           default=_get_default_writeoff)
     writeoff_difference = fields.Boolean("Write-off Payment Difference", default=True)
+
+
+    @api.multi
+    def cron_cleanup_matches(self):
+        try:
+            crdate = datetime.now() - timedelta(days=7)
+            self._cr.execute("DELETE FROM account_bank_match WHERE create_date < %s" % crdate)
+            # self.invalidate_cache()
+        except AttributeError:
+            return False
+        return True
 
 
     @api.one
