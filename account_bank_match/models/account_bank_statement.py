@@ -744,7 +744,7 @@ class AccountBankStatementLine(models.Model):
         return move
 
 
-    @api.model
+    @api.one
     def create_account_move(self, account_id):
         """
         Create an account move from current bank statement line to specified account.
@@ -761,8 +761,8 @@ class AccountBankStatementLine(models.Model):
         else:
             amount_currency = False
             currency_id = False
-
         ref = self.ref or self.name
+        ref = ref[:30]
         partner_id = self.partner_id.id or 0
         name = account.code
         pay_amount = self.amount
@@ -803,7 +803,7 @@ class AccountBankStatementLine(models.Model):
         })
         _logger.info("1200wd - Created new account move with id %s, ref %s" % (move.id, ref))
         self.journal_entry_id = move.id
-        return move
+        return move.id
 
 
     @api.multi
@@ -889,7 +889,7 @@ class AccountBankStatementLine(models.Model):
         return act_move
 
 
-    @api.model
+    @api.one
     def match(self, vals):
         """
         If bank statement line is not matched yet call account_bank_match method.
@@ -910,7 +910,7 @@ class AccountBankStatementLine(models.Model):
         return vals
 
 
-    @api.model
+    @api.one
     def auto_reconcile(self, type='auto'):
         """
         If there is an invoice linked to this bank statement line lookup writeoff difference account
