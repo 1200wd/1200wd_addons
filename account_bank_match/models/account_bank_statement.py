@@ -517,18 +517,14 @@ class AccountBankStatementLine(models.Model):
 
         @return: Sorted list of matches with higher score first
         """
-        time_start = datetime.now()
         # Delete old match records
         try:
             self._cr.execute("DELETE FROM account_bank_match WHERE statement_line_id=%d" % self.id)
             self.invalidate_cache()
         except AttributeError:
             return False
-        _logger.debug("1200wd - Search matches - delete old %.0f milliseconds" %
-                      ((datetime.now()-time_start).total_seconds() * 1000))
 
         # Search matches with reference pattern
-        time_start = datetime.now()
         company_id = self.env.user.company_id.id
         matches = []
         ref_matches = self._extract_references()
@@ -536,11 +532,8 @@ class AccountBankStatementLine(models.Model):
             base_score = sum([d['score'] for d in ref_matches]) / len(ref_matches)
             for ref_match in ref_matches:
                 matches = self._update_match_list(ref_match, base_score + ref_match['score_item'], matches)
-        _logger.debug("1200wd - Search matches - ref patterns - %.0f milliseconds" %
-                      ((datetime.now()-time_start).total_seconds() * 1000))
 
         # Search supplier reference in bank statement line
-        time_start = datetime.now()
         ref_matches = []
         supplier_inv_list = self.env['account.invoice'].search_read([
             ('supplier_invoice_number', '!=', False),
@@ -559,21 +552,21 @@ class AccountBankStatementLine(models.Model):
         if ref_matches:
             for ref_match in ref_matches:
                 matches = self._update_match_list(ref_match, ref_match['score_item'], matches)
-        _logger.debug("1200wd - Search matches - search ref - %.0f milliseconds" %
-                      ((datetime.now()-time_start).total_seconds() * 1000))
 
         # Run match rules on invoices, sale orders
-        time_start = datetime.now()
         for rule in self.env['account.bank.match.rule'].search(
                 ['|', ('company_id', '=', False), ('company_id', '=', company_id),
                 ('type', '=', 'extraction')]):
+
             rule_domain = self._parse_rule(rule)
             if not rule_domain: # stop running rule if empty domain is returned to avoid useless matches on rule parsing errors
                 continue
             base_domain = self._match_get_base_domain(rule['model'])
             orderby_field = self._match_get_datefield_name(rule['model'])
-            if orderby_field: orderby_field += ' DESC'
-            rule_matches = self.env[rule['model']].search(base_domain + rule_domain, limit=15, order=orderby_field)
+            if orderby_field:
+                orderby_field += ' DESC'
+            time_start_rule = datetime.now()
+            rule_matches = self.env[rule['model']].search(base_domain + rule_domain, order=orderby_field, limit=25)
             if rule_matches:
                 add_score = rule.score_item + (rule.score / len(rule_matches))
                 for rule_match in rule_matches:
@@ -588,12 +581,13 @@ class AccountBankStatementLine(models.Model):
                          'description': description,
                          'so_ref': so_ref,},
                         add_score, matches)
-        _logger.debug("1200wd - Search matches - match rules - %.0f milliseconds" %
-                      ((datetime.now()-time_start).total_seconds() * 1000))
+            exec_time = (datetime.now()-time_start_rule).total_seconds() * 1000
+            if exec_time > 100:
+                _logger.warning("1200wd - Slow bank match extraction query, rule %s took %.0f milliseconds" %
+                                (rule['name'], exec_time))
 
         matches = [m for m in matches if m['score'] > 0]
         # Punish unknown references
-        time_start = datetime.now()
         for match in [m for m in matches]:
             if not self._match_get_object(match['model'], match['name']):
                 if match['score'] > 1:
@@ -609,19 +603,10 @@ class AccountBankStatementLine(models.Model):
             for match in matches:
                 if match['name'] in mfound:
                     match['score'] += rule.score_item
-                # import pdb; pdb.set_trace()
-            # for match in [m for m in matches if m['model'] == rule.model]:
-            #     if self._match_get_object(match['model'], match['name'], rule_domain):
-            #         match['score'] += rule.score_item
-        _logger.debug("1200wd - Search matches - bonus rules - %.0f milliseconds" %
-                      ((datetime.now()-time_start).total_seconds() * 1000))
 
         # Sort and cleanup and return results
-        time_start = datetime.now()
         matches = sorted(matches, key=lambda k: k['score'], reverse=True)
         matches = [m for m in matches if m['score'] > 0]
-        _logger.debug("1200wd - Search matches - cleanup - %.0f milliseconds" %
-                      ((datetime.now()-time_start).total_seconds() * 1000))
 
         return matches
 
@@ -649,6 +634,7 @@ class AccountBankStatementLine(models.Model):
         @param writeoff_acc_id: account number where to write off
         @return: Move id of created move object
         """
+        time_start = datetime.now()
         if len(invoice) != 1:
             self._handle_error("Can only pay one invoice at a time")
             return False
@@ -744,30 +730,44 @@ class AccountBankStatementLine(models.Model):
             'period_id': period_id,
             'date': date,
         })
+        exec_time = (datetime.now()-time_start).total_seconds() * 1000
+        _logger.warning("1200wd - Pay and reconcile - prepare %.1f milliseconds" % exec_time)
+        time_start = datetime.now()
 
         move_ids = (move | invoice.move_id).ids
         self._cr.execute("SELECT id FROM account_move_line WHERE move_id IN %s",
                          (tuple(move_ids),))
         lines = self.env['account.move.line'].browse([r[0] for r in self._cr.fetchall()])
         lines2rec = lines.browse()
+        exec_time = (datetime.now()-time_start).total_seconds() * 1000
+        _logger.warning("1200wd - Pay and reconcile - lines %.1f milliseconds" % exec_time)
+        time_start = datetime.now()
         for line in itertools.chain(lines, invoice.payment_ids):
             if line.account_id == invoice.account_id:
                 lines2rec += line
-
+        exec_time = (datetime.now()-time_start).total_seconds() * 1000
+        _logger.warning("1200wd - Pay and reconcile - itertools %.1f milliseconds" % exec_time)
+        time_start = datetime.now()
         if payment_difference and writeoff_difference and not writeoff_acc_id:
             msg = "Please select account to writeoff differences"
             self._handle_error(msg)
             return False
         elif not payment_difference or (payment_difference and writeoff_acc_id and writeoff_difference):
             # Pay and reconcile invoice, book payment differences
+            time_start2 = datetime.now()
             r_id = self.env['account.move.reconcile'].create(
                 {'type': 'auto',
                  'line_id': map(lambda x: (4, x, False), lines2rec.ids),
                  'line_partial_ids': map(lambda x: (3, x, False), lines2rec.ids)
                  }
             )
+            exec_time = (datetime.now()-time_start2).total_seconds() * 1000
+            _logger.warning("1200wd - Pay and reconcile - amr.create - %.1f milliseconds" % exec_time)
             for id in move_ids:
+                time_start2 = datetime.now()
                 workflow.trg_trigger(self._uid, 'account.move.line', id, self._cr)
+                exec_time = (datetime.now()-time_start2).total_seconds() * 1000
+                _logger.warning("1200wd - Pay and reconcile - move %d: %.1f milliseconds" % (id,exec_time))
         elif type == 'auto':
             msg = "Cannot partially pay invoices when auto-matching"
             self._handle_error(msg)
@@ -779,9 +779,13 @@ class AccountBankStatementLine(models.Model):
                     (pay_amount, code, invoice.amount_total, code, payment_difference, code)
             invoice.message_post(body=msg)
             lines2rec.reconcile_partial('manual')
-
+        exec_time = (datetime.now()-time_start).total_seconds() * 1000
+        _logger.warning("1200wd - Pay and reconcile - part 2 %.1f milliseconds" % exec_time)
+        time_start = datetime.now()
         # Update the stored value (fields.function), so we write to trigger recompute
         invoice.write({})
+        exec_time = (datetime.now()-time_start).total_seconds() * 1000
+        _logger.warning("1200wd - Pay and reconcile - invoice write %.1f milliseconds" % exec_time)
         return move
 
 

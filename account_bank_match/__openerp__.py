@@ -33,7 +33,7 @@ If one correct match is found automatically link and reconcile the statement lin
     'author': "1200 Web Development",
     'website': "http://1200wd.com",
     'category': 'Accounting & Finance',
-    'version': '8.0.1.2',
+    'version': '8.0.1.3',
     'depends': [
         'account_bank_statement_advanced',
         'sale',
