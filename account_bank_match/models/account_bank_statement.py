@@ -582,7 +582,7 @@ class AccountBankStatementLine(models.Model):
                          'so_ref': so_ref,},
                         add_score, matches)
             exec_time = (datetime.now()-time_start_rule).total_seconds() * 1000
-            if exec_time > 100:
+            if exec_time > 200:
                 _logger.warning("1200wd - Slow bank match extraction query, rule %s took %.0f milliseconds" %
                                 (rule['name'], exec_time))
 

@@ -141,11 +141,11 @@ class AccountBankMatch(models.Model):
             datestr = (date.today() - timedelta(days=7)).__str__()
             # Using temporary table because DELETE ... WHERE is very slow on large tables
             # FIXME: Still veryveryvery slow, drop foreign key match_selected in statement-line table first will probably fix this
-            self._cr.execute("CREATE TEMP TABLE account_bank_match_tmp AS "
-                             "SELECT abm.* "
-                             "FROM account_bank_match abm WHERE abm.create_date > %s", (datestr,))
-            self._cr.execute("DELETE FROM account_bank_match")
-            self._cr.execute("INSERT INTO account_bank_match SELECT * FROM account_bank_match_tmp")
+            # self._cr.execute("CREATE TEMP TABLE account_bank_match_tmp AS "
+            #                  "SELECT abm.* "
+            #                  "FROM account_bank_match abm WHERE abm.create_date > %s", (datestr,))
+            # self._cr.execute("DELETE FROM account_bank_match")
+            # self._cr.execute("INSERT INTO account_bank_match SELECT * FROM account_bank_match_tmp")
             # self.invalidate_cache()
         except AttributeError:
             return False
