@@ -2,7 +2,7 @@
 ##############################################################################
 #
 #    Account Bank Match
-#    Copyright (C) 2016 April
+#    Copyright (C) 2016 October
 #    1200 Web Development
 #    http://1200wd.com/
 #
@@ -21,8 +21,14 @@
 #
 ##############################################################################
 
-import res_config
-import account_bank_match
-import account_bank_statement
-import account_invoice
-import sale
+from openerp import models, fields
+
+
+class AccountInvoice(models.Model):
+    _inherit = "account.invoice"
+
+    amount_total = fields.Float(
+        string='Total',
+        compute='_compute_amount',
+        index=True,
+    )
