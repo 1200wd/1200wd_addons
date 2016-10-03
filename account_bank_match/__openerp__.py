@@ -33,7 +33,7 @@ If one correct match is found automatically link and reconcile the statement lin
     'author': "1200 Web Development",
     'website': "http://1200wd.com",
     'category': 'Accounting & Finance',
-    'version': '8.0.1.1',
+    'version': '8.0.1.3',
     'depends': [
         'account_bank_statement_advanced',
         'sale',
@@ -44,6 +44,7 @@ If one correct match is found automatically link and reconcile the statement lin
         'views/account_bank_match.xml',
         'views/account_bank_statement_view.xml',
         'data/account.bank.match.rule.csv',
+        'data/account_bank_match_cron.xml'
     ],
     'price': 0.00,
     'currency': 'EUR',

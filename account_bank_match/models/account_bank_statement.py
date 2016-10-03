@@ -59,8 +59,8 @@ class AccountBankStatementLine(models.Model):
     so_ref = fields.Char('Sale Order Reference')
     name = fields.Char('Communication', required=True, default='/')
 
-    match_ids = fields.One2many('account.bank.match', 'statement_line_id', "Matches")
-    match_selected = fields.Many2one('account.bank.match', string="Winning Match", ondelete='cascade')
+    match_ids = fields.One2many('account.bank.match', 'statement_line_id', "Matches", ondelete='set null')
+    match_selected = fields.Many2one('account.bank.match', string="Winning Match", ondelete='set null')
 
     show_errors = False
     error_str = ""
@@ -105,7 +105,7 @@ class AccountBankStatementLine(models.Model):
 
     @api.model
     def create_invoice(self):
-        _logger.debug("1200wd - account_bank_statement_line create_invoice")
+        time_start = datetime.now()
         adv_inv_obj = self.env['sale.advance.payment.inv']
         inv_obj = self.env['account.invoice']
         # Create invoice
@@ -114,6 +114,8 @@ class AccountBankStatementLine(models.Model):
         invoice = inv_obj.browse(invoice_id)
         # Validate invoice
         invoice.signal_workflow('invoice_open')
+        _logger.debug("1200wd - Created invoice in %.0f milliseconds" %
+                      ((datetime.now()-time_start).total_seconds() * 1000))
         return invoice
 
 
@@ -122,7 +124,11 @@ class AccountBankStatementLine(models.Model):
         self._context.update({"order_ids": order.ids})
         invoice = self.create_invoice()
         # Add invoice reference to bank statement line
-        return self.prepare_bs_line(invoice, vals)
+        time_start = datetime.now()
+        ret = self.prepare_bs_line(invoice, vals)
+        _logger.debug("1200wd - Prepare BS Line in %.0f milliseconds" %
+                      ((datetime.now()-time_start).total_seconds() * 1000))
+        return ret
 
 
     @api.model
@@ -186,7 +192,6 @@ class AccountBankStatementLine(models.Model):
             return []
         statement_text = re.sub(r"\s", "", statement_text).upper()
         self.statement_text = statement_text
-        _logger.debug("1200wd - %s" % statement_text)
         company_id = self.env.user.company_id.id
         matches = []
         count = 0
@@ -230,7 +235,6 @@ class AccountBankStatementLine(models.Model):
                          'score': match_ref.score,
                          'score_item': match_ref.score_item,
                          })
-                    _logger.info("1200wd - Match %s found" % name)
                     count += 1
                     if count > MATCH_MAX_PER_REFERENCE: break
             except Exception, e:
@@ -247,8 +251,6 @@ class AccountBankStatementLine(models.Model):
         @param rule: record from account.bank.match.rule
         @return: Odoo styled rule
         """
-        # _logger.debug("1200wd - Running match rule %s" % rule.name)
-
         rule_list = []
         try:
             rule_list = ast.literal_eval(rule.rule)
@@ -303,7 +305,6 @@ class AccountBankStatementLine(models.Model):
             else:
                 rule_list_new.append((field_name, operator, value))
 
-        # _logger.debug("1200wd - Parsing rule result %s" % rule_list_new)
         return rule_list_new
 
 
@@ -373,7 +374,6 @@ class AccountBankStatementLine(models.Model):
                      'description': d['description']})
                 for d in matches if d['name'] == match['name']
             ]
-        _logger.info("1200wd - Found match %s score %s" % (match['name'], add_score))
 
         return matches
 
@@ -472,14 +472,36 @@ class AccountBankStatementLine(models.Model):
         try:
             m = self.env[model]
             if model == 'account.invoice':
-                return m.search(['|', ('number', '=', ref), ('reference', '=', ref)] + domain)
+                # return m.search(['|', ('number', '=', ref), ('reference', '=', ref)] + domain, limit=1)
+                return m.search([('number', '=', ref)] + domain, limit=1)
             elif model == 'sale.order':
-                return m.search([('name', '=', ref)] + domain)
+                return m.search([('name', '=', ref)] + domain, limit=1)
             else:
-                return m.search([('id', '=', ref)] + domain)
+                return m.search([('id', '=', ref)] + domain, limit=1)
 
         except Exception, e:
-            msg = "Could not open model %s with reference %s. Error %s" % (model, ref, e.args[0])
+            msg = "Could not open model %s with reference %s. Error %s" % (model, ref, e)
+            self._handle_error(msg)
+        return False
+
+
+    @api.model
+    def _match_check_bonus(self, model, refs, domain = None):
+        if domain is None:
+            domain = []
+        try:
+            if type(refs) != list:
+                refs = [refs]
+            m = self.env[model]
+            if model == 'account.invoice':
+                return [res.number for res in m.search([('number', 'in', refs)] + domain)]
+            elif model == 'sale.order':
+                return  [res.name for res in m.search([('name', 'in', refs)] + domain)]
+            else:
+                return m.search([('id', 'in', refs)] + domain).ids
+
+        except Exception, e:
+            msg = "Could not open model %s with reference %s. Error %s" % (model, refs, e)
             self._handle_error(msg)
         return False
 
@@ -501,8 +523,6 @@ class AccountBankStatementLine(models.Model):
             self.invalidate_cache()
         except AttributeError:
             return False
-
-        company_id = self.env.user.company_id.id
 
         # Search matches with reference pattern
         company_id = self.env.user.company_id.id
@@ -529,7 +549,6 @@ class AccountBankStatementLine(models.Model):
                 score = 40 + min(50,(len(supplier_ref)-3)*10)
                 ref_matches.append(
                     {'name': inv_number, 'so_ref': '', 'model': 'account.invoice', 'description': description, 'score': 0, 'score_item': score,})
-                _logger.debug("1200wd - Supplier reference %s found for invoice %s" % (supplier_ref, inv_number))
         if ref_matches:
             for ref_match in ref_matches:
                 matches = self._update_match_list(ref_match, ref_match['score_item'], matches)
@@ -538,16 +557,17 @@ class AccountBankStatementLine(models.Model):
         for rule in self.env['account.bank.match.rule'].search(
                 ['|', ('company_id', '=', False), ('company_id', '=', company_id),
                 ('type', '=', 'extraction')]):
+
             rule_domain = self._parse_rule(rule)
-            # _logger.debug("1200wd - Running rule %s domain %s" % (rule.name, rule_domain))
             if not rule_domain: # stop running rule if empty domain is returned to avoid useless matches on rule parsing errors
                 continue
             base_domain = self._match_get_base_domain(rule['model'])
             orderby_field = self._match_get_datefield_name(rule['model'])
-            if orderby_field: orderby_field += ' DESC'
-            rule_matches = self.env[rule['model']].search(base_domain + rule_domain, limit=25, order=orderby_field)
+            if orderby_field:
+                orderby_field += ' DESC'
+            time_start_rule = datetime.now()
+            rule_matches = self.env[rule['model']].search(base_domain + rule_domain, order=orderby_field, limit=25)
             if rule_matches:
-                _logger.info("1200wd - %d matches found for %s" % (len(rule_matches), rule.name))
                 add_score = rule.score_item + (rule.score / len(rule_matches))
                 for rule_match in rule_matches:
                     name = self._match_get_name(rule_match, rule.model)
@@ -561,8 +581,13 @@ class AccountBankStatementLine(models.Model):
                          'description': description,
                          'so_ref': so_ref,},
                         add_score, matches)
+            exec_time = (datetime.now()-time_start_rule).total_seconds() * 1000
+            if exec_time > 200:
+                _logger.warning("1200wd - Slow bank match extraction query, rule %s took %.0f milliseconds" %
+                                (rule['name'], exec_time))
 
-        # Hide unknown references
+        matches = [m for m in matches if m['score'] > 0]
+        # Punish unknown references
         for match in [m for m in matches]:
             if not self._match_get_object(match['model'], match['name']):
                 if match['score'] > 1:
@@ -573,10 +598,11 @@ class AccountBankStatementLine(models.Model):
                 ['|', ('company_id', '=', False), ('company_id', '=', company_id),
                 ('type', '=', 'bonus')]):
             rule_domain = self._parse_rule(rule)
-            for match in [m for m in matches if m['model'] == rule.model]:
-                if self._match_get_object(match['model'], match['name'], rule_domain):
+            r_matches = [m['name'] for m in matches if m['model'] == rule.model]
+            mfound = self._match_check_bonus(rule.model, r_matches, rule_domain)
+            for match in matches:
+                if match['name'] in mfound:
                     match['score'] += rule.score_item
-                    _logger.info("1200wd - Bonus found for %s match %s score %s" % (rule.name, match['name'], rule.score_item))
 
         # Sort and cleanup and return results
         matches = sorted(matches, key=lambda k: k['score'], reverse=True)
@@ -608,6 +634,7 @@ class AccountBankStatementLine(models.Model):
         @param writeoff_acc_id: account number where to write off
         @return: Move id of created move object
         """
+        time_start = datetime.now()
         if len(invoice) != 1:
             self._handle_error("Can only pay one invoice at a time")
             return False
@@ -703,30 +730,44 @@ class AccountBankStatementLine(models.Model):
             'period_id': period_id,
             'date': date,
         })
+        exec_time = (datetime.now()-time_start).total_seconds() * 1000
+        _logger.warning("1200wd - Pay and reconcile - prepare %.1f milliseconds" % exec_time)
+        time_start = datetime.now()
 
         move_ids = (move | invoice.move_id).ids
         self._cr.execute("SELECT id FROM account_move_line WHERE move_id IN %s",
                          (tuple(move_ids),))
         lines = self.env['account.move.line'].browse([r[0] for r in self._cr.fetchall()])
         lines2rec = lines.browse()
+        exec_time = (datetime.now()-time_start).total_seconds() * 1000
+        _logger.warning("1200wd - Pay and reconcile - lines %.1f milliseconds" % exec_time)
+        time_start = datetime.now()
         for line in itertools.chain(lines, invoice.payment_ids):
             if line.account_id == invoice.account_id:
                 lines2rec += line
-
+        exec_time = (datetime.now()-time_start).total_seconds() * 1000
+        _logger.warning("1200wd - Pay and reconcile - itertools %.1f milliseconds" % exec_time)
+        time_start = datetime.now()
         if payment_difference and writeoff_difference and not writeoff_acc_id:
             msg = "Please select account to writeoff differences"
             self._handle_error(msg)
             return False
         elif not payment_difference or (payment_difference and writeoff_acc_id and writeoff_difference):
             # Pay and reconcile invoice, book payment differences
+            time_start2 = datetime.now()
             r_id = self.env['account.move.reconcile'].create(
                 {'type': 'auto',
                  'line_id': map(lambda x: (4, x, False), lines2rec.ids),
                  'line_partial_ids': map(lambda x: (3, x, False), lines2rec.ids)
                  }
             )
+            exec_time = (datetime.now()-time_start2).total_seconds() * 1000
+            _logger.warning("1200wd - Pay and reconcile - amr.create - %.1f milliseconds" % exec_time)
             for id in move_ids:
+                time_start2 = datetime.now()
                 workflow.trg_trigger(self._uid, 'account.move.line', id, self._cr)
+                exec_time = (datetime.now()-time_start2).total_seconds() * 1000
+                _logger.warning("1200wd - Pay and reconcile - move %d: %.1f milliseconds" % (id,exec_time))
         elif type == 'auto':
             msg = "Cannot partially pay invoices when auto-matching"
             self._handle_error(msg)
@@ -738,13 +779,17 @@ class AccountBankStatementLine(models.Model):
                     (pay_amount, code, invoice.amount_total, code, payment_difference, code)
             invoice.message_post(body=msg)
             lines2rec.reconcile_partial('manual')
-
+        exec_time = (datetime.now()-time_start).total_seconds() * 1000
+        _logger.warning("1200wd - Pay and reconcile - part 2 %.1f milliseconds" % exec_time)
+        time_start = datetime.now()
         # Update the stored value (fields.function), so we write to trigger recompute
         invoice.write({})
+        exec_time = (datetime.now()-time_start).total_seconds() * 1000
+        _logger.warning("1200wd - Pay and reconcile - invoice write %.1f milliseconds" % exec_time)
         return move
 
 
-    @api.model
+    @api.one
     def create_account_move(self, account_id):
         """
         Create an account move from current bank statement line to specified account.
@@ -761,8 +806,8 @@ class AccountBankStatementLine(models.Model):
         else:
             amount_currency = False
             currency_id = False
-
         ref = self.ref or self.name
+        ref = ref[:30]
         partner_id = self.partner_id.id or 0
         name = account.code
         pay_amount = self.amount
@@ -803,7 +848,7 @@ class AccountBankStatementLine(models.Model):
         })
         _logger.info("1200wd - Created new account move with id %s, ref %s" % (move.id, ref))
         self.journal_entry_id = move.id
-        return move
+        return move.id
 
 
     @api.multi
@@ -844,7 +889,6 @@ class AccountBankStatementLine(models.Model):
                             'so_ref': match['so_ref'],
                             'score': match['score'] or 0,
                         }
-                        _logger.info("1200wd - Match found %s: %s, score %d" % (match['name'], match.get('description', False), match['score'] or 0))
                         self.env['account.bank.match'].create(data)
 
             so_ref, invoice_ref = sl._get_winning_match(matches)
@@ -889,7 +933,7 @@ class AccountBankStatementLine(models.Model):
         return act_move
 
 
-    @api.model
+    @api.one
     def match(self, vals):
         """
         If bank statement line is not matched yet call account_bank_match method.
@@ -905,12 +949,12 @@ class AccountBankStatementLine(models.Model):
                 if match:
                     vals['so_ref'] = match['so_ref']
                     vals['name'] = match['name'] or '/'
-                _logger.info("1200wd - matching %s with vals %s" % (match, vals))
+                _logger.debug("1200wd - matching %s with vals %s" % (match, vals))
                 vals = self.order_invoice_lookup(vals)
         return vals
 
 
-    @api.model
+    @api.one
     def auto_reconcile(self, type='auto'):
         """
         If there is an invoice linked to this bank statement line lookup writeoff difference account
@@ -921,10 +965,11 @@ class AccountBankStatementLine(models.Model):
 
         @return: Always True
         """
+        time_start = datetime.now()
         configs = self.env['account.config.settings'].get_default_bank_match_configuration(self)
         if type == 'auto' and not configs.get('match_automatic_reconcile') or self.journal_entry_id:
             return True
-        _logger.info("1200wd - auto-reconcile journal %s" % self.name)
+        _logger.debug("1200wd - auto-reconcile journal %s" % self.name)
         if self.name and self.name != '/':
             invoice = self._match_get_object('account.invoice', self.name)
             if len(invoice) == 1:
@@ -960,6 +1005,8 @@ class AccountBankStatementLine(models.Model):
         else:
             _logger.warning("1200wd - No reference name specified, cannot reconcile")
             return False
+        _logger.debug("1200wd - Autoreconcile in %.0f milliseconds" %
+                      ((datetime.now()-time_start).total_seconds() * 1000))
         return True
 
 

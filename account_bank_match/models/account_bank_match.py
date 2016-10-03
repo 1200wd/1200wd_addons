@@ -30,6 +30,7 @@ from openerp import models, fields, api
 import openerp.addons.decimal_precision as dp
 from openerp.exceptions import ValidationError
 import re
+from datetime import date, timedelta
 
 _logger = logging.getLogger(__name__)
 
@@ -132,6 +133,23 @@ class AccountBankMatch(models.Model):
     writeoff_journal_id = fields.Many2one('account.journal', string="Write-off Journal", ondelete="cascade",
                                           default=_get_default_writeoff)
     writeoff_difference = fields.Boolean("Write-off Payment Difference", default=True)
+
+
+    @api.multi
+    def cron_cleanup_matches(self):
+        try:
+            datestr = (date.today() - timedelta(days=7)).__str__()
+            # Using temporary table because DELETE ... WHERE is very slow on large tables
+            # FIXME: Still veryveryvery slow, drop foreign key match_selected in statement-line table first will probably fix this
+            # self._cr.execute("CREATE TEMP TABLE account_bank_match_tmp AS "
+            #                  "SELECT abm.* "
+            #                  "FROM account_bank_match abm WHERE abm.create_date > %s", (datestr,))
+            # self._cr.execute("DELETE FROM account_bank_match")
+            # self._cr.execute("INSERT INTO account_bank_match SELECT * FROM account_bank_match_tmp")
+            # self.invalidate_cache()
+        except AttributeError:
+            return False
+        return True
 
 
     @api.one
