@@ -21,14 +21,14 @@
 #
 ##############################################################################
 
-from openerp import models, fields
+# from openerp import models, fields
 
-
-class SaleOrder(models.Model):
-    _inherit = 'sale.order'
-
-    amount_total = fields.Float(
-        string='Total',
-        compute='_amount_all_wrapper',
-        index=True,
-    )
+# FIXME: Disabled add index for now, as this code also cause problems with the compute function not being called
+# class SaleOrder(models.Model):
+#     _inherit = 'sale.order'
+#
+#     amount_total = fields.Float(
+#         string='Total',
+#         compute='_amount_all_wrapper',
+#         index=True,
+#     )
