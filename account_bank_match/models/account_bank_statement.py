@@ -1023,7 +1023,7 @@ class AccountBankStatementLine(models.Model):
         remote_account = ''
         if self.partner_id.id:
             partner_bank = self.env['res.partner.bank'].search([('partner_id','=',self.partner_id.id)])
-            if partner_bank:
+            if partner_bank and 'sanitized_acc_number' in partner_bank:
                 remote_account = partner_bank.sanitized_acc_number
         data = {
             'name': ref,
