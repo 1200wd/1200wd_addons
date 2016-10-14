@@ -1020,10 +1020,14 @@ class AccountBankStatementLine(models.Model):
         st_line = self[0]
         ctx = self._context.copy()
         ref = re.sub(r"\s", "", st_line.ref).upper()
-        remote_account = self.env['res.partner.bank'].search([('partner_id','=',self.partner_id.id)]).sanitized_acc_number
+        remote_account = ''
+        if self.partner_id.id:
+            partner_bank = self.env['res.partner.bank'].search([('partner_id','=',self.partner_id.id)])
+            if partner_bank and 'sanitized_acc_number' in partner_bank:
+                remote_account = partner_bank.sanitized_acc_number
         data = {
             'name': ref,
-            'partner_bank_account': remote_account or '',
+            'partner_bank_account': remote_account,
             'account_journal_id': st_line.journal_id.id,
             'company_id': st_line.company_id.id,
         }
