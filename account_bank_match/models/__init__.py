@@ -24,5 +24,6 @@
 import res_config
 import account_bank_match
 import account_bank_statement
+import account_bank_statement_import
 import account_invoice
 import sale
