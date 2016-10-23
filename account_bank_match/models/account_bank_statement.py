@@ -1108,17 +1108,18 @@ class AccountBankStatement(models.Model):
                         continue
 
                 _logger.info("1200wd - Matched bank statement line %s with %s" % (line.id, vals_new['name']))
-            elif show_errors:
+            else:
                 match_errors.append((line.id, line.ref, line.so_ref, "No match found"))
 
         match_errors_str = ""
         for err in match_errors:
             match_errors_str += "Line ID: %d; Reference: %s, %s; Message: %s\n\n" % (err[0], err[1], err[2],err[3])
         if match_errors_str:
-            if show_errors:
-                raise Warning("Matching finished\nErrors matching the following statement lines:\n\n" + match_errors_str)
-            else:
-                return match_errors_str
+            # FIXME: Open popup with result, one error or 'match not found' causes all matches to fail!!
+            # if show_errors:
+            #     raise Warning("Matching finished\nErrors matching the following statement lines:\n\n" + match_errors_str)
+            # else:
+            return match_errors_str
 
         return True
 
