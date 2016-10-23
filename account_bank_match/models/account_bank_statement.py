@@ -60,7 +60,7 @@ class AccountBankStatementLine(models.Model):
     name = fields.Char('Communication', required=True, default='/')
 
     match_ids = fields.One2many('account.bank.match', 'statement_line_id', "Matches", ondelete='set null')
-    match_selected = fields.Many2one('account.bank.match', string="Winning Match", ondelete='set null')
+    match_selected = fields.One2many('account.bank.match', string="Winning Match", ondelete='set null')
 
     show_errors = False
     error_str = ""
