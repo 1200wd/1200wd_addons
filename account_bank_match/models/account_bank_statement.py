@@ -180,14 +180,17 @@ class AccountBankStatementLine(models.Model):
         Format {name, [sale order reference], model, [description], score total, score per item}
         """
         try:
+            # Extract remote account in 2 different ways, to make sure it's working on every Odoo version
             remote_account = ''
-            if self.partner_id:
-                partner_bank = self.env['res.partner.bank'].search([('partner_id','=',self.partner_id.id)])
+            if self.partner_id and self.parner_id != self.company_id:
+                partner_bank = self.env['res.partner.bank'].search([('partner_id','=',self.partner_id.id)], limit=1)
                 if partner_bank and 'sanitized_acc_number' in partner_bank:
                     remote_account = partner_bank.sanitized_acc_number
+            if self.bank_account_id:
+                remote_account = self.bank_account_id.sanitized_acc_number
             statement_text = (self.name or '') + '_' + (self.partner_id.name or '') + '_' + (self.ref or '') + '_' + (self.so_ref or '') + '_' + remote_account
         except Exception, e:
-            msg = "Could not parse statement text for %s" % self.name
+            msg = "Could not parse statement text for %s. Error %s" % (self.name, e)
             self._handle_error(msg)
             return []
         statement_text = re.sub(r"\s", "", statement_text).upper()
@@ -1020,11 +1023,16 @@ class AccountBankStatementLine(models.Model):
         st_line = self[0]
         ctx = self._context.copy()
         ref = re.sub(r"\s", "", st_line.ref).upper()
+
+        # Extract remote account in 2 different ways, to make sure it's working on every Odoo version
         remote_account = ''
-        if self.partner_id.id:
-            partner_bank = self.env['res.partner.bank'].search([('partner_id','=',self.partner_id.id)])
+        if self.partner_id and self.parner_id != self.company_id:
+            partner_bank = self.env['res.partner.bank'].search([('partner_id','=',self.partner_id.id)], limit=1)
             if partner_bank and 'sanitized_acc_number' in partner_bank:
                 remote_account = partner_bank.sanitized_acc_number
+        if self.bank_account_id:
+            remote_account = self.bank_account_id.sanitized_acc_number
+            
         data = {
             'name': ref,
             'partner_bank_account': remote_account,
