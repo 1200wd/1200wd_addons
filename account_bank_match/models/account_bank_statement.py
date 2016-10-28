@@ -180,14 +180,17 @@ class AccountBankStatementLine(models.Model):
         Format {name, [sale order reference], model, [description], score total, score per item}
         """
         try:
+            # Extract remote account in 2 different ways, to make sure it's working on every Odoo version
             remote_account = ''
-            if self.partner_id:
-                partner_bank = self.env['res.partner.bank'].search([('partner_id','=',self.partner_id.id)])
+            if self.partner_id and self.partner_id != self.company_id:
+                partner_bank = self.env['res.partner.bank'].search([('partner_id','=',self.partner_id.id)], limit=1)
                 if partner_bank and 'sanitized_acc_number' in partner_bank:
                     remote_account = partner_bank.sanitized_acc_number
+            if self.bank_account_id:
+                remote_account = self.bank_account_id.sanitized_acc_number
             statement_text = (self.name or '') + '_' + (self.partner_id.name or '') + '_' + (self.ref or '') + '_' + (self.so_ref or '') + '_' + remote_account
         except Exception, e:
-            msg = "Could not parse statement text for %s" % self.name
+            msg = "Could not parse statement text for %s. Error %s" % (self.name, e)
             self._handle_error(msg)
             return []
         statement_text = re.sub(r"\s", "", statement_text).upper()
@@ -1020,11 +1023,16 @@ class AccountBankStatementLine(models.Model):
         st_line = self[0]
         ctx = self._context.copy()
         ref = re.sub(r"\s", "", st_line.ref).upper()
+
+        # Extract remote account in 2 different ways, to make sure it's working on every Odoo version
         remote_account = ''
-        if self.partner_id.id:
-            partner_bank = self.env['res.partner.bank'].search([('partner_id','=',self.partner_id.id)])
+        if self.partner_id and self.partner_id != self.company_id:
+            partner_bank = self.env['res.partner.bank'].search([('partner_id','=',self.partner_id.id)], limit=1)
             if partner_bank and 'sanitized_acc_number' in partner_bank:
                 remote_account = partner_bank.sanitized_acc_number
+        if self.bank_account_id:
+            remote_account = self.bank_account_id.sanitized_acc_number
+
         data = {
             'name': ref,
             'partner_bank_account': remote_account,
@@ -1108,17 +1116,18 @@ class AccountBankStatement(models.Model):
                         continue
 
                 _logger.info("1200wd - Matched bank statement line %s with %s" % (line.id, vals_new['name']))
-            elif show_errors:
+            else:
                 match_errors.append((line.id, line.ref, line.so_ref, "No match found"))
 
         match_errors_str = ""
         for err in match_errors:
             match_errors_str += "Line ID: %d; Reference: %s, %s; Message: %s\n\n" % (err[0], err[1], err[2],err[3])
         if match_errors_str:
-            if show_errors:
-                raise Warning("Matching finished\nErrors matching the following statement lines:\n\n" + match_errors_str)
-            else:
-                return match_errors_str
+            # FIXME: Open popup with result, one error or 'match not found' causes all matches to fail!!
+            # if show_errors:
+            #     raise Warning("Matching finished\nErrors matching the following statement lines:\n\n" + match_errors_str)
+            # else:
+            return match_errors_str
 
         return True
 
