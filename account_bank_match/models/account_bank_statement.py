@@ -1020,10 +1020,14 @@ class AccountBankStatementLine(models.Model):
         st_line = self[0]
         ctx = self._context.copy()
         ref = re.sub(r"\s", "", st_line.ref).upper()
-        remote_account = self.env['res.partner.bank'].search([('partner_id','=',self.partner_id.id)]).sanitized_acc_number
+        remote_account = ''
+        if self.partner_id.id:
+            partner_bank = self.env['res.partner.bank'].search([('partner_id','=',self.partner_id.id)])
+            if partner_bank and 'sanitized_acc_number' in partner_bank:
+                remote_account = partner_bank.sanitized_acc_number
         data = {
             'name': ref,
-            'partner_bank_account': remote_account or '',
+            'partner_bank_account': remote_account,
             'account_journal_id': st_line.journal_id.id,
             'company_id': st_line.company_id.id,
         }
@@ -1081,11 +1085,11 @@ class AccountBankStatement(models.Model):
             if not vals or vals['journal_entry_id']:
                 continue
             try:
-                vals_new = line.match(vals)
+                vals_new = line.match(vals)[0]
             except Exception, e:
                 match_errors.append((line.id, line.ref, line.so_ref, e.message))
                 continue
-            if vals_new['name'] != '/':
+            if vals_new and 'name' in vals_new and vals_new['name'] != '/':
                 line.write(vals_new)
                 line_match_ids = [l.id for l in line.match_ids]
                 line_match = line_match_ids and self.env['account.bank.match'].search([('id', 'in', line_match_ids), ('name','=',vals_new['name'])])
@@ -1104,6 +1108,8 @@ class AccountBankStatement(models.Model):
                         continue
 
                 _logger.info("1200wd - Matched bank statement line %s with %s" % (line.id, vals_new['name']))
+            elif show_errors:
+                match_errors.append((line.id, line.ref, line.so_ref, "No match found"))
 
         match_errors_str = ""
         for err in match_errors:
