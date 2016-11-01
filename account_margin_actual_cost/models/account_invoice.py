@@ -32,16 +32,13 @@ class AccountInvoiceLine(models.Model):
     @api.depends('product_id', 'quantity', 'price_subtotal')
     def get_actual_costs(self):
         self.actual_cost = 0
-        if self.invoice_id.type not in ['out_invoice', 'out_refund']:
-            #FIXME: this probably returns [None] can probably be removed
-            return
-        if self.product_id.product_tmpl_id.actual_cost:
-            self.actual_cost = self.product_id.product_tmpl_id.actual_cost * self.quantity
-        if self.price_subtotal and self.actual_cost:
-            self.margin_perc = ( 1 - (self.actual_cost / self.price_subtotal) ) * 100
-        _logger.debug("1200wd - Invoice line {}: Update Actual Cost to {} and margin to {}%".
-                      format(self.id, self.actual_cost, self.margin_perc))
-        return True
+        if self.invoice_id.type in ['out_invoice', 'out_refund']:
+            if self.product_id.product_tmpl_id.actual_cost:
+                self.actual_cost = self.product_id.product_tmpl_id.actual_cost * self.quantity
+            if self.price_subtotal and self.actual_cost:
+                self.margin_perc = ( 1 - (self.actual_cost / self.price_subtotal) ) * 100
+            _logger.debug("1200wd - Invoice line {}: Update Actual Cost to {} and margin to {}%".
+                          format(self.id, self.actual_cost, self.margin_perc))
 
     actual_cost = fields.Float(string="Actual Cost Price", readonly=True,
                                compute="get_actual_costs", store=True,
@@ -62,18 +59,14 @@ class AccountInvoice(models.Model):
     def calculate_total_actual_costs(self):
         self.actual_cost_total = 0
         self.margin_perc = 0
-        if self.type not in ['out_invoice', 'out_refund']:
-            #FIXME: this probably returns [None] can probably be removed
-            return
-        for line in self.invoice_line:
-            line.get_actual_costs()
-            self.actual_cost_total += line.actual_cost or 0.0
-        if self.amount_untaxed and self.actual_cost_total:
-            self.margin_perc = ( 1 - ( self.actual_cost_total / self.amount_untaxed) ) * 100
-        _logger.debug("1200wd - Update invoice total actual costs {} and margin to {}%".
-                      format(self.actual_cost_total, self.margin_perc))
-        #FIXME: this returns [True] can probably be removed
-        return True
+        if self.type in ['out_invoice', 'out_refund']:
+            for line in self.invoice_line:
+                line.get_actual_costs()
+                self.actual_cost_total += line.actual_cost or 0.0
+            if self.amount_untaxed and self.actual_cost_total:
+                self.margin_perc = ( 1 - ( self.actual_cost_total / self.amount_untaxed) ) * 100
+            _logger.debug("1200wd - Update invoice total actual costs {} and margin to {}%".
+                          format(self.actual_cost_total, self.margin_perc))
 
     actual_cost_total = fields.Float(string="Total Actual Cost", readonly=True,
                                      digits_compute=dp.get_precision('Product Price'),
