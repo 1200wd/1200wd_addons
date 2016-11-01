@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 #
 #    Account Invoice - Actual Costs and Margins
-#    Copyright (C) 2015 November 
-#    1200 Web Development
-#    http://1200wd.com/
+#    Copyright (C) 1200 WebDevelopment <http://1200wd.com/>
+#    2016 November
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -26,14 +25,15 @@ import logging
 _logger = logging.getLogger(__name__)
 
 
-class account_invoice_line(models.Model):
+class AccountInvoiceLine(models.Model):
     _inherit = "account.invoice.line"
 
     @api.one
-    @api.depends('quantity', 'price_subtotal')
+    @api.depends('product_id', 'quantity', 'price_subtotal')
     def get_actual_costs(self):
         self.actual_cost = 0
         if self.invoice_id.type not in ['out_invoice', 'out_refund']:
+            #FIXME: this probably returns [None] can probably be removed
             return
         if self.product_id.product_tmpl_id.actual_cost:
             self.actual_cost = self.product_id.product_tmpl_id.actual_cost * self.quantity
@@ -54,7 +54,7 @@ class account_invoice_line(models.Model):
                                help="Profit margin of this invoice line")
 
 
-class account_invoice(models.Model):
+class AccountInvoice(models.Model):
     _inherit = "account.invoice"
 
     @api.one

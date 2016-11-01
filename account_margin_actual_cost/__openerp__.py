@@ -2,9 +2,8 @@
 ##############################################################################
 #
 #    Account Invoice - Actual Costs and Margins
-#    Copyright (C) 2016 July
-#    1200 Web Development
-#    http://1200wd.com/
+#    Copyright (C) 1200 WebDevelopment <http://1200wd.com/>
+#    2016 November
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -30,13 +29,14 @@
     'author': "1200 Web Development",
     'website': "http://www.1200wd.com",
     'category': 'Accounting & Finance',
-    'version': '8.0.1.2',
+    'version': '8.0.1.3',
     'depends': [
         'sale_margin_actual_cost',
     ],
     'data': [
-        'account_invoice_view.xml',
-        'margin_reports.xml',
+        'views/account_invoice_view.xml',
+        'views/margin_reports.xml',
+        'report/account_invoice_report_view.xml',
     ],
     'demo': [],
     'installable': True,
