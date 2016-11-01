@@ -30,7 +30,7 @@ class account_invoice_line(models.Model):
     _inherit = "account.invoice.line"
 
     @api.one
-    @api.depends('actual_cost', 'quantity', 'price_subtotal')
+    @api.depends('quantity', 'price_subtotal')
     def get_actual_costs(self):
         self.actual_cost = 0
         if self.invoice_id.type not in ['out_invoice', 'out_refund']:
@@ -63,6 +63,7 @@ class account_invoice(models.Model):
         self.actual_cost_total = 0
         self.margin_perc = 0
         if self.type not in ['out_invoice', 'out_refund']:
+            #FIXME: this probably returns [None] can probably be removed
             return
         for line in self.invoice_line:
             line.get_actual_costs()
@@ -71,6 +72,7 @@ class account_invoice(models.Model):
             self.margin_perc = ( 1 - ( self.actual_cost_total / self.amount_untaxed) ) * 100
         _logger.debug("1200wd - Update invoice total actual costs {} and margin to {}%".
                       format(self.actual_cost_total, self.margin_perc))
+        #FIXME: this returns [True] can probably be removed
         return True
 
     actual_cost_total = fields.Float(string="Total Actual Cost", readonly=True,

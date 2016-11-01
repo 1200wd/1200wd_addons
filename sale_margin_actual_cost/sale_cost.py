@@ -29,14 +29,16 @@ _logger = logging.getLogger(__name__)
 class sale_order_line(models.Model):
     _inherit = "sale.order.line"
 
+    #FIXME: @api.multi is preferred, rewrite function
     @api.one
-    @api.depends('actual_cost', 'price_unit', 'product_uos_qty')
+    @api.depends('price_unit', 'product_uos_qty')
     def get_actual_costs(self):
         if self.product_tmpl_id.actual_cost:
             self.actual_cost = 0
             self.actual_cost = self.product_tmpl_id.actual_cost * self.product_uos_qty
         if self.price_subtotal and self.actual_cost:
             self.margin_perc = ( 1 - ( self.actual_cost / self.price_subtotal ) ) * 100
+        #FIXME: remove unneccesary debug lines
         _logger.debug("1200wd - Sale order line {}: Update Actual Cost to {} and margin to {}".
                       format(self.id, self.actual_cost, self.margin_perc))
         return True
@@ -53,6 +55,7 @@ class sale_order_line(models.Model):
 class sale_order(models.Model):
     _inherit = "sale.order"
 
+    #FIXME: @api.multi is preferred, rewrite function
     @api.one
     @api.depends('order_line')
     def calculate_total_actual_costs(self):
@@ -63,8 +66,10 @@ class sale_order(models.Model):
             self.actual_cost_total += line.actual_cost or 0.0
         if self.amount_untaxed and self.actual_cost_total:
             self.margin_perc = ( 1 - ( self.actual_cost_total / self.amount_untaxed) ) * 100
+        #FIXME: remove unneccesary debug lines
         _logger.debug("1200wd - Update sale.order actual costs to {} and margin to {}".
                       format(self.actual_cost_total, self.margin_perc))
+        #FIXME: this returns [True] can probably be removed
         return True
 
     actual_cost_total = fields.Float(string="Total Actual Cost", readonly=True,
