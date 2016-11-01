@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 #
 #    Sales - Actual Costs and Margins
-#    Copyright (C) 2015 November
-#    1200 Web Development
-#    http://1200wd.com/
+#    © 1200 WebDevelopment <http://1200wd.com/>
+#    2016 November
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -26,7 +25,7 @@ import logging
 _logger = logging.getLogger(__name__)
 
 
-class product_template(models.Model):
+class ProductTemplate(models.Model):
     _inherit = "product.template"
 
     @api.one
@@ -57,7 +56,7 @@ class product_template(models.Model):
                                     "labour, currency risks, etc.")
 
 
-class product_cost_type(models.Model):
+class ProductCostType(models.Model):
     _name = "product.cost.type"
 
     name = fields.Char(string="Extra Cost Type", size=64, required=True)
@@ -65,7 +64,7 @@ class product_cost_type(models.Model):
     default_costs = fields.Float(string="Default Extra costs", digits=dp.get_precision('Product Price'))
 
 
-class product_cost(models.Model):
+class ProductCost(models.Model):
     _name = "product.cost"
 
     product_tmpl_id = fields.Many2one('product.template', 'Product')
@@ -96,20 +95,20 @@ class product_cost(models.Model):
     @api.multi
     def write(self, vals):
         ps = set([t.product_tmpl_id.id for t in self])
-        res = super(product_cost, self).write(vals)
+        res = super(ProductCost, self).write(vals)
         self._update_product_costs(ps)
         return res
 
     @api.model
     def create(self, vals):
-        res = super(product_cost, self).create(vals)
+        res = super(ProductCost, self).create(vals)
         self._update_product_costs([vals['product_tmpl_id']])
         return res
 
     @api.multi
     def unlink(self):
         ps = set([t.product_tmpl_id.id for t in self])
-        res = super(product_cost, self).unlink()
+        res = super(ProductCost, self).unlink()
         self._update_product_costs(ps)
         return res
 

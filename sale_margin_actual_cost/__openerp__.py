@@ -2,9 +2,8 @@
 ##############################################################################
 #
 #    Sales - Actual Costs and Margins
-#    Copyright (C) 2016 July
-#    1200 Web Development
-#    http://1200wd.com/
+#    © 1200 WebDevelopment <http://1200wd.com/>
+#    2016 November
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -33,7 +32,7 @@
     'author': "1200 Web Development",
     'website': "http://www.1200wd.com",
     'category': 'Sales',
-    'version': '8.0.1.1',
+    'version': '8.0.1.3',
     'depends': [
         'product',
         'sale',
@@ -41,10 +40,10 @@
     ],
     'data': [
         'security/ir.model.access.csv',
-        'product_cost_view.xml',
-        'product_view.xml',
+        'views/product_cost_view.xml',
+        'views/product_view.xml',
         'data/product.cost.type.csv',
-        'sale_cost_view.xml',
+        'views/sale_cost_view.xml',
     ],
     'demo': [],
     'installable': True,

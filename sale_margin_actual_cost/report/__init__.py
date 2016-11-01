@@ -2,9 +2,8 @@
 ##############################################################################
 #
 #    Sales - Actual Costs and Margins
-#    Copyright (C) 2015 november
-#    1200 WebDevelopment
-#    http://1200wd.com/
+#    © 1200 WebDevelopment <http://1200wd.com/>
+#    2016 November
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as

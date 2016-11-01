@@ -2,9 +2,8 @@
 ##############################################################################
 #
 #    Sales - Actual Costs and Margins
-#    Copyright (C) 2015 November
-#    1200 Web Development
-#    http://1200wd.com/
+#    © 1200 WebDevelopment <http://1200wd.com/>
+#    2016 November
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -21,7 +20,5 @@
 #
 ##############################################################################
 
-import product_cost
-import product
-import sale_cost
+import models
 import report

@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 #
 #    Sales - Actual Costs and Margins
-#    Copyright (C) 2015 November 
-#    1200 Web Development
-#    http://1200wd.com/
+#    © 1200 WebDevelopment <http://1200wd.com/>
+#    2016 November
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -26,7 +25,7 @@ import logging
 _logger = logging.getLogger(__name__)
 
 
-class sale_order_line(models.Model):
+class SaleOrderLine(models.Model):
     _inherit = "sale.order.line"
 
     #FIXME: @api.multi is preferred, rewrite function
@@ -52,7 +51,7 @@ class sale_order_line(models.Model):
                                compute="get_actual_costs", store=True,
                                help="Profit margin of this sale order line")
 
-class sale_order(models.Model):
+class SaleOrder(models.Model):
     _inherit = "sale.order"
 
     #FIXME: @api.multi is preferred, rewrite function
