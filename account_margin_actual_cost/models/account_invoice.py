@@ -28,8 +28,9 @@ _logger = logging.getLogger(__name__)
 class AccountInvoiceLine(models.Model):
     _inherit = "account.invoice.line"
 
-    @api.one
-    @api.depends('product_id', 'quantity', 'price_subtotal')
+    # @api.one
+    # @api.depends('product_id', 'quantity', 'price_subtotal')
+    # TODO: Recalculate margins and actual costs when writing invoice rule or invoice
     def get_actual_costs(self):
         self.actual_cost = 0
         if self.invoice_id.type in ['out_invoice', 'out_refund']:
@@ -54,8 +55,8 @@ class AccountInvoiceLine(models.Model):
 class AccountInvoice(models.Model):
     _inherit = "account.invoice"
 
-    @api.one
-    @api.depends('invoice_line')
+    # @api.one
+    # @api.depends('invoice_line.product_id', 'invoice_line.quantity', 'invoice_line.price_subtotal')
     def calculate_total_actual_costs(self):
         self.actual_cost_total = 0
         self.margin_perc = 0
