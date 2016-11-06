@@ -65,9 +65,8 @@ class AccountBankStatementLine(models.Model):
         string='Matches',
         ondelete='set null',
     )
-    match_selected = fields.One2many(
+    match_selected = fields.Many2one(
         comodel_name='account.bank.match',
-        inverse_name='statement_line_id',
         string='Winning Match',
         ondelete='set null',
     )

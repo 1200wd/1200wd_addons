@@ -139,7 +139,8 @@ class AccountBankMatch(models.Model):
     def cron_cleanup_matches(self):
         try:
             datestr = (date.today() - timedelta(days=7)).__str__()
-            self._cr.execute("DELETE FROM account_bank_match abm WHERE abm.create_date < %s", (datestr,))
+            # TODO: Test first after changing match_selected to many2one relation
+            # self._cr.execute("DELETE FROM account_bank_match abm WHERE abm.create_date < %s", (datestr,))
         except AttributeError:
             return False
         return True
