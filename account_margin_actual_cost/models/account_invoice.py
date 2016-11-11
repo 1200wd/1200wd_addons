@@ -31,7 +31,6 @@ class AccountInvoiceLine(models.Model):
     @api.one
     # @api.depends('product_id', 'quantity', 'price_subtotal')
     # TODO: Recalculate margins and actual costs when writing invoice rule or invoice
-    # FIXME: Last inserted invoice line not calculated
     # FIXME: Remove @api.one
     def get_actual_costs(self):
         self.actual_cost = 0
@@ -82,8 +81,8 @@ class AccountInvoice(models.Model):
 
     @api.multi
     def write(self, vals):
+        super(AccountInvoice, self).write(vals)
         if 'invoice_line' in vals:
             for inv in self:
                 inv.calculate_total_actual_costs()
-        super(AccountInvoice, self).write(vals)
         return True
