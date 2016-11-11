@@ -65,16 +65,10 @@ class AccountBankStatementLine(models.Model):
         string='Matches',
         ondelete='set null',
     )
-    match_selected = fields.Many2one(
-        comodel_name='account.bank.match',
-        string='Winning Match',
-        ondelete='set null',
-    )
 
     show_errors = False
     error_str = ""
-
-    statement_text = ''
+    statement_text = ""
 
 
     def _handle_error(self, message):
@@ -944,6 +938,11 @@ class AccountBankStatementLine(models.Model):
         act_move['context'] = dict(ctx, wizard_action=pickle.dumps(act_move))
         return act_move
 
+    @api.multi
+    def _match_selected(self):
+        for match in self.match_ids:
+            if match.match_selected:
+                return match
 
     @api.one
     def match(self, vals):
@@ -956,7 +955,7 @@ class AccountBankStatementLine(models.Model):
         """
         if (not vals.get('name', False)) or vals.get('name', False) == '/':
             # Only search for matches if match_id not set
-            if not ('match_selected' in vals and vals['match_selected']):
+            if self._match_selected:
                 match = self.account_bank_match(False)
                 if match:
                     vals['so_ref'] = match['so_ref']
@@ -986,16 +985,17 @@ class AccountBankStatementLine(models.Model):
             invoice = self._match_get_object('account.invoice', self.name)
             if len(invoice) == 1:
                 default_writeoff_journal_id = self.env['account.journal'].browse([configs.get('match_writeoff_journal_id')])
+                match_selected = self._match_selected()
                 if invoice.amount_total < 0:
-                    writeoff_acc_id = self.match_selected.writeoff_difference and \
-                                      (self.match_selected.writeoff_journal_id.default_debit_account_id.id or 0) or \
+                    writeoff_acc_id = match_selected.writeoff_difference and \
+                                      (match_selected.writeoff_journal_id.default_debit_account_id.id or 0) or \
                                       (default_writeoff_journal_id.default_debit_account_id.id or 0)
                 else:
-                    writeoff_acc_id = self.match_selected.writeoff_difference and \
-                                      (self.match_selected.writeoff_journal_id.default_credit_account_id.id or 0) or \
+                    writeoff_acc_id = match_selected.writeoff_difference and \
+                                      (match_selected.writeoff_journal_id.default_credit_account_id.id or 0) or \
                                       (default_writeoff_journal_id.default_credit_account_id.id or 0)
 
-                writeoff_difference = self.match_selected.writeoff_difference
+                writeoff_difference = match_selected.writeoff_difference
                 if type=='auto': writeoff_difference = True
                 move_entry = self.pay_invoice_and_reconcile(invoice, writeoff_acc_id, writeoff_difference, type=type)
                 if move_entry:
@@ -1098,7 +1098,7 @@ class AccountBankStatement(models.Model):
         match_errors = []
         for line in [l for l in self.line_ids]:
             line.show_errors = False
-            vals = line.read(['name', 'so_ref', 'match_selected', 'journal_entry_id'], False)[0]
+            vals = line.read(['name', 'so_ref', 'journal_entry_id'], False)[0]
             if not vals or vals['journal_entry_id']:
                 continue
             try:

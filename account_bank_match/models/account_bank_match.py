@@ -133,21 +133,22 @@ class AccountBankMatch(models.Model):
     writeoff_journal_id = fields.Many2one('account.journal', string="Write-off Journal", ondelete="cascade",
                                           default=_get_default_writeoff)
     writeoff_difference = fields.Boolean("Write-off Payment Difference", default=True)
+    match_selected = fields.Boolean("Winning match", default=False)
 
 
     @api.multi
     def cron_cleanup_matches(self):
         try:
             datestr = (date.today() - timedelta(days=7)).__str__()
-            # TODO: Test first after changing match_selected to many2one relation
-            # self._cr.execute("DELETE FROM account_bank_match abm WHERE abm.create_date < %s", (datestr,))
+            self._cr.execute("DELETE FROM account_bank_match abm WHERE abm.create_date < %s", (datestr,))
         except AttributeError:
             return False
         return True
 
 
-    @api.one
+    @api.multi
     def compute_payment_difference(self):
+        self.ensure_one()
         if self.model == 'account.invoice':
             SIGN = {'out_invoice': -1, 'in_invoice': 1, 'out_refund': 1, 'in_refund': -1}
             invoice = self.env[self.model].search([('number', '=', self.name)])
@@ -165,10 +166,12 @@ class AccountBankMatch(models.Model):
                                       readonly=True, compute='compute_payment_difference')
 
 
-    @api.one
+    @api.multi
     def action_match_confirm(self):
+        self.ensure_one()
         self.statement_line_id.show_errors = True
-        vals = {'match_selected': self.id}
+        self.match_selected = True
+        vals = {}
         if self.model == 'sale.order':
             vals['so_ref'] = self.name
             vals['name'] = '/'
