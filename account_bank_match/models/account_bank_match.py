@@ -135,6 +135,8 @@ class AccountBankMatch(models.Model):
     writeoff_difference = fields.Boolean("Write-off Payment Difference", default=True)
     match_selected = fields.Boolean("Winning match", default=False)
 
+    # TODO: Add constraint statement_line_id and name must be unique
+
 
     @api.multi
     def cron_cleanup_matches(self):

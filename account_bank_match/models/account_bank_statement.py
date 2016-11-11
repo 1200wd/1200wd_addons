@@ -898,6 +898,10 @@ class AccountBankStatementLine(models.Model):
                         self.env['account.bank.match'].create(data)
 
             so_ref, invoice_ref = sl._get_winning_match(matches)
+            for match in self.match_ids:
+                if match.name == invoice_ref:
+                    match.match_selected = True
+                    break
         return {'matches_found': matches_found, 'so_ref': so_ref, 'name': invoice_ref}
 
 
@@ -955,7 +959,8 @@ class AccountBankStatementLine(models.Model):
         """
         if (not vals.get('name', False)) or vals.get('name', False) == '/':
             # Only search for matches if match_id not set
-            if self._match_selected:
+            import pdb; pdb.set_trace()
+            if not self._match_selected():
                 match = self.account_bank_match(False)
                 if match:
                     vals['so_ref'] = match['so_ref']
@@ -1108,9 +1113,9 @@ class AccountBankStatement(models.Model):
                 continue
             if vals_new and 'name' in vals_new and vals_new['name'] != '/':
                 line.write(vals_new)
-                line_match_ids = [l.id for l in line.match_ids]
-                line_match = line_match_ids and self.env['account.bank.match'].search([('id', 'in', line_match_ids), ('name','=',vals_new['name'])])
-                if line_match_ids and len(line_match) and line_match.model == 'account.account':
+                line_match = line.match_ids.ids and self.env['account.bank.match'].search(
+                                [('id', 'in', line.match_ids.ids), ('name','=',vals_new['name'])])
+                if line.match_ids.ids and len(line_match) and line_match.model == 'account.account':
                     account_id = int(vals_new['name']) or 0
                     try:
                         line.create_account_move(account_id)
