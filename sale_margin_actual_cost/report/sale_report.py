@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 #    Sales - Actual Costs and Margins
-#    Copyright (C) 2015 november 
-#    1200 WebDevelopment
-#    http://1200wd.com/
+#    © 2016 - 1200 WebDevelopment <http://1200wd.com/>
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -22,14 +20,14 @@
 from openerp import models, fields, api
 
 
-class sale_report(models.Model):
+class SaleReport(models.Model):
     _inherit = "sale.report"
 
     actual_cost_total = fields.Float(string="Total Actual Cost", readonly=True,
                                      help="Actual Purchase Price for the product of this sale order line")
 
     def _select(self):
-        select_str = super(sale_report, self)._select()
+        select_str = super(SaleReport, self)._select()
         select_str += """,
                     sum(l.actual_cost) as actual_cost_total
         """

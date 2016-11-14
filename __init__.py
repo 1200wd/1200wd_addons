@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
-##############################################################################
 #
-#    Sales - Actual Costs and Margins
-#    © 2016 - 1200 WebDevelopment <http://1200wd.com/>
+#    odoodev __init__.py
+#    Copyright (C) 2016 November 
+#    1200 Web Development
+#    http://1200wd.com/
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -17,7 +18,4 @@
 #    You should have received a copy of the GNU Affero General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-##############################################################################
 
-import models
-import report

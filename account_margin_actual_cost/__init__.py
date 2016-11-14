@@ -2,9 +2,7 @@
 ##############################################################################
 #
 #    Account Invoice - Actual Costs and Margins
-#    Copyright (C) 2015 November
-#    1200 Web Development
-#    http://1200wd.com/
+#    © 2016 - 1200 WebDevelopment <http://1200wd.com/>
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -21,5 +19,5 @@
 #
 ##############################################################################
 
-import account_invoice
+import models
 import report
