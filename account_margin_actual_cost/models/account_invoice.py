@@ -28,7 +28,7 @@ class AccountInvoiceLine(models.Model):
     _inherit = "account.invoice.line"
 
     @api.multi
-    def get_actual_costs(self):
+    def calculate_actual_costs(self):
         for line in self:
             line.actual_cost = 0
             if line.invoice_id.type in ['out_invoice', 'out_refund']:
@@ -58,7 +58,7 @@ class AccountInvoice(models.Model):
             invoice.margin_perc = 0
             if invoice.type in ['out_invoice', 'out_refund']:
                 for line in invoice.invoice_line:
-                    line.get_actual_costs()
+                    line.calculate_actual_costs()
                     invoice.actual_cost_total += line.actual_cost or 0.0
                 if invoice.amount_untaxed and invoice.actual_cost_total:
                     invoice.margin_perc = ( 1 - ( invoice.actual_cost_total / invoice.amount_untaxed) ) * 100

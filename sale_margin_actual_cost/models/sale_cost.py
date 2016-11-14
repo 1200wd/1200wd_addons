@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 #    Sales - Actual Costs and Margins
-#    © 1200 WebDevelopment <http://1200wd.com/>
-#    2016 November
+#    © 2016 - 1200 WebDevelopment <http://1200wd.com/>
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -28,54 +27,59 @@ _logger = logging.getLogger(__name__)
 class SaleOrderLine(models.Model):
     _inherit = "sale.order.line"
 
-    #FIXME: @api.multi is preferred, rewrite function
-    @api.one
-    @api.depends('price_unit', 'product_uos_qty')
-    def get_actual_costs(self):
-        if self.product_tmpl_id.actual_cost:
-            self.actual_cost = 0
-            self.actual_cost = self.product_tmpl_id.actual_cost * self.product_uos_qty
-        if self.price_subtotal and self.actual_cost:
-            self.margin_perc = ( 1 - ( self.actual_cost / self.price_subtotal ) ) * 100
-        #FIXME: remove unneccesary debug lines
-        _logger.debug("1200wd - Sale order line {}: Update Actual Cost to {} and margin to {}".
-                      format(self.id, self.actual_cost, self.margin_perc))
-        return True
+    @api.multi
+    def calculate_actual_costs(self):
+        for line in self:
+            if line.product_tmpl_id.actual_cost:
+                line.actual_cost = 0
+                line.actual_cost = line.product_tmpl_id.actual_cost * line.product_uos_qty
+            if line.price_subtotal and line.actual_cost:
+                line.margin_perc = ( 1 - ( line.actual_cost / line.price_subtotal ) ) * 100
 
     actual_cost = fields.Float(string="Actual Cost Price", readonly=True,
-                               compute="get_actual_costs", store=True,
-                               digits_compute=dp.get_precision('Product Price'),
+                               digits=dp.get_precision('Product Price'),
                                help="Actual costs of the products of this sale order line")
     margin_perc = fields.Float(string="Margin %", readonly=True,
                                digits=(16, 1), group_operator="avg",
-                               compute="get_actual_costs", store=True,
                                help="Profit margin of this sale order line")
 
 class SaleOrder(models.Model):
     _inherit = "sale.order"
 
-    #FIXME: @api.multi is preferred, rewrite function
-    @api.one
-    @api.depends('order_line')
+    @api.multi
     def calculate_total_actual_costs(self):
-        self.actual_cost_total = 0
-        for line in self.order_line:
-            if line.state == 'cancel':
-                continue
-            self.actual_cost_total += line.actual_cost or 0.0
-        if self.amount_untaxed and self.actual_cost_total:
-            self.margin_perc = ( 1 - ( self.actual_cost_total / self.amount_untaxed) ) * 100
-        #FIXME: remove unneccesary debug lines
-        _logger.debug("1200wd - Update sale.order actual costs to {} and margin to {}".
-                      format(self.actual_cost_total, self.margin_perc))
-        #FIXME: this returns [True] can probably be removed
-        return True
+        for sale in self:
+            sale.actual_cost_total = 0
+            for line in sale.order_line:
+                if line.state == 'cancel':
+                    continue
+                line.calculate_actual_costs()
+                sale.actual_cost_total += line.actual_cost or 0.0
+            if sale.amount_untaxed and sale.actual_cost_total:
+                sale.margin_perc = ( 1 - ( sale.actual_cost_total / sale.amount_untaxed) ) * 100
+            _logger.debug("1200wd - Update sale.order actual costs to {} and margin to {}".
+                          format(sale.actual_cost_total, sale.margin_perc))
 
     actual_cost_total = fields.Float(string="Total Actual Cost", readonly=True,
-                                     digits_compute=dp.get_precision('Product Price'),
-                                     compute="calculate_total_actual_costs", store=True,
+                                     digits=dp.get_precision('Product Price'),
                                      help="Actual Total Costs of the products of this sale order")
     margin_perc = fields.Float(string="Margin %", readonly=True,
                                digits=(16, 1), group_operator="avg",
-                               compute="calculate_total_actual_costs", store=True,
                                help="Profit Margin of this sale order")
+
+
+    @api.multi
+    def write(self, vals):
+        super(SaleOrder, self).write(vals)
+        if 'order_line' in vals:
+            for sale in self:
+                sale.calculate_total_actual_costs()
+        return True
+
+
+    @api.model
+    def create(self, vals):
+        res = super(SaleOrder, self).create(vals)
+        if 'order_line' in vals:
+            res.calculate_total_actual_costs()
+        return res
