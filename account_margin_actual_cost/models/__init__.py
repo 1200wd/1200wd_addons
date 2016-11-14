@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
-##############################################################################
 #
-#    Sales - Actual Costs and Margins
+#    Account Invoice - Actual Costs and Margins
 #    © 2016 - 1200 WebDevelopment <http://1200wd.com/>
 #
 #    This program is free software: you can redistribute it and/or modify
@@ -17,7 +16,5 @@
 #    You should have received a copy of the GNU Affero General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-##############################################################################
 
-import models
-import report
+import account_invoice

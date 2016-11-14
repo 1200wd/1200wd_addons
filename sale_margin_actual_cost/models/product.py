@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 #    Sales - Actual Costs and Margins
-#    Copyright (C) 2015 November 
-#    1200 Web Development
-#    http://1200wd.com/
+#    © 2016 - 1200 WebDevelopment <http://1200wd.com/>
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -22,7 +20,7 @@
 from openerp import models, fields, api, exceptions, _
 
 
-# class product_template(models.Model):
+# class ProductTemplate(models.Model):
 #     _inherit = "product.template"
 #
 #     cost_method = fields.Selection(

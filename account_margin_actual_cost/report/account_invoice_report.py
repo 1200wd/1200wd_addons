@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 #
 #    Account Invoice - Actual Costs and Margins
-#    Copyright (C) 2015 november 
-#    1200 WebDevelopment
-#    http://1200wd.com/
+#    © 1200 WebDevelopment <http://1200wd.com/>
+#    2016 November
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -22,7 +21,7 @@
 from openerp import models, fields, api
 
 
-class account_invoice_report(models.Model):
+class AccountInvoiceReport(models.Model):
     _inherit = "account.invoice.report"
 
     actual_cost_total = fields.Float(string="Total Actual Cost", readonly=True,
@@ -31,7 +30,7 @@ class account_invoice_report(models.Model):
                                      help="Average margin on invoices", group_operator="avg")
 
     def _select(self):
-        select_str = super(account_invoice_report, self)._select()
+        select_str = super(AccountInvoiceReport, self)._select()
         select_str += """,
                     sub.actual_cost_total as actual_cost_total,
                     sub.margin_avg as margin_avg
@@ -39,7 +38,7 @@ class account_invoice_report(models.Model):
         return select_str
 
     def _sub_select(self):
-        select_str = super(account_invoice_report, self)._sub_select()
+        select_str = super(AccountInvoiceReport, self)._sub_select()
         select_str += """,
                     SUM(CASE
                          WHEN ai.type::text = ANY (ARRAY['out_refund'::character varying::text, 'in_invoice'::character varying::text])
@@ -51,7 +50,7 @@ class account_invoice_report(models.Model):
         return select_str
 
     def _group_by(self):
-        group_by_str = super(account_invoice_report, self)._group_by()
+        group_by_str = super(AccountInvoiceReport, self)._group_by()
         group_by_str += """,
                     ai.margin_perc
         """
