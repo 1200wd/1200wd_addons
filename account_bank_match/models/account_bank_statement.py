@@ -65,17 +65,10 @@ class AccountBankStatementLine(models.Model):
         string='Matches',
         ondelete='set null',
     )
-    match_selected = fields.One2many(
-        comodel_name='account.bank.match',
-        inverse_name='statement_line_id',
-        string='Winning Match',
-        ondelete='set null',
-    )
 
     show_errors = False
     error_str = ""
-
-    statement_text = ''
+    statement_text = ""
 
 
     def _handle_error(self, message):
@@ -905,6 +898,10 @@ class AccountBankStatementLine(models.Model):
                         self.env['account.bank.match'].create(data)
 
             so_ref, invoice_ref = sl._get_winning_match(matches)
+            for match in self.match_ids:
+                if match.name == invoice_ref:
+                    match.match_selected = True
+                    break
         return {'matches_found': matches_found, 'so_ref': so_ref, 'name': invoice_ref}
 
 
@@ -945,6 +942,11 @@ class AccountBankStatementLine(models.Model):
         act_move['context'] = dict(ctx, wizard_action=pickle.dumps(act_move))
         return act_move
 
+    @api.multi
+    def _match_selected(self):
+        for match in self.match_ids:
+            if match.match_selected:
+                return match
 
     @api.one
     def match(self, vals):
@@ -957,7 +959,8 @@ class AccountBankStatementLine(models.Model):
         """
         if (not vals.get('name', False)) or vals.get('name', False) == '/':
             # Only search for matches if match_id not set
-            if not ('match_selected' in vals and vals['match_selected']):
+            import pdb; pdb.set_trace()
+            if not self._match_selected():
                 match = self.account_bank_match(False)
                 if match:
                     vals['so_ref'] = match['so_ref']
@@ -987,16 +990,17 @@ class AccountBankStatementLine(models.Model):
             invoice = self._match_get_object('account.invoice', self.name)
             if len(invoice) == 1:
                 default_writeoff_journal_id = self.env['account.journal'].browse([configs.get('match_writeoff_journal_id')])
+                match_selected = self._match_selected()
                 if invoice.amount_total < 0:
-                    writeoff_acc_id = self.match_selected.writeoff_difference and \
-                                      (self.match_selected.writeoff_journal_id.default_debit_account_id.id or 0) or \
+                    writeoff_acc_id = match_selected.writeoff_difference and \
+                                      (match_selected.writeoff_journal_id.default_debit_account_id.id or 0) or \
                                       (default_writeoff_journal_id.default_debit_account_id.id or 0)
                 else:
-                    writeoff_acc_id = self.match_selected.writeoff_difference and \
-                                      (self.match_selected.writeoff_journal_id.default_credit_account_id.id or 0) or \
+                    writeoff_acc_id = match_selected.writeoff_difference and \
+                                      (match_selected.writeoff_journal_id.default_credit_account_id.id or 0) or \
                                       (default_writeoff_journal_id.default_credit_account_id.id or 0)
 
-                writeoff_difference = self.match_selected.writeoff_difference
+                writeoff_difference = match_selected.writeoff_difference
                 if type=='auto': writeoff_difference = True
                 move_entry = self.pay_invoice_and_reconcile(invoice, writeoff_acc_id, writeoff_difference, type=type)
                 if move_entry:
@@ -1099,7 +1103,7 @@ class AccountBankStatement(models.Model):
         match_errors = []
         for line in [l for l in self.line_ids]:
             line.show_errors = False
-            vals = line.read(['name', 'so_ref', 'match_selected', 'journal_entry_id'], False)[0]
+            vals = line.read(['name', 'so_ref', 'journal_entry_id'], False)[0]
             if not vals or vals['journal_entry_id']:
                 continue
             try:
@@ -1109,9 +1113,9 @@ class AccountBankStatement(models.Model):
                 continue
             if vals_new and 'name' in vals_new and vals_new['name'] != '/':
                 line.write(vals_new)
-                line_match_ids = [l.id for l in line.match_ids]
-                line_match = line_match_ids and self.env['account.bank.match'].search([('id', 'in', line_match_ids), ('name','=',vals_new['name'])])
-                if line_match_ids and len(line_match) and line_match.model == 'account.account':
+                line_match = line.match_ids.ids and self.env['account.bank.match'].search(
+                                [('id', 'in', line.match_ids.ids), ('name','=',vals_new['name'])])
+                if line.match_ids.ids and len(line_match) and line_match.model == 'account.account':
                     account_id = int(vals_new['name']) or 0
                     try:
                         line.create_account_move(account_id)
