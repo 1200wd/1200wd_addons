@@ -959,7 +959,6 @@ class AccountBankStatementLine(models.Model):
         """
         if (not vals.get('name', False)) or vals.get('name', False) == '/':
             # Only search for matches if match_id not set
-            import pdb; pdb.set_trace()
             if not self._match_selected():
                 match = self.account_bank_match(False)
                 if match:
