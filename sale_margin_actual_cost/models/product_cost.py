@@ -27,22 +27,24 @@ _logger = logging.getLogger(__name__)
 class ProductTemplate(models.Model):
     _inherit = "product.template"
 
-    @api.one
+    @api.multi
     def calculate_costs(self):
-        # Calculate extra costs from product_extra_costs table
-        pc = self.env['product.cost'].search([('product_tmpl_id', '=', self.id)])
-        self.extra_costs = 0
-        for r in pc:
-            self.extra_costs += r.costs
-        _logger.debug("1200wd - Updating extra costs of product_tmpl_id {} to {}".format(self.id, self.extra_costs))
-        return True
+        for product in self:
+            # Calculate extra costs from product_extra_costs table
+            pc = product.env['product.cost'].search([('product_tmpl_id', '=', product.id)])
+            product.extra_costs = 0
+            for r in pc:
+                product.extra_costs += r.costs
+            _logger.debug("1200wd - Updating extra costs of product_tmpl_id {} to {}".
+                          format(product.id, product.extra_costs))
 
-    @api.one
+    @api.multi
     @api.depends('standard_price', 'extra_costs')
     def calculate_actual_costs(self):
-        self.actual_cost = self.standard_price + self.extra_costs
-        _logger.debug("1200wd - Updating actual cost of product_tmpl_id {} to {}".format(self.id, self.actual_cost))
-        return True
+        for product in self:
+            product.actual_cost = product.standard_price + product.extra_costs
+            _logger.debug("1200wd - Updating actual cost of product_tmpl_id {} to {}".
+                          format(product.id, product.actual_cost))
 
     extra_costs = fields.Float(string="Extra costs", readonly=True,
                                digits_compute=dp.get_precision('Product Price'),
@@ -111,8 +113,9 @@ class ProductCost(models.Model):
         self._update_product_costs(ps)
         return res
 
-    @api.one
+    @api.multi
     @api.onchange('type')
     def update_default_costs(self):
+        self.ensure_one()
         if self.type.default_costs:
             self.costs = self.type.default_costs
