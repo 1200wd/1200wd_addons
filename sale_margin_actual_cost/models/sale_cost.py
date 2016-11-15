@@ -36,19 +36,19 @@ class SaleOrderLine(models.Model):
                 line.margin_perc = ( 1 - ( line.actual_cost / line.price_subtotal ) ) * 100
 
     actual_cost = fields.Float(string="Actual Cost Price", readonly=True,
-                               compute="get_actual_costs", store=True,
+                               compute="calculate_actual_costs", store=True,
                                digits_compute=dp.get_precision('Product Price'),
                                help="Actual costs of the products of this sale order line")
     margin_perc = fields.Float(string="Margin %", readonly=True,
                                digits=(16, 1), group_operator="avg",
-                               compute="get_actual_costs", store=True,
+                               compute="calculate_actual_costs", store=True,
                                help="Profit margin of this sale order line")
 
     @api.model
     def create(self, vals):
         res = super(SaleOrderLine, self).create(vals)
-        _logger.debug("1200wd - Writing SOL vals %s" % vals)
-        # res.calculate_actual_costs()
+        # TODO: This shouldn't be neccesary?
+        res.calculate_actual_costs()
         return res
 
 class SaleOrder(models.Model):
