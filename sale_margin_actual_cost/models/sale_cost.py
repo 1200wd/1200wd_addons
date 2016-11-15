@@ -31,17 +31,25 @@ class SaleOrderLine(models.Model):
     def calculate_actual_costs(self):
         for line in self:
             if line.product_tmpl_id.actual_cost:
-                line.actual_cost = 0
                 line.actual_cost = line.product_tmpl_id.actual_cost * line.product_uos_qty
             if line.price_subtotal and line.actual_cost:
                 line.margin_perc = ( 1 - ( line.actual_cost / line.price_subtotal ) ) * 100
 
     actual_cost = fields.Float(string="Actual Cost Price", readonly=True,
-                               digits=dp.get_precision('Product Price'),
+                               compute="get_actual_costs", store=True,
+                               digits_compute=dp.get_precision('Product Price'),
                                help="Actual costs of the products of this sale order line")
     margin_perc = fields.Float(string="Margin %", readonly=True,
                                digits=(16, 1), group_operator="avg",
+                               compute="get_actual_costs", store=True,
                                help="Profit margin of this sale order line")
+
+    @api.model
+    def create(self, vals):
+        res = super(SaleOrderLine, self).create(vals)
+        _logger.debug("1200wd - Writing SOL vals %s" % vals)
+        # res.calculate_actual_costs()
+        return res
 
 class SaleOrder(models.Model):
     _inherit = "sale.order"
@@ -49,16 +57,17 @@ class SaleOrder(models.Model):
     @api.multi
     def calculate_total_actual_costs(self):
         for sale in self:
-            sale.actual_cost_total = 0
+            actual_cost_total = 0
             for line in sale.order_line:
                 if line.state == 'cancel':
                     continue
                 line.calculate_actual_costs()
-                sale.actual_cost_total += line.actual_cost or 0.0
+                actual_cost_total += line.actual_cost or 0.0
             if sale.amount_untaxed and sale.actual_cost_total:
-                sale.margin_perc = ( 1 - ( sale.actual_cost_total / sale.amount_untaxed) ) * 100
+                sale.margin_perc = ( 1 - ( actual_cost_total / sale.amount_untaxed) ) * 100
+            sale.actual_cost_total = actual_cost_total
             _logger.debug("1200wd - Update sale.order actual costs to {} and margin to {}".
-                          format(sale.actual_cost_total, sale.margin_perc))
+                          format(actual_cost_total, sale.margin_perc))
 
     actual_cost_total = fields.Float(string="Total Actual Cost", readonly=True,
                                      digits=dp.get_precision('Product Price'),
@@ -70,11 +79,11 @@ class SaleOrder(models.Model):
 
     @api.multi
     def write(self, vals):
-        super(SaleOrder, self).write(vals)
+        res = super(SaleOrder, self).write(vals)
         if 'order_line' in vals:
             for sale in self:
                 sale.calculate_total_actual_costs()
-        return True
+        return res
 
 
     @api.model

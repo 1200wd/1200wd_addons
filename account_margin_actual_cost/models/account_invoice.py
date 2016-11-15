@@ -30,7 +30,6 @@ class AccountInvoiceLine(models.Model):
     @api.multi
     def calculate_actual_costs(self):
         for line in self:
-            line.actual_cost = 0
             if line.invoice_id.type in ['out_invoice', 'out_refund']:
                 if line.product_id.product_tmpl_id.actual_cost:
                     line.actual_cost = line.product_id.product_tmpl_id.actual_cost * line.quantity
@@ -54,16 +53,16 @@ class AccountInvoice(models.Model):
     @api.multi
     def calculate_total_actual_costs(self):
         for invoice in self:
-            invoice.actual_cost_total = 0
-            invoice.margin_perc = 0
+            actual_cost_total = 0
             if invoice.type in ['out_invoice', 'out_refund']:
                 for line in invoice.invoice_line:
                     line.calculate_actual_costs()
-                    invoice.actual_cost_total += line.actual_cost or 0.0
+                    actual_cost_total += line.actual_cost or 0.0
                 if invoice.amount_untaxed and invoice.actual_cost_total:
-                    invoice.margin_perc = ( 1 - ( invoice.actual_cost_total / invoice.amount_untaxed) ) * 100
+                    invoice.margin_perc = ( 1 - ( actual_cost_total / invoice.amount_untaxed) ) * 100
+                invoice.actual_cost_total = actual_cost_total
                 _logger.debug("1200wd - Update invoice total actual costs {} and margin to {}%".
-                              format(invoice.actual_cost_total, invoice.margin_perc))
+                              format(actual_cost_total, invoice.margin_perc))
 
     actual_cost_total = fields.Float(string="Total Actual Cost", readonly=True,
                                      digits=dp.get_precision('Product Price'),
