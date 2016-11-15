@@ -44,12 +44,12 @@ class SaleOrderLine(models.Model):
                                compute="calculate_actual_costs", store=True,
                                help="Profit margin of this sale order line")
 
-    @api.model
-    def create(self, vals):
-        res = super(SaleOrderLine, self).create(vals)
-        # TODO: This shouldn't be neccesary?
-        res.calculate_actual_costs()
-        return res
+    # @api.model
+    # def create(self, vals):
+    #     res = super(SaleOrderLine, self).create(vals)
+    #     # TODO: This shouldn't be neccesary?
+    #     res.calculate_actual_costs()
+    #     return res
 
 class SaleOrder(models.Model):
     _inherit = "sale.order"
