@@ -36,20 +36,21 @@ class SaleOrderLine(models.Model):
                 line.margin_perc = ( 1 - ( line.actual_cost / line.price_subtotal ) ) * 100
 
     actual_cost = fields.Float(string="Actual Cost Price", readonly=True,
-                               compute="calculate_actual_costs", store=True,
-                               digits_compute=dp.get_precision('Product Price'),
+                               digits=dp.get_precision('Product Price'),
                                help="Actual costs of the products of this sale order line")
     margin_perc = fields.Float(string="Margin %", readonly=True,
                                digits=(16, 1), group_operator="avg",
-                               compute="calculate_actual_costs", store=True,
                                help="Profit margin of this sale order line")
 
-    # @api.model
-    # def create(self, vals):
-    #     res = super(SaleOrderLine, self).create(vals)
-    #     # TODO: This shouldn't be neccesary?
-    #     res.calculate_actual_costs()
-    #     return res
+    @api.model
+    def create(self, vals):
+        # Overwrite create to fix problems with import via XMLRPC not calling sale.order methods
+        res = super(SaleOrderLine, self).create(vals)
+        _logger.debug("1200wd - Created sale order line %d and update actual costs" % res.id)
+        res.calculate_actual_costs()
+        res.order_id.calculate_total_actual_costs()
+        return res
+
 
 class SaleOrder(models.Model):
     _inherit = "sale.order"
