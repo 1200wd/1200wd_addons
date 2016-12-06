@@ -18,33 +18,45 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ##############################################################################
-
 import logging
 from openerp import models, fields, api, _, exceptions
 
+
 _logger = logging.getLogger(__name__)
+
 
 class StockPicking(models.Model):
     _inherit = "stock.picking"
 
     @api.model
     def _get_invoice_vals(self, key, inv_type, journal_id, move, picking=None):
+        """Create invoice from stock.picking.
+        
+        Include customer sales channel and customer pricelist
         """
-        Create invoice from stock.picking: include customer sales channel and customer pricelist
-        """
-        inv_vals = super(StockPicking, self)._get_invoice_vals(key, inv_type, journal_id, move, picking=picking)
+        inv_vals = super(StockPicking, self)._get_invoice_vals(
+            key, inv_type, journal_id, move, picking=picking
+        )
         if 'partner_id' in inv_vals:
             partner = self.env['res.partner'].browse(inv_vals['partner_id'])
             if partner and partner.sales_channel_id:
-                _logger.debug("1200wd - sale_channel - Create invoice from stock.picking, use customer %s sales channel %s" %
-                              (partner.id, partner.sales_channel_id.id))
+                _logger.debug(
+                    "1200wd - sale_channel - Create invoice from stock.picking, use customer %s sales channel %s" %
+                    (partner.id, partner.sales_channel_id.id)
+                )
                 inv_vals.update({
                     'sales_channel_id': partner.sales_channel_id.id,
-                    'pricelist_id': partner.sales_channel_id.property_product_pricelist.id,
+                    'pricelist_id':
+                    partner.sales_channel_id.property_product_pricelist.id,
                 })
             else:
-                _logger.warning("1200wd - sale_channel - Could not update sales channel sales channel, partner has no sales channel defined. Vals %s" % inv_vals)
+                _logger.warning(
+                    "1200wd - sale_channel - Could not update sales channel sales channel, partner has no sales channel defined. Vals %s" %
+                    inv_vals
+                )
         else:
-            _logger.warning("1200wd - sale_channel - Could not update sales channel sales channel, partner not found. Vals %s" % inv_vals)
-
+            _logger.warning(
+                "1200wd - sale_channel - Could not update sales channel sales channel, partner not found. Vals %s" %
+                inv_vals
+            )
         return inv_vals

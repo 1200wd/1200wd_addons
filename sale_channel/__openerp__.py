@@ -22,12 +22,14 @@
     'name': "Sale Channel",
     'summary': """Module to allow the use of multiple Sales Channels""",
     'description': """
-    Allow the use of multiple sales channels for instance for different websites, countries and shops.
+    Allow the use of multiple sales channels for instance for different
+    websites, countries and shops.
 
-    For each sales channel you can specify a default pricelist, tax structure, address, sales person and many other
-    settings.
+    For each sales channel you can specify a default pricelist, address,
+    sales person and many other settings.
 
-    Easily filter sale orders, invoices and statistics by a specific sales channel.
+    Easily filter sale orders, invoices and statistics by a specific
+    sales channel.
     """,
     'author': "1200 Web Development",
     'website': "http://www.1200wd.com",
