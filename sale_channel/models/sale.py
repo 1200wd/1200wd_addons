@@ -85,7 +85,7 @@ class SaleOrder(models.Model):
         return [('category_id', 'in', ids)]
 
     sales_channel_id = fields.Many2one('res.partner', string="Sales channel", ondelete='set null',
-                                       domain=_get_sales_channel_domain, required=True, index=True)
+                                       domain=_get_sales_channel_domain, index=True)
 
     @api.onchange('sales_channel_id')
     def sales_channel_change(self):
