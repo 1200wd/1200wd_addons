@@ -2,9 +2,7 @@
 ##############################################################################
 #
 #    Sales Channels
-#    Copyright (C) 2016 June
-#    1200 Web Development
-#    http://1200wd.com/
+#    © 2016 - 1200 WebDevelopment <http://1200wd.com/>
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -85,7 +83,7 @@ class SaleOrder(models.Model):
         return [('category_id', 'in', ids)]
 
     sales_channel_id = fields.Many2one('res.partner', string="Sales channel", ondelete='set null',
-                                       domain=_get_sales_channel_domain, required=True, index=True)
+                                       domain=_get_sales_channel_domain, index=True)
 
     @api.onchange('sales_channel_id')
     def sales_channel_change(self):

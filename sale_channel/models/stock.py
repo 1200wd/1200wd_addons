@@ -2,9 +2,7 @@
 ##############################################################################
 #
 #    Sales Channels
-#    Copyright (C) 2016 June
-#    1200 Web Development
-#    http://1200wd.com/
+#    © 2016 - 1200 WebDevelopment <http://1200wd.com/>
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -34,7 +32,7 @@ class StockPicking(models.Model):
         """
         Create invoice from stock.picking: include customer sales channel and customer pricelist
         """
-        inv_vals = super(StockPicking, self)._get_invoice_vals(key, inv_type, journal_id, move)
+        inv_vals = super(StockPicking, self)._get_invoice_vals(key, inv_type, journal_id, move, picking=picking)
         if 'partner_id' in inv_vals:
             partner = self.env['res.partner'].browse(inv_vals['partner_id'])
             if partner and partner.sales_channel_id:

@@ -2,9 +2,7 @@
 ##############################################################################
 #
 #    Sales Channels
-#    Copyright (C) 2016 June
-#    1200 Web Development
-#    http://1200wd.com/
+#    © 2016 - 1200 WebDevelopment <http://1200wd.com/>
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -34,7 +32,7 @@
     'author': "1200 Web Development",
     'website': "http://www.1200wd.com",
     'category': 'Sales',
-    'version': '8.0.1.1',
+    'version': '8.0.1.1.2',
     'depends': [
         'sale',
         'account',
@@ -51,6 +49,6 @@
     'installable': True,
     'auto_install': False,
     'application': False,
-    'price': 10.00,
+    'price': 0.00,
     'currency': 'EUR',
 }
