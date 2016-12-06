@@ -45,7 +45,8 @@ class AccountInvoice(models.Model):
                             payment_term=False, partner_bank_id=False, company_id=False):
         _logger.debug('1200wd - account_invoice sale_channel onchange_partner_id')
         res = super(AccountInvoice, self).onchange_partner_id(
-            type, partner_id, date_invoice=False, payment_term=False, partner_bank_id=False, company_id=False
+            type, partner_id, date_invoice=date_invoice, payment_term=payment_term, partner_bank_id=partner_bank_id,
+            company_id=company_id
         )
         partner = self.env['res.partner'].browse(partner_id)
 
@@ -58,8 +59,8 @@ class AccountInvoice(models.Model):
     @api.model
     def _prepare_refund(self, invoice, date=None, period_id=None, description=None, journal_id=None):
         _logger.debug('1200wd - account_invoice _prepare_refund include sales_channel')
-        values = super(AccountInvoice, self)._prepare_refund(invoice, date=None, period_id=None, description=None,
-                                                              journal_id=None)
+        values = super(AccountInvoice, self)._prepare_refund(invoice, date=date, period_id=period_id,
+                                                             description=description, journal_id=journal_id)
         values.update({
             'sales_channel_id': invoice.sales_channel_id.id,
         })

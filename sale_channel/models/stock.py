@@ -32,7 +32,7 @@ class StockPicking(models.Model):
         """
         Create invoice from stock.picking: include customer sales channel and customer pricelist
         """
-        inv_vals = super(StockPicking, self)._get_invoice_vals(key, inv_type, journal_id, move)
+        inv_vals = super(StockPicking, self)._get_invoice_vals(key, inv_type, journal_id, move, picking=picking)
         if 'partner_id' in inv_vals:
             partner = self.env['res.partner'].browse(inv_vals['partner_id'])
             if partner and partner.sales_channel_id:
