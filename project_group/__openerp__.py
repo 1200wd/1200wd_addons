@@ -30,7 +30,7 @@
     'author': "1200 Web Development",
     'website': "http://1200wd.com",
     'category': 'Project',
-    'version': '8.0.1.2',
+    'version': '9.0.1.2',
     'depends': [
         'project',
     ],

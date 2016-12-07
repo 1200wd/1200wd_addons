@@ -11,7 +11,7 @@
 
         <menuitem name="Project Groups"
                   id="project_group"
-                  parent="base.menu_definitions"
+                  parent="base.menu_main_pm"
                   action="action_project_group"
                   sequence="5"/>
 
