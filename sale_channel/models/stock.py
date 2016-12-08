@@ -45,19 +45,20 @@ class StockPicking(models.Model):
                     " stock.picking, use customer %s sales channel %s" %
                     (partner.id, partner.sales_channel_id.id)
                 )
+                # TODO (consider taking values from SO if available!)
                 inv_vals.update({
                     'sales_channel_id': partner.sales_channel_id.id,
                     'pricelist_id':
                     partner.sales_channel_id.property_product_pricelist.id,
                 })
             else:
-                _logger.warning(
+                _logger.info(
                     "1200wd - sale_channel - Could not update sales channel,"
                     " partner has no sales channel defined. Vals %s" %
                     inv_vals
                 )
         else:
-            _logger.warning(
+            _logger.info(
                 "1200wd - sale_channel - Could not update sales channel,"
                 " partner not found. Vals %s" %
                 inv_vals
