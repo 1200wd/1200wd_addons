@@ -107,14 +107,15 @@ class SaleOrder(models.Model):
 
     @api.multi
     def onchange_partner_id(self, partner_id):
+        """Add values from sales_channel partner, if available."""
         res = super(SaleOrder, self).onchange_partner_id(partner_id)
         if partner_id:
             partner = self.env['res.partner'].browse(partner_id)
-            res['value'].update({
-                'sales_channel_id': partner.sales_channel_id,
-                'pricelist_id':
-                    partner.sales_channel_id.property_product_pricelist,
-            })
+            if partner.sales_channel_id:
+                res['value'].['sales_channel_id'] = partner.sales_channel_id
+                if partner.sales_channel_id.property_product_pricelist:
+                    'res['value'].[pricelist_id'] = \
+                        partner.sales_channel_id.property_product_pricelist
         return res
 
     @api.model
