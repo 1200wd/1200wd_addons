@@ -2,8 +2,8 @@
 ##############################################################################
 #
 #    Delivery Transsmart Ingegration
-#    Copyright (C) 2016 1200 Web Development (<http://1200wd.com/>)
-#              (C) 2015 ONESTEiN BV (<http://www.onestein.nl>)
+#    © 2016 - 1200 Web Development <http://1200wd.com/>
+#    © 2015 - ONESTEiN BV (<http://www.onestein.nl>)
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -28,21 +28,37 @@ import logging
 
 _logger = logging.getLogger(__name__)
 
+
 def price_from_transsmart_price(price_str):
     """convert transsmart price string to odoo float field."""
     if price_str.startswith('EUR '):
         return float(price_str[4:].replace(',','.'))
     raise Warning(_("Couldn't convert transsmart price %s to float") % (price_str,))
 
-class stock_picking(models.Model):
+
+class StockPicking(models.Model):
     _inherit = 'stock.picking'
 
-    delivery_service_level_time_id = fields.Many2one('delivery.service.level.time', string='Delivery Service Level Time (PreBook)', ondelete="restrict")
-    cost_center_id = fields.Many2one('transsmart.cost.center', string='Delivery Cost Center')
+    delivery_service_level_time_id = fields.Many2one(
+        'delivery.service.level.time',
+        string='Delivery Service Level Time (PreBook)',
+        ondelete="restrict")
+    cost_center_id = fields.Many2one(
+        'transsmart.cost.center',
+        string='Delivery Cost Center')
 
-    delivery_cost = fields.Float('Delivery Cost', digits_compute=dp.get_precision('Product Price'), readonly=True)
-    transsmart_id = fields.Integer("Transsmart ID", readonly=True)
-    transsmart_confirmed = fields.Boolean("Transsmart Confirmed", compute="_compute_transsmart_confirmed", readonly=True, store=True)
+    delivery_cost = fields.Float(
+        'Delivery Cost',
+        digits_compute=dp.get_precision('Product Price'),
+        readonly=True)
+    transsmart_id = fields.Integer(
+        "Transsmart ID",
+        readonly=True)
+    transsmart_confirmed = fields.Boolean(
+        "Transsmart Confirmed",
+        compute="_compute_transsmart_confirmed",
+        readonly=True,
+        store=True)
 
     @api.depends('transsmart_id')
     def _compute_transsmart_confirmed(self):
@@ -168,7 +184,8 @@ class stock_picking(models.Model):
         document = self._transsmart_document_from_stock_picking()
 
         _logger.info("transsmart.getrates with document: %s" % (json.dumps(document),))
-        r = self.env['delivery.transsmart.config.settings'].get_transsmart_service().send('/Rates', params={'prebooking': 1, 'getrates': 0}, payload=document)
+        r = self.env['delivery.transsmart.config.settings'].\
+            get_transsmart_service().send('/Rates', params={'prebooking': 1, 'getrates': 0}, payload=document)
         if len(r):
             if type(r) == list:
                 r = r[0]
@@ -199,7 +216,8 @@ class stock_picking(models.Model):
         document = self._transsmart_document_from_stock_picking()
 
         _logger.info("transsmart.document with document: %s" % (json.dumps(document),))
-        r = self.env['delivery.transsmart.config.settings'].get_transsmart_service().send('/Document', params={'autobook': 1}, payload=document)
+        r = self.env['delivery.transsmart.config.settings'].\
+            get_transsmart_service().send('/Document', params={'autobook': 1}, payload=document)
         if len(r):
             if type(r) == list:
                 r = r[0]
@@ -222,24 +240,25 @@ class stock_picking(models.Model):
     @api.multi
     def action_confirm(self):
         if self.env.context.get('ingoing_override', False):
-            return super(stock_picking, self).action_confirm()
+            return super(StockPicking, self).action_confirm()
         self.action_get_transsmart_rate()
-        return super(stock_picking, self).action_confirm()
+        return super(StockPicking, self).action_confirm()
 
     @api.model
     def create(self, vals):
         if 'action_ship_create' in self.env.context:
             vals.update({
                 'cost_center_id': self.env.context['action_ship_create'].cost_center_id.id,
-                'delivery_service_level_time_id': self.env.context['action_ship_create'].delivery_service_level_time_id.id
+                'delivery_service_level_time_id':
+                    self.env.context['action_ship_create'].delivery_service_level_time_id.id
             })
-        r = super(stock_picking, self).create(vals)
+        r = super(StockPicking, self).create(vals)
         return r
 
 
     def copy(self, cr, uid, ids, defaults=None, context=None):
         if context and context.get('ingoing_override', False):
-            return super(stock_picking, self).copy(cr, uid, ids, defaults, context)
+            return super(StockPicking, self).copy(cr, uid, ids, defaults, context)
         if not defaults:
             defaults = {}
         defaults.update({
@@ -247,4 +266,4 @@ class stock_picking(models.Model):
             'transsmart_id': 0,
             'delivery_cost': 0
         })
-        return super(stock_picking, self).copy(cr, uid, ids, defaults, context)
+        return super(StockPicking, self).copy(cr, uid, ids, defaults, context)

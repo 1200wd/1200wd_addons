@@ -19,10 +19,18 @@
 #
 ##############################################################################
 
-from . import sale_order
-from . import product_product
-from . import delivery_service_level
-from . import stock_picking
-from . import res_config
-from . import res_partner
-from . import stock_return_picking
+
+from openerp import models, fields, api, _
+import openerp.addons.decimal_precision as dp
+from openerp.exceptions import Warning
+
+
+class ProductProduct(models.Model):
+    _inherit = 'product.product'
+
+    service_level_id = fields.Many2one(
+        'delivery.service.level',
+        string='Service Level')
+    service_level_time_id = fields.Many2one(
+        'delivery.service.level.time',
+        string='Service Level Time')

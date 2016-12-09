@@ -2,8 +2,7 @@
 ##############################################################################
 #
 #    Delivery Transsmart Ingegration
-#    Copyright (C) 2016 1200 Web Development (<http://1200wd.com/>)
-#              (C) 2015 ONESTEiN BV (<http://www.onestein.nl>)
+#    © 2015 - ONESTEiN BV (<http://www.onestein.nl>)
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -26,11 +25,11 @@ import logging
 _logger = logging.getLogger(__name__)
 
 
-class stock_return_picking(models.TransientModel):
+class StockReturnPicking(models.TransientModel):
     _inherit = 'stock.return.picking'
 
     @api.multi
     def create_returns(self):
         self = self.with_context(ingoing_override=True)
-        res = super(stock_return_picking, self).create_returns()
+        res = super(StockReturnPicking, self).create_returns()
         return res

@@ -2,8 +2,7 @@
 ##############################################################################
 #
 #    Delivery Transsmart Ingegration
-#    Copyright (C) 2016 1200 Web Development (<http://1200wd.com/>)
-#              (C) 2015 ONESTEiN BV (<http://www.onestein.nl>)
+#    © 2016 - 1200 Web Development <http://1200wd.com/>
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -26,7 +25,7 @@ import openerp.addons.decimal_precision as dp
 from openerp.exceptions import Warning
 
 
-class delivery_service_level(models.Model):
+class DeliveryServiceLevel(models.Model):
     _name = 'delivery.service.level'
 
     name = fields.Char(size=128, string="Name")
@@ -35,7 +34,7 @@ class delivery_service_level(models.Model):
     description = fields.Char(size=256, string="Description")
 
 
-class delivery_service_level_time(models.Model):
+class DeliveryServiceLevelTime(models.Model):
     _name = 'delivery.service.level.time'
 
     name = fields.Char(size=128, string="Name")
@@ -45,47 +44,10 @@ class delivery_service_level_time(models.Model):
     pre_book = fields.Boolean(string="Available for pre-booking", default=False)
 
 
-class transsmart_cost_center(models.Model):
+class TranssmartCostCenter(models.Model):
     _name = 'transsmart.cost.center'
 
     name = fields.Char(size=128, string="Name")
     transsmart_id = fields.Integer("Transsmart ID")
     code = fields.Char(size=128, string="Code", help="This code should match the code in the Transsmart configuration.")
     description = fields.Char(size=256, string="Description")
-
-
-class product_product(models.Model):
-    _inherit = 'product.product'
-
-    service_level_id = fields.Many2one('delivery.service.level', string='Service Level')
-    service_level_time_id = fields.Many2one('delivery.service.level.time', string='Service Level Time')
-
-
-class res_partner(models.Model):
-    _inherit = 'res.partner'
-
-    transsmart_code = fields.Char(size=128, string="Transsmart Code")
-    transsmart_id = fields.Integer("Transsmart ID")
-
-
-class sale_order(models.Model):
-    _inherit = 'sale.order'
-
-    delivery_service_level_time_id = fields.Many2one('delivery.service.level.time', string='Delivery Service Level Time', ondelete="restrict")
-    cost_center_id = fields.Many2one('transsmart.cost.center', string='Delivery Cost Center')
-
-
-    def action_ship_create(self, cr, uid, ids, context=None):
-        context = context.copy() or {}
-        sales = self.browse(cr, uid, ids, context=context)
-        context['action_ship_create'] = sales
-        r = super(sale_order, self).action_ship_create(cr, uid, ids, context=context)
-        for sale in sales:
-            sale.picking_ids.action_get_transsmart_rate()
-        return r
-
-
-class res_company(models.Model):
-    _inherit = 'res.company'
-
-    transsmart_enabled = fields.Boolean('Use Transsmart', default=True)
