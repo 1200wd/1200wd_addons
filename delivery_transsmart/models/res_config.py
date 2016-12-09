@@ -31,11 +31,14 @@ class DeliveryTranssmartConfiguration(models.TransientModel):
     _name = 'delivery.transsmart.config.settings'
     _inherit = 'res.config.settings'
 
-    service_level_time_id = fields.Many2one('delivery.service.level.time',
-                                            string='Default Prebooking Service Level Time',
-                                            help='Default service level time.')
-    carrier_id = fields.Many2one('res.partner', string='Default Prebooking Carrier',
-                                 help='Default carrier.')
+    service_level_time_id = fields.Many2one(
+        'delivery.service.level.time',
+        string='Default Prebooking Service Level Time',
+        help='Default service level time.')
+    carrier_id = fields.Many2one(
+        'res.partner',
+        string='Default Prebooking Carrier',
+        help='Default carrier.')
     disable = fields.Boolean('Disable')
 
     @api.multi
@@ -213,4 +216,6 @@ class DeliveryTranssmartConfiguration(models.TransientModel):
 class ResCompany(models.Model):
     _inherit = 'res.company'
 
-    transsmart_enabled = fields.Boolean('Use Transsmart', default=True)
+    transsmart_enabled = fields.Boolean(
+        'Use Transsmart',
+        default=True)
