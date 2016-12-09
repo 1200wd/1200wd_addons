@@ -41,6 +41,14 @@ class DeliveryTranssmartConfiguration(models.TransientModel):
         help='Default carrier.')
     disable = fields.Boolean('Disable')
 
+    url = fields.Char(
+        string="URL",
+        default="https://connect.test.api.transwise.eu/Api")
+    username = fields.Char(
+        string="Username")
+    password = fields.Char(
+        string="Password")
+
     @api.multi
     def get_default_transsmart(self):
         ir_values_obj = self.env['ir.values']
