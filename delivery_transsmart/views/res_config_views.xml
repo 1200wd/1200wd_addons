@@ -30,7 +30,7 @@
                     </group>
                </form>
            </field>
-       </record>
+        </record>
        
         <record id="action_delivery_transsmart_config_settings" model="ir.actions.act_window">
             <field name="name">Configure Transsmart</field>

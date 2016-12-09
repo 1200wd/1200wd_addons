@@ -3,7 +3,6 @@
 #
 #    Delivery Transsmart Ingegration
 #    Copyright (C) 2016 1200 Web Development (<http://1200wd.com/>)
-#              (C) 2015 ONESTEiN BV (<http://www.onestein.nl>)
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -20,31 +19,7 @@
 #
 ##############################################################################
 
-{
-    'name': "Transsmart Integration",
-    'summary': """Transsmart Integration for Odoo""",
-    'description': """
-    Transsmart Integration for Odoo. Exchange delivery information between Odoo and Transsmart.
-    """,
-    'author': "1200 Web Development",
-    'website': "http://1200wd.com",
-    'category': 'Warehouse',
-    'version': '8.0.3.0',
-    'depends': [
-        'webservice_interface',
-        'delivery',
-    ],
-    'data': [
-        "security/ir.model.access.csv",
-        "views/delivery_transsmart_views.xml",
-        "views/service_level_views.xml",
-        "views/res_config_views.xml",
-        "data/data.xml"
-    ],
-    'demo': [],
-    'price': 0.00,
-    'currency': 'EUR',
-    'installable': True,
-    'auto_install': False,
-    'application': False,
-}
+from . import models
+from . import stock_picking
+from . import res_config
+from . import stock_return_picking
