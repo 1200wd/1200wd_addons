@@ -35,7 +35,7 @@
                                 <label for="username"/>
                             </div>
                             <div>
-                                <field name="password" class="oe_inline"/>
+                                <field name="password" class="oe_inline" password="True"/>
                                 <label for="password"/>
                             </div>
                         </div>

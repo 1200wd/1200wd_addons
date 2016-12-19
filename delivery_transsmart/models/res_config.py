@@ -34,20 +34,28 @@ class DeliveryTranssmartConfiguration(models.TransientModel):
     service_level_time_id = fields.Many2one(
         'delivery.service.level.time',
         string='Default Prebooking Service Level Time',
-        help='Default service level time.')
+        help='Default service level time',
+    )
     carrier_id = fields.Many2one(
         'res.partner',
         string='Default Prebooking Carrier',
-        help='Default carrier.')
+        help='Default carrier',
+    )
     disable = fields.Boolean('Disable')
 
     url = fields.Char(
         string="URL",
-        default="https://connect.test.api.transwise.eu/Api")
+        default="https://connect.test.api.transwise.eu/Api",
+        size=80,
+    )
     username = fields.Char(
-        string="Username")
+        string="Username",
+        size=64,
+    )
     password = fields.Char(
-        string="Password")
+        string="Password",
+        size=64,
+    )
 
     @api.multi
     def get_default_transsmart(self):
