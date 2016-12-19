@@ -26,3 +26,4 @@ from . import stock_picking
 from . import res_config
 from . import res_partner
 from . import stock_return_picking
+from . import web_service

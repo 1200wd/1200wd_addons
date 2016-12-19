@@ -31,7 +31,6 @@
     'category': 'Warehouse',
     'version': '8.0.3.0',
     'depends': [
-        'webservice_interface',
         'delivery',
     ],
     'data': [
