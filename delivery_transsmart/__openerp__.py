@@ -38,7 +38,8 @@
         "views/delivery_transsmart_views.xml",
         "views/service_level_views.xml",
         "views/res_config_views.xml",
-        "data/data.xml"
+        "views/delivery_web_service_views.xml",
+        "data/data.xml",
     ],
     'demo': [],
     'price': 0.00,

@@ -26,8 +26,17 @@ import logging
 
 _logger = logging.getLogger(__name__)
 
-class WebService(models.Model):
-    _name = 'web.service'
+class DeliveryWebService(models.Model):
+    _name = 'delivery.web.service'
+
+    name = fields.Char(string="Title", required=True)
+    url = fields.Char(string="URL", required=True, default="https://connect.test.api.transwise.eu/Api")
+    username = fields.Char(string="Username", required=True)
+    password = fields.Char(string="Password", required=True)
+
+    type = fields.Selection([('http_rest', 'HTTP REST')], 'Service Type', required=True)
+
+    description = fields.Text()
 
     def send(self, method, params=None, payload=None):
         if self.type == 'http_rest':
@@ -47,7 +56,7 @@ class WebService(models.Model):
                     data = json.loads(response.text)
                     error_message = data["Message"]
                 else:
-                    error_message = "Error when communication the service\n\n{}".format(response.text)
+                    error_message = "Transsmart communication error\n\n{}".format(response.text)
                 raise Warning("ERROR {}: {}".format(response.status_code, error_message))
 
             return response.json()
@@ -71,7 +80,7 @@ class WebService(models.Model):
                     data = json.loads(response.text)
                     error_message = data["Message"]
                 else:
-                    error_message = "Error when communication the service\n\n{}".format(response.text)
+                    error_message = "Transsmart communication error\n\n{}".format(response.text)
                 raise Warning("ERROR {}: {}".format(response.status_code, error_message))
 
             return response.json()

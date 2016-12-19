@@ -21,7 +21,6 @@
 ##############################################################################
 
 from openerp import models, fields, api, _
-import openerp.addons.decimal_precision as dp
 from openerp.exceptions import Warning
 import logging
 
@@ -42,20 +41,6 @@ class DeliveryTranssmartConfiguration(models.TransientModel):
         help='Default carrier',
     )
     disable = fields.Boolean('Disable')
-
-    url = fields.Char(
-        string="URL",
-        default="https://connect.test.api.transwise.eu/Api",
-        size=80,
-    )
-    username = fields.Char(
-        string="Username",
-        size=64,
-    )
-    password = fields.Char(
-        string="Password",
-        size=64,
-    )
 
     @api.multi
     def get_default_transsmart(self):

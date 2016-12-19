@@ -24,21 +24,6 @@
                                 <label for="service_level_time_id"/>
                             </div>
                         </div>
-                        <label for="id" string="Connection Information"/>
-                        <div>
-                            <div>
-                                <field name="url" class="oe_inline"/>
-                                <label for="url"/>
-                            </div>
-                            <div>
-                                <field name="username" class="oe_inline"/>
-                                <label for="username"/>
-                            </div>
-                            <div>
-                                <field name="password" class="oe_inline" password="True"/>
-                                <label for="password"/>
-                            </div>
-                        </div>
                         <label for="id" string="Refresh Transsmart Data"/>
                         <div>
                             <div>
