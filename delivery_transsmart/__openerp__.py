@@ -2,8 +2,8 @@
 ##############################################################################
 #
 #    Delivery Transsmart Ingegration
-#    Copyright (C) 2016 1200 Web Development (<http://1200wd.com/>)
-#              (C) 2015 ONESTEiN BV (<http://www.onestein.nl>)
+#    © 2016 - 1200 Web Development <http://1200wd.com/>
+#    © 2015 - ONESTEiN BV (<http://www.onestein.nl>)
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as

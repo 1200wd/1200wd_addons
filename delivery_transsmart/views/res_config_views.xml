@@ -23,7 +23,27 @@
                                 <field name="service_level_time_id" class="oe_inline"/>
                                 <label for="service_level_time_id"/>
                             </div>
+                        </div>
+                        <label for="id" string="Connection Information"/>
+                        <div>
                             <div>
+                                <field name="url" class="oe_inline"/>
+                                <label for="url"/>
+                            </div>
+                            <div>
+                                <field name="username" class="oe_inline"/>
+                                <label for="username"/>
+                            </div>
+                            <div>
+                                <field name="password" class="oe_inline"/>
+                                <label for="password"/>
+                            </div>
+                        </div>
+                        <label for="id" string="Refresh Transsmart Data"/>
+                        <div>
+                            <div>
+                                <label string="Warning: Data and settings will be imported from Transsmart,
+                                existing service levels and delivery settings may be overwritten"/>
                                 <button type="object" name="sync_transsmart_models" string="Refresh transsmart data"/>
                             </div>
                         </div>

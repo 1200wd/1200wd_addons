@@ -2,14 +2,6 @@
 <openerp>
 	<data noupdate="1">
 
-        <record id="web_service_transsmart" model="web.service">
-            <field name="name">Transsmart</field>
-            <field name="url">https://connect.test.api.transwise.eu/Api</field>
-            <field name="type">http_rest</field>
-            <field name="username">username</field>
-            <field name="password">password</field>
-        </record>
-
         <record id="res_partner_category_transsmart_carrier" model="res.partner.category">
             <field name="name">Transsmart Carrier</field>
             <field name="active">1</field>
