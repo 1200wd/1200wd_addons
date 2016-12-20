@@ -41,7 +41,7 @@
                     view_type="form"
                     view_mode="tree,form"/>
 
-        <menuitem id="menu_delivery_web_service_settings" name="Connection" parent="menu_transsmart_configuration"
+        <menuitem id="menu_delivery_web_service_settings" name="Connections" parent="menu_transsmart_configuration"
             sequence="15" action="action_delivery_web_service_settings"/>
 
    </data>

@@ -178,7 +178,8 @@ class StockPicking(models.Model):
             return
         # Exit if carrier is a not a Transsmart carrier
         if self.carrier_id.partner_id and not self.carrier_id.partner_id.transsmart_id:
-            _logger.debug("1200wd - {} is not a Transsmart carrier. Skip prebooking.".format(self.carrier_id.name))
+            _logger.debug("1200wd - [{}] {} is not a Transsmart carrier. Skip prebooking.".
+                          format(self.carrier_id.id, self.carrier_id.name))
             return
 
         document = self._transsmart_document_from_stock_picking()
@@ -207,7 +208,8 @@ class StockPicking(models.Model):
             return
         # Exit if carrier is a not a Transsmart carrier
         if self.carrier_id.partner_id and not self.carrier_id.partner_id.transsmart_id:
-            _logger.debug("1200wd - {} is not a Transsmart carrier. Skip create shipment.".format(self.carrier_id.name))
+            _logger.debug("1200wd - [{}] {} is not a Transsmart carrier. Skip create shipment.".
+                          format(self.carrier_id.id, self.carrier_id.name))
             return
 
         if self.transsmart_id:
@@ -216,6 +218,8 @@ class StockPicking(models.Model):
         document = self._transsmart_document_from_stock_picking()
 
         _logger.info("transsmart.document with document: %s" % (json.dumps(document),))
+        import pdb;
+        pdb.set_trace()
         r = self.env['delivery.transsmart.config.settings'].\
             get_transsmart_service().send('/Document', params={'autobook': 1}, payload=document)
         if len(r):

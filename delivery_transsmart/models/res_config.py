@@ -90,13 +90,20 @@ class DeliveryTranssmartConfiguration(models.TransientModel):
                                   self.web_service_transsmart and self.web_service_transsmart.id or None)
 
     def get_transsmart_service(self):
-        # Return Transsmart webservice object.
-        # If no default connection is set and there is only one connection select and return that connection
-        if not self.web_service_transsmart and len(self.env['delivery.web.service'].search([])) != 1:
-            raise Warning(_('No Transsmart connection information found or no default connection selected'))
+        """
+        If no default connection is set and there is only one connection return that connection.
+        :return: Transsmart delivery webservice object.
+        """
+        if self.web_service_transsmart:
+            return self.web_service_transsmart
         else:
-            self.web_service_transsmart = self.env['delivery.web.service'].search([])
-        return self.web_service_transsmart
+            wst = self.env['ir.values'].get_default('delivery.transsmart', 'web_service_transsmart')
+        if not wst:
+            if len(self.env['delivery.web.service'].search([])) == 1:
+                return self.env['delivery.web.service'].search([])
+            else:
+                raise Warning(_('No Transsmart connection information found or no default connection selected'))
+        return self.env['delivery.web.service'].browse([wst])
 
     def get_transsmart_carrier_tag(self):
         return self.env['ir.model.data'].get_object('delivery_transsmart', 'res_partner_category_transsmart_carrier')        
