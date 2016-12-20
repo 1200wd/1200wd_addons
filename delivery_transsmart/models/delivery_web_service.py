@@ -61,7 +61,8 @@ class DeliveryWebService(models.Model):
 
             return response.json()
         else:
-            raise Warning('Implementation for this web service type is missing: ' + self.type)
+            raise Warning('Transsmart connection error. Implementation for this web service type is missing: '
+                          + self.type)
 
     def receive(self, method, params=None):
         if self.type == 'http_rest':
@@ -85,4 +86,5 @@ class DeliveryWebService(models.Model):
 
             return response.json()
         else:
-            raise Warning('Implementation for this web service type is missing: ' + self.type)
+            raise Warning('Transsmart connection error. Implementation for this web service type is missing: '
+                          + self.type)

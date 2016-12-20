@@ -23,6 +23,10 @@
                                 <field name="service_level_time_id" class="oe_inline"/>
                                 <label for="service_level_time_id"/>
                             </div>
+                            <div>
+                                <field name="web_service_transsmart" class="oe_inline"/>
+                                <label for="web_service_transsmart"/>
+                            </div>
                         </div>
                         <label for="id" string="Refresh Transsmart Data"/>
                         <div>

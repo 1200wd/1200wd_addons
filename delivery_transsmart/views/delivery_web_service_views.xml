@@ -10,7 +10,6 @@
                     <field name="name"/>
                     <field name="url"/>
                     <field name="username"/>
-                    <field name="password" type="password"/>
                     <field name="type"/>
                     <field name="description"/>
                 </tree>
@@ -27,7 +26,7 @@
                             <field name="name"/>
                             <field name="url"/>
                             <field name="username"/>
-                            <field name="password" type="password"/>
+                            <field name="password" password="True"/>
                             <field name="type"/>
                             <field name="description"/>
                         </group>

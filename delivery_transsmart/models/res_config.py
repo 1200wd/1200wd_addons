@@ -41,15 +41,22 @@ class DeliveryTranssmartConfiguration(models.TransientModel):
         help='Default carrier',
     )
     disable = fields.Boolean('Disable')
+    web_service_transsmart = fields.Many2one(
+        'delivery.web.service',
+        string='Connection',
+        help='Transsmart connection for this Odoo instance'
+    )
 
     @api.multi
     def get_default_transsmart(self):
         ir_values_obj = self.env['ir.values']
         carrier_id = ir_values_obj.get_default('delivery.transsmart', 'transsmart_default_carrier')
         service_level_time_id = ir_values_obj.get_default('delivery.transsmart', 'transsmart_default_service_level')
+        web_service_transsmart = ir_values_obj.get_default('delivery.transsmart', 'web_service_transsmart')
         return {
             'carrier_id': carrier_id,
             'service_level_time_id': service_level_time_id,
+            'web_service_transsmart': web_service_transsmart,
         }
    
     @api.multi
@@ -79,9 +86,17 @@ class DeliveryTranssmartConfiguration(models.TransientModel):
                                   self.carrier_id and self.carrier_id.id or None)
         ir_values_obj.set_default('delivery.transsmart', 'transsmart_default_service_level',
                                   self.service_level_time_id and self.service_level_time_id.id or None)
+        ir_values_obj.set_default('delivery.transsmart', 'web_service_transsmart',
+                                  self.web_service_transsmart and self.web_service_transsmart.id or None)
 
     def get_transsmart_service(self):
-        return self.env['ir.model.data'].get_object('delivery_transsmart', 'web_service_transsmart')
+        # Return Transsmart webservice object.
+        # If no default connection is set and there is only one connection select and return that connection
+        if not self.web_service_transsmart and len(self.env['delivery.web.service'].search([])) != 1:
+            raise Warning(_('No Transsmart connection information found or no default connection selected'))
+        else:
+            self.web_service_transsmart = self.env['delivery.web.service'].search([])
+        return self.web_service_transsmart
 
     def get_transsmart_carrier_tag(self):
         return self.env['ir.model.data'].get_object('delivery_transsmart', 'res_partner_category_transsmart_carrier')        
