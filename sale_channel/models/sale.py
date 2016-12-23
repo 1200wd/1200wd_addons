@@ -51,11 +51,12 @@ class SaleOrderLine(models.Model):
             # because Sale Order ID is unknown
             partner = self.pool.get('res.partner').browse(cr, uid, partner_id)
             if partner.sales_channel_id.id:
-                tids = self.pool['account.tax'].search(cr, uid, [
-                    ('amount', '=', product_obj.taxes_id.amount),
-                    ('company_id', '=', partner.company_id.id),
-                    ('type_tax_use', '=', 'sale'),
-                    ('sales_channel_id', '=', partner.sales_channel_id.id)],
+                tids = self.pool['account.tax'].search(
+                    cr, uid, [
+                        ('amount', '=', product_obj.taxes_id.amount),
+                        ('company_id', '=', partner.company_id.id),
+                        ('type_tax_use', '=', 'sale'),
+                    ],
                     context=context
                 )
                 fpos = self.pool.get('account.fiscal.position').browse(
@@ -76,7 +77,8 @@ class SaleOrderLine(models.Model):
                     try:
                         if t and result['value']['tax_id'][0] != t.id:
                             _logger.debug(
-                                "1200wd - Changed to Sales Channel {} specific tax {}".
+                                "1200wd - Changed to Sales Channel {}"
+                                " specific tax {}".
                                 format(partner.sales_channel_id.id, t.id)
                             )
                             result['value']['tax_id'][0] = t.id
