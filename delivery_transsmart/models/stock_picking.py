@@ -218,8 +218,6 @@ class StockPicking(models.Model):
         document = self._transsmart_document_from_stock_picking()
 
         _logger.info("transsmart.document with document: %s" % (json.dumps(document),))
-        import pdb;
-        pdb.set_trace()
         r = self.env['delivery.transsmart.config.settings'].\
             get_transsmart_service().send('/Document', params={'autobook': 1}, payload=document)
         if len(r):
