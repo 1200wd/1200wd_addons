@@ -55,7 +55,6 @@ class SaleOrderLine(models.Model):
                     ('amount', '=', product_obj.taxes_id.amount),
                     ('company_id', '=', partner.company_id.id),
                     ('type_tax_use', '=', 'sale'),
-                    ('sales_channel_id', '=', partner.sales_channel_id.id)],
                     context=context
                 )
                 fpos = self.pool.get('account.fiscal.position').browse(
@@ -76,7 +75,8 @@ class SaleOrderLine(models.Model):
                     try:
                         if t and result['value']['tax_id'][0] != t.id:
                             _logger.debug(
-                                "1200wd - Changed to Sales Channel {} specific tax {}".
+                                "1200wd - Changed to Sales Channel {}"
+                                "specific tax {}".
                                 format(partner.sales_channel_id.id, t.id)
                             )
                             result['value']['tax_id'][0] = t.id
