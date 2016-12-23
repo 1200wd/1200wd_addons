@@ -29,7 +29,11 @@
             <field name="model">res.partner</field>
             <field name="arch" type="xml">
                 <xpath expr="//filter[@string='Companies']" position="after">
-                    <filter string="Sales Channels" name="type_sales_channel" domain="[['category_id', 'ilike', 'sales channel']]"/>
+                    <filter
+                        string="Sales Channels"
+                        name="type_sales_channel"
+                        domain="[['category_id', 'ilike', 'sales channel']]"
+                        />
                 </xpath>
                 <xpath expr="//filter[@string='Country']" position="after">
                     <filter string="Sales Channel" domain="[]" context="{'group_by':'sales_channel_id'}"/>

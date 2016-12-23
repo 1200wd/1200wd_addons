@@ -10,13 +10,6 @@
                 <xpath expr="//field[@name='date_order']" position="after">
                     <field name="sales_channel_id"/>
                 </xpath>
-                <xpath expr="//tree/field[@name='tax_id']" position="replace">
-                    <field name="tax_id" widget="many2many_tags"
-                           domain="[('parent_id', '=', False),('type_tax_use', '&lt;&gt;', 'purchase'),
-                           ('company_id', '=', parent.company_id),
-                           '|', ('sales_channel_id', '=', parent.sales_channel_id),
-                                ('sales_channel_id', '=', False)]"/>
-                </xpath>
             </field>
         </record>
 
@@ -24,30 +17,15 @@
             <field name="inherit_id" ref="sale.view_sales_order_filter"/>
             <field name="model">sale.order</field>
             <field name="arch" type="xml">
-                <xpath expr="//filter[@string='Order Month']" position="after">
-                    <filter string="Sales Channel" domain="[]" context="{'group_by':'sales_channel_id'}"/>
-                </xpath>
-            </field>
-        </record>
-
-        <record model="ir.ui.view" id="view_tax_form_sales_channel">
-            <field name="name">account.tax.form</field>
-            <field name="model">account.tax</field>
-            <field name="inherit_id" ref="account.view_tax_form"/>
-            <field name="arch" type="xml">
-                <group string="Misc" position="inside">
-                    <field name="sales_channel_id" />
-                </group>
-            </field>
-        </record>
-
-        <record model="ir.ui.view" id="view_tax_tree_sales_channel">
-            <field name="name">account.tax.tree</field>
-            <field name="model">account.tax</field>
-            <field name="inherit_id" ref="account.view_tax_tree"/>
-            <field name="arch" type="xml">
-                <xpath expr="//field[@name='description']" position="after">
-                    <field name="sales_channel_id" />
+                <xpath
+                    expr="//filter[@string='Order Month']"
+                    position="after"
+                    >
+                    <filter
+                        string="Sales Channel"
+                        domain="[]"
+                        context="{'group_by':'sales_channel_id'}"
+                        />
                 </xpath>
             </field>
         </record>

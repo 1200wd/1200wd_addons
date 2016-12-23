@@ -20,16 +20,16 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ##############################################################################
-
 import logging
+
 from openerp import models, fields, api
 import openerp.addons.decimal_precision as dp
+
 
 _logger = logging.getLogger(__name__)
 
 
-class AccountBankMatchConfiguration(models.Model):
-    _name = 'account.config.settings'
+class AccountBankMatchConfiguration(models.TransientModel):
     _inherit = 'account.config.settings'
 
     match_automatic_reconcile = fields.Boolean(

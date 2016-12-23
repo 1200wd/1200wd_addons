@@ -18,9 +18,9 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ##############################################################################
-
 import logging
 from openerp import models, fields, api
+
 
 _logger = logging.getLogger(__name__)
 
@@ -28,39 +28,37 @@ _logger = logging.getLogger(__name__)
 class AccountInvoice(models.Model):
     _inherit = "account.invoice"
 
-    @api.model
-    def _get_sales_channel_domain(self):
-        ids = []
-        try:
-            ids = self.env.ref('ari_sale.category_sales_channel').ids
-        except ValueError:
-            pass
-        return [('category_id', 'in', ids)]
-
-    sales_channel_id = fields.Many2one('res.partner', string="Sales channel", ondelete='set null',
-                                       domain=_get_sales_channel_domain, required=False, index=True)
+    sales_channel_id = fields.Many2one(
+        comodel_name='res.partner',
+        string='Sales channel',
+        ondelete='set null',
+        domain="[('category_id', 'ilike', 'sales channel')]",
+        index=True,
+    )
 
     @api.multi
-    def onchange_partner_id(self, type, partner_id, date_invoice=False,
-                            payment_term=False, partner_bank_id=False, company_id=False):
-        _logger.debug('1200wd - account_invoice sale_channel onchange_partner_id')
+    def onchange_partner_id(
+            self, type, partner_id, date_invoice=False, payment_term=False,
+            partner_bank_id=False, company_id=False):
         res = super(AccountInvoice, self).onchange_partner_id(
-            type, partner_id, date_invoice=date_invoice, payment_term=payment_term, partner_bank_id=partner_bank_id,
+            type, partner_id, date_invoice=date_invoice,
+            payment_term=payment_term, partner_bank_id=partner_bank_id,
             company_id=company_id
         )
-        partner = self.env['res.partner'].browse(partner_id)
-
         if partner_id:
+            partner = self.env['res.partner'].browse(partner_id)
             res['value'].update({
                 'sales_channel_id': partner.sales_channel_id,
             })
         return res
 
     @api.model
-    def _prepare_refund(self, invoice, date=None, period_id=None, description=None, journal_id=None):
-        _logger.debug('1200wd - account_invoice _prepare_refund include sales_channel')
-        values = super(AccountInvoice, self)._prepare_refund(invoice, date=date, period_id=period_id,
-                                                             description=description, journal_id=journal_id)
+    def _prepare_refund(
+            self, invoice, date=None, period_id=None, description=None,
+            journal_id=None):
+        values = super(AccountInvoice, self)._prepare_refund(
+            invoice, date=date, period_id=period_id,
+            description=description, journal_id=journal_id)
         values.update({
             'sales_channel_id': invoice.sales_channel_id.id,
         })

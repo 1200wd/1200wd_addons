@@ -52,19 +52,20 @@ class SaleAdvancePaymentInv(models.TransientModel):
         return res
 
 
-
 class AccountBankStatementLine(models.Model):
     _inherit = "account.bank.statement.line"
 
     so_ref = fields.Char('Sale Order Reference')
     name = fields.Char('Communication', required=True, default='/')
-
     match_ids = fields.One2many(
         comodel_name='account.bank.match',
         inverse_name='statement_line_id',
         string='Matches',
         ondelete='set null',
     )
+    # Field counterparty_name is also in account_bank_statement_advanced,
+    # but we do not want to depend on this module to make sure field exists:
+    counterparty_name = fields.Char(string='Counterparty Name')
 
     show_errors = False
     error_str = ""
