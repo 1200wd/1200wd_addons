@@ -110,6 +110,8 @@ class DeliveryTranssmartConfiguration(models.TransientModel):
 
     @api.multi
     def sync_transsmart_models(self):
+        raise Warning("This option is disabled at the moment. Please update transsmart data manually or remove"
+                      "this warning from the code in the Transsmart Delivery module")
         remote_data = self.get_transsmart_service().receive('/ServiceLevelOther')
         local_data = self.env['delivery.service.level'].search([])
         local_codes = {local.code: local for local in local_data}
