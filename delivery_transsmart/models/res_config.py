@@ -189,31 +189,34 @@ class DeliveryTranssmartConfiguration(models.TransientModel):
         service_level_other = self.env['delivery.service.level'].\
             search([('transsmart_id','=',transsmart_document['ServiceLevelOtherId'])])
         if len(service_level_other) != 1:
-            raise Warning(_('No unique Service Level Other found with transsmart Id %s: '
+            raise Warning(_('No unique Service Level Other found with transsmart Id %s. Found %d. '
                             'You have to refresh or review the transsmart data!') %
-                          (transsmart_document['ServiceLevelOtherId'],))
+                          (transsmart_document['ServiceLevelOtherId'], len(service_level_other)))
 
         if 'ServiceLevelTimeId' not in transsmart_document:
             raise Warning(_('No Service Level Time Id found in Transsmart Document'))
         service_level_time = self.env['delivery.service.level.time'].\
             search([('transsmart_id','=',transsmart_document['ServiceLevelTimeId'])])
         if len(service_level_time) != 1:
-            raise Warning(_('No unique Service Level Time found with transsmart Id %s: '
+            raise Warning(_('No unique Service Level Time found with transsmart Id %s. Found %d. '
                             'You have to refresh or review the transsmart data!') %
-                          (transsmart_document['ServiceLevelTimeId'],))
+                          (transsmart_document['ServiceLevelTimeId'], len(service_level_time)))
 
         if 'CarrierId' not in transsmart_document:
             raise Warning(_('No Carrier Id found in Transsmart Document'))
         carrier = self.env['res.partner'].search([('transsmart_id','=',transsmart_document['CarrierId'])])
         if len(carrier) != 1:
-            raise Warning(_('No unique Carrier found with transsmart Id %s: '
+            raise Warning(_('No unique Carrier found with transsmart Id %s. Found %d. '
                             'You have to refresh or review the transsmart data!') %
-                          (transsmart_document['CarrierId'],))
+                          (transsmart_document['CarrierId'],len(carrier)))
 
         products = self.env['product.product'].search([
             ('service_level_id', '=', service_level_other[0].id), 
             ('service_level_time_id', '=', service_level_time[0].id)
         ])
+        if len(products) > 1:
+            raise Warning(_('More then one delivery product with Service Level ID %d and Service Level Time ID %d'),
+                          (service_level_other[0].id, service_level_time[0].id))
         if len(products) < 1:
             # autocreate product
             products = [self.env['product.product'].create({
@@ -225,6 +228,9 @@ class DeliveryTranssmartConfiguration(models.TransientModel):
 
         delivery_carrier = self.env['delivery.carrier'].search(
             [('partner_id','=', carrier[0].id), ('product_id','=',products[0].id)])
+        if len(delivery_carrier) > 1:
+            raise Warning(_('More then one delivery carrier found for partner %d and product %d'),
+                          (carrier[0].id, products[0].id))
         if len(delivery_carrier) < 1:
             # autcreate delivery.carrier
             delivery_carrier = self.env['delivery.carrier'].create({
