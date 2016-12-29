@@ -116,7 +116,7 @@ class StockPicking(models.Model):
             "AddressStreetNoPickup": ".",
             "AddressZipcodePickup": self.company_id.zip or '',
             "AddressCityPickup": self.company_id.city or '',
-            "AddressStatePickup": self.company_id.state_id.name or '',
+            "AddressStatePickup": self.company_id.state_id.code,
             "AddressCountryPickup": self.company_id.country_id.code or '',
 
             "AddressName": self.partner_id.name or '',
