@@ -45,11 +45,14 @@ class StockPicking(models.Model):
                     " stock.picking, use customer %s sales channel %s" %
                     (partner.id, partner.sales_channel_id.id)
                 )
-                # TODO (consider taking values from SO if available!)
+                price_list_id = (
+                    partner.property_product_pricelist.id or
+                    partner.sales_channel_id.property_product_pricelist.id or
+                    False
+                )
                 inv_vals.update({
                     'sales_channel_id': partner.sales_channel_id.id,
-                    'pricelist_id':
-                    partner.sales_channel_id.property_product_pricelist.id,
+                    'pricelist_id': price_list_id,
                 })
             else:
                 _logger.info(
