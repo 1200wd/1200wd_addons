@@ -3,7 +3,6 @@
 #
 #    Delivery Transsmart Ingegration
 #    © 2016 - 1200 Web Development <http://1200wd.com/>
-#    © 2015 - ONESTEiN BV (<http://www.onestein.nl>)
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -20,4 +19,11 @@
 #
 ##############################################################################
 
-from . import models
+from . import sale_order
+from . import product_product
+from . import delivery_service_level
+from . import stock_picking
+from . import res_config
+from . import res_partner
+from . import stock_return_picking
+from . import delivery_web_service

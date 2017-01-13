@@ -3,7 +3,6 @@
 #
 #    Delivery Transsmart Ingegration
 #    © 2016 - 1200 Web Development <http://1200wd.com/>
-#    © 2015 - ONESTEiN BV (<http://www.onestein.nl>)
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -20,4 +19,18 @@
 #
 ##############################################################################
 
-from . import models
+
+from openerp import models, fields, api, _
+import openerp.addons.decimal_precision as dp
+from openerp.exceptions import Warning
+
+
+class ProductProduct(models.Model):
+    _inherit = 'product.product'
+
+    service_level_id = fields.Many2one(
+        'delivery.service.level',
+        string='Service Level')
+    service_level_time_id = fields.Many2one(
+        'delivery.service.level.time',
+        string='Service Level Time')

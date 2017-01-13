@@ -2,7 +2,6 @@
 ##############################################################################
 #
 #    Delivery Transsmart Ingegration
-#    © 2016 - 1200 Web Development <http://1200wd.com/>
 #    © 2015 - ONESTEiN BV (<http://www.onestein.nl>)
 #
 #    This program is free software: you can redistribute it and/or modify
@@ -20,4 +19,17 @@
 #
 ##############################################################################
 
-from . import models
+from openerp import models, fields, api, _
+import logging
+
+_logger = logging.getLogger(__name__)
+
+
+class StockReturnPicking(models.TransientModel):
+    _inherit = 'stock.return.picking'
+
+    @api.multi
+    def create_returns(self):
+        self = self.with_context(ingoing_override=True)
+        res = super(StockReturnPicking, self).create_returns()
+        return res

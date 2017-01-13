@@ -2,8 +2,7 @@
 ##############################################################################
 #
 #    Delivery Transsmart Ingegration
-#    Copyright (C) 2016 1200 Web Development (<http://1200wd.com/>)
-#              (C) 2015 ONESTEiN BV (<http://www.onestein.nl>)
+#    © 2016 - 1200 Web Development <http://1200wd.com/>
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -20,17 +19,33 @@
 #
 ##############################################################################
 
+
 from openerp import models, fields, api, _
-import logging
+import openerp.addons.decimal_precision as dp
+from openerp.exceptions import Warning
 
-_logger = logging.getLogger(__name__)
+
+class ProductProduct(models.Model):
+    _inherit = 'product.product'
+
+    service_level_id = fields.Many2one(
+        'delivery.service.level',
+        string='Service Level')
+    service_level_time_id = fields.Many2one(
+        'delivery.service.level.time',
+        string='Service Level Time')
 
 
-class stock_return_picking(models.TransientModel):
-    _inherit = 'stock.return.picking'
+class ResPartner(models.Model):
+    _inherit = 'res.partner'
 
-    @api.multi
-    def create_returns(self):
-        self = self.with_context(ingoing_override=True)
-        res = super(stock_return_picking, self).create_returns()
-        return res
+    transsmart_code = fields.Char(
+        size=128,
+        string="Transsmart Code")
+    transsmart_id = fields.Integer(
+        "Transsmart ID")
+
+
+
+
+

@@ -24,13 +24,22 @@
                                 <label for="service_level_time_id"/>
                             </div>
                             <div>
+                                <field name="web_service_transsmart" class="oe_inline"/>
+                                <label for="web_service_transsmart"/>
+                            </div>
+                        </div>
+                        <label for="id" string="Refresh Transsmart Data"/>
+                        <div>
+                            <div>
+                                <label string="Warning: Data and settings will be imported from Transsmart,
+                                existing service levels and delivery settings may be overwritten"/>
                                 <button type="object" name="sync_transsmart_models" string="Refresh transsmart data"/>
                             </div>
                         </div>
                     </group>
                </form>
            </field>
-       </record>
+        </record>
        
         <record id="action_delivery_transsmart_config_settings" model="ir.actions.act_window">
             <field name="name">Configure Transsmart</field>
