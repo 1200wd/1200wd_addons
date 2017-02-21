@@ -25,17 +25,6 @@ import openerp.addons.decimal_precision as dp
 from openerp.exceptions import Warning
 
 
-class ProductProduct(models.Model):
-    _inherit = 'product.product'
-
-    service_level_id = fields.Many2one(
-        'delivery.service.level',
-        string='Service Level')
-    service_level_time_id = fields.Many2one(
-        'delivery.service.level.time',
-        string='Service Level Time')
-
-
 class ResPartner(models.Model):
     _inherit = 'res.partner'
 
