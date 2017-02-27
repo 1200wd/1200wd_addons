@@ -118,6 +118,8 @@ class StockPicking(models.Model):
             "AddressCityPickup": self.company_id.city or '',
             "AddressStatePickup": self.company_id.state_id.code,
             "AddressCountryPickup": self.company_id.country_id.code or '',
+            "AddressEmailPickup": self.company_id.email or '',
+            "AddressPhonePickup": self.company_id.phone or '',
 
             "AddressName": self.partner_id.name or '',
             "AddressStreet": self.partner_id.street or '',
