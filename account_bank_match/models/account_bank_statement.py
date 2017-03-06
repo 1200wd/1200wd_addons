@@ -208,7 +208,7 @@ class AccountBankStatementLine(models.Model):
 
         search_domain = ['|', ('company_id', '=', False), ('company_id', '=', company_id),
                          '|', ('account_journal_id', '=', False), ('account_journal_id', '=',
-                                                                   self.journal_id.id or self.statement_id.journal_id.id),
+                         self.journal_id.id or self.statement_id.journal_id.id),
                          '|', ('partner_bank_account', '=', False), ('partner_bank_account', '=', remote_account)]
         match_refs = self.env['account.bank.match.reference'].search(search_domain)
         for match_ref in match_refs:
@@ -218,7 +218,8 @@ class AccountBankStatementLine(models.Model):
                     if match_ref.account_account_id:
                         name = match_ref.account_account_id.id
                     obj = self.env[match_ref.model].search([(self._match_get_field_name(match_ref.model), '=', name)])
-                    description = "%s; Partner bank %s" % (self._match_description(obj, match_ref.model), match_ref.partner_bank_account)
+                    description = "%s; Partner bank %s" % (self._match_description(obj, match_ref.model),
+                                                           match_ref.partner_bank_account)
                     matches.append(
                         {'name': name,
                          'so_ref': '',
