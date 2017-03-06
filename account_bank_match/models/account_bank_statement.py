@@ -163,10 +163,12 @@ class AccountBankStatementLine(models.Model):
                     elif order.order_policy == 'manual' and order.state == 'manual':
                         vals = self._prepare_create_invoice(order, vals)
                     elif order.order_policy == 'prepaid' and order.state != 'wait_payment':
-                        msg = "Trying to pay for Sale Order {} when its state is not 'Wait for Payment'.".format(vals['so_ref'])
+                        msg = "Trying to pay for Sale Order {} when its state is not 'Wait for Payment'.".\
+                            format(vals['so_ref'])
                         self._handle_error(msg)
                     else:
-                        msg = "Create invoice skipped, order policy and state are {} and {} resp.".format(order.order_policy, order.state)
+                        msg = "Create invoice skipped, order policy and state are {} and {} resp.".\
+                            format(order.order_policy, order.state)
                         self._handle_error(msg)
             else:
                 msg = "One sale order expected. Found %s sale orders for reference: %s" % (len(order), vals['so_ref'])
@@ -192,7 +194,8 @@ class AccountBankStatementLine(models.Model):
                     remote_account = partner_bank.sanitized_acc_number
             if self.bank_account_id:
                 remote_account = self.bank_account_id.sanitized_acc_number
-            statement_text = (self.name or '') + '_' + (self.partner_id.name or '') + '_' + (self.ref or '') + '_' + (self.so_ref or '') + '_' + remote_account
+            statement_text = (self.name or '') + '_' + (self.partner_id.name or '') + '_' + (self.ref or '') +\
+                             '_' + (self.so_ref or '') + '_' + remote_account
         except Exception, e:
             msg = "Could not parse statement text for %s. Error %s" % (self.name, e)
             self._handle_error(msg)
@@ -245,7 +248,8 @@ class AccountBankStatementLine(models.Model):
                     count += 1
                     if count > MATCH_MAX_PER_REFERENCE: break
             except Exception, e:
-                msg = "Please check Bank Match Reference patterns an error occured while parsing '%s'. Error: %s" % (match_ref.name, e.args[0])
+                msg = "Please check Bank Match Reference patterns an error occured while parsing '%s'. Error: %s" % \
+                      (match_ref.name, e.args[0])
                 self._handle_error(msg)
         return matches
 
@@ -258,7 +262,6 @@ class AccountBankStatementLine(models.Model):
         @param rule: record from account.bank.match.rule
         @return: Odoo styled rule
         """
-        rule_list = []
         try:
             rule_list = ast.literal_eval(rule.rule)
         except Exception, e:
@@ -280,7 +283,7 @@ class AccountBankStatementLine(models.Model):
                         new_value = ((datetime.now() - timedelta(days=numofdays)).strftime('%Y-%m-%d'))
                     elif 'days' in found_odoo_expression:
                         try:
-                            rs = re.search("(.+?)([\-|\+])days\((\d+)\)", found_odoo_expression)
+                            rs = re.search("(.+?)([\-|+])days\((\d+)\)", found_odoo_expression)
                             field = rs.group(1)
                             sign = rs.group(2)
                             numofdays = int(rs.group(3))
@@ -292,7 +295,8 @@ class AccountBankStatementLine(models.Model):
                                 ndate += timedelta(days=numofdays)
                             new_value = ndate.strftime('%Y-%m-%d')
                         except Exception, e:
-                            msg = "Rule '%s'. Error matching odoo expression '%s' %s" % (rule.rule, found_odoo_expression, e.message)
+                            msg = "Rule '%s'. Error matching odoo expression '%s' %s" % \
+                                  (rule.rule, found_odoo_expression, e.message)
                             self._handle_error(msg)
                             return False
                     else:
@@ -304,7 +308,8 @@ class AccountBankStatementLine(models.Model):
                                 rule_list_new.append(('id', '=', False))  # Always False
                                 continue
                         except Exception, e:
-                            msg = "Rule '%s'. Error matching odoo expression '%s' %s" % (rule.rule, odoo_expression, e.message)
+                            msg = "Rule '%s'. Error matching odoo expression '%s' %s" % \
+                                  (rule.rule, odoo_expression, e.message)
                             self._handle_error(msg)
                             return False
             if new_value:
@@ -316,7 +321,7 @@ class AccountBankStatementLine(models.Model):
 
 
     @api.model
-    def _update_match_list(self, match, add_score, matches=[]):
+    def _update_match_list(self, match, add_score, matches=None):
         """
         Add a new match to the match list
 
@@ -325,6 +330,8 @@ class AccountBankStatementLine(models.Model):
         @param matches: Match list
         @return: Updated match list
         """
+        if matches is None:
+            matches = []
         if not 'so_ref' in match:
             msg ="_update_match_list: Missing so_ref in match"
             self._handle_error(msg)
@@ -342,7 +349,8 @@ class AccountBankStatementLine(models.Model):
                 description = self._match_description(invoice, 'account.invoice')
                 sc = add_score / len(open_invoices)
                 matches = self._update_match_list({'name': invoice.number, 'model': 'account.invoice',
-                                                   'description': description, 'so_ref': invoice.origin or ''}, sc, matches)
+                                                   'description': description, 'so_ref': invoice.origin or ''},
+                                                  sc, matches)
             open_orders = [o for o in partner.sale_order_ids if o.state in ['draft', 'wait_payment', 'sent']]
             for order in open_orders:
                 description = self._match_description(order, 'sale.order')
@@ -399,10 +407,13 @@ class AccountBankStatementLine(models.Model):
             if 'currency_id' in object:
                 currency_symbol = object.currency_id.name or ''
             if model == 'account.invoice':
-                description = (object.number or 'Not found') + "; " + (object.origin or '') + "; " + (object.supplier_invoice_number or '') + "; " + (object.date_invoice or '') + "; " + (object.partner_id.name or '') + "; " + \
+                description = (object.number or 'Not found') + "; " + (object.origin or '') + "; " \
+                              + (object.supplier_invoice_number or '') + "; " + (object.date_invoice or '') + \
+                              "; " + (object.partner_id.name or '') + "; " + \
                               (object.state or '') + "; " + currency_symbol + " " + str(object.amount_total or '')
             # elif model == 'account.move.line':
-            #     description = (object.ref or 'Not found') + "; " + (object.date or '') + "; " + (object.partner_id.name or '') + "; " + \
+            #     description = (object.ref or 'Not found') + "; " + (object.date or '') + "; " +
+            # (object.partner_id.name or '') + "; " + \
             #                   (object.state or '') + "; " + currency_symbol + " " + str(object.debit or '')
             elif model == 'sale.order':
                 description = (object.date_order or 'Not found') + "; " + (object.partner_id.name or '') + "; " + \
@@ -555,7 +566,8 @@ class AccountBankStatementLine(models.Model):
                 # Add bonus, increase score depending on number of characters of supplier reference
                 score = 40 + min(50,(len(supplier_ref)-3)*10)
                 ref_matches.append(
-                    {'name': inv_number, 'so_ref': '', 'model': 'account.invoice', 'description': description, 'score': 0, 'score_item': score,})
+                    {'name': inv_number, 'so_ref': '', 'model': 'account.invoice', 'description': description,
+                     'score': 0, 'score_item': score,})
         if ref_matches:
             for ref_match in ref_matches:
                 matches = self._update_match_list(ref_match, ref_match['score_item'], matches)
@@ -566,7 +578,7 @@ class AccountBankStatementLine(models.Model):
                 ('type', '=', 'extraction')]):
 
             rule_domain = self._parse_rule(rule)
-            if not rule_domain: # stop running rule if empty domain is returned to avoid useless matches on rule parsing errors
+            if not rule_domain: # stop if empty domain is returned to avoid useless matches on rule parsing errors
                 continue
             base_domain = self._match_get_base_domain(rule['model'])
             orderby_field = self._match_get_datefield_name(rule['model'])
@@ -686,8 +698,7 @@ class AccountBankStatementLine(models.Model):
             self._handle_error(msg)
             return False
 
-        move_lines = []
-        move_lines.append((0, 0, {
+        move_lines= [((0, 0, {
             'name': name,
             'debit': pay_amount > 0 and pay_amount,
             'credit': pay_amount < 0 and -pay_amount,
@@ -698,7 +709,7 @@ class AccountBankStatementLine(models.Model):
             'currency_id': currency_id,
             'amount_currency': amount_currency or 0.0,
             'company_id': invoice.company_id.id,
-        }))
+        }))]
         if payment_difference and writeoff_acc_id and writeoff_difference:
             move_lines.append((0, 0, {
                 'name': name,
@@ -821,8 +832,7 @@ class AccountBankStatementLine(models.Model):
         period_id = self.statement_id.period_id.id
         pay_account_id = self.account_id.id or self.statement_id.account_id.id or 0
         pay_journal_id = self.journal_id.id or self.statement_id.journal_id.id or 0
-        move_lines = []
-        move_lines.append((0, 0, {
+        move_lines = [((0, 0, {
             'name': name,
             'debit': pay_amount > 0 and pay_amount,
             'credit': pay_amount < 0 and -pay_amount,
@@ -833,8 +843,7 @@ class AccountBankStatementLine(models.Model):
             'currency_id': currency_id,
             'amount_currency': amount_currency or 0.0,
             'company_id': self.company_id.id,
-        }))
-        move_lines.append((0, 0, {
+        })), (0, 0, {
             'name': name,
             'debit': pay_amount < 0 and -pay_amount,
             'credit': pay_amount > 0 and pay_amount,
@@ -845,7 +854,7 @@ class AccountBankStatementLine(models.Model):
             'currency_id': currency_id,
             'amount_currency': -1 * (amount_currency or 0.0),
             'company_id': self.company_id.id,
-        }))
+        })]
         move = self.env['account.move'].create({
             'ref': ref,
             'line_id': move_lines,
@@ -878,9 +887,11 @@ class AccountBankStatementLine(models.Model):
             match_cache_time = configs.get('match_cache_time')
             if match_cache_time != -1:
                 to_old =  ((datetime.now() - timedelta(seconds=match_cache_time)).strftime('%Y-%m-%d %H:%M:%S'))
-                matches_found = self.env['account.bank.match'].search_count([('statement_line_id', '=', sl.id), ('create_date', '>', to_old)])
+                matches_found = self.env['account.bank.match'].search_count([('statement_line_id', '=', sl.id),
+                                                                             ('create_date', '>', to_old)])
             if matches_found and not always_refresh:
-                matches = self.env['account.bank.match'].search_read([('statement_line_id', '=', sl.id)], order='score DESC', limit=2)
+                matches = self.env['account.bank.match'].search_read([('statement_line_id', '=', sl.id)],
+                                                                     order='score DESC', limit=2)
 
             # ... otherwise search for matches add them to database
             else:
@@ -960,13 +971,13 @@ class AccountBankStatementLine(models.Model):
         """
         if (not vals.get('name', False)) or vals.get('name', False) == '/':
             # Only search for matches if match_id not set
-            if not self._match_selected():
-                match = self.account_bank_match(False)
-                if match:
-                    vals['so_ref'] = match['so_ref']
-                    vals['name'] = match['name'] or '/'
-                _logger.debug("1200wd - matching %s with vals %s" % (match, vals))
-                vals = self.order_invoice_lookup(vals)
+            # if not self._match_selected():
+            match = self.account_bank_match(False)
+            if match:
+                vals['so_ref'] = match['so_ref']
+                vals['name'] = match['name'] or '/'
+            _logger.debug("1200wd - matching %s with vals %s" % (match, vals))
+            vals = self.order_invoice_lookup(vals)
         return vals
 
 
@@ -989,7 +1000,8 @@ class AccountBankStatementLine(models.Model):
         if self.name and self.name != '/':
             invoice = self._match_get_object('account.invoice', self.name)
             if len(invoice) == 1:
-                default_writeoff_journal_id = self.env['account.journal'].browse([configs.get('match_writeoff_journal_id')])
+                default_writeoff_journal_id = \
+                    self.env['account.journal'].browse([configs.get('match_writeoff_journal_id')])
                 match_selected = self._match_selected()
                 if invoice.amount_total < 0:
                     writeoff_acc_id = match_selected.writeoff_difference and \
@@ -1149,7 +1161,8 @@ class AccountBankStatement(models.Model):
 
     @api.model
     def create(self, vals):
-        #FIXME: This is a quick fix to solve problems with a incorrect period in the bank statement. Find out why Odoo uses wrong period sometimes...
+        #FIXME: This is a quick fix to solve problems with a incorrect period in the bank statement.
+        # Find out why Odoo uses wrong period sometimes...
         if 'date' in vals:
             try:
                 period_id = self.onchange_date(vals['date'], self.env.user.company_id.id)['value']['period_id']
