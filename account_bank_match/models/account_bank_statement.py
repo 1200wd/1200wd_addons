@@ -890,9 +890,11 @@ class AccountBankStatementLine(models.Model):
                 to_old =  ((datetime.now() - timedelta(seconds=match_cache_time)).strftime('%Y-%m-%d %H:%M:%S'))
                 matches_found = self.env['account.bank.match'].search_count([('statement_line_id', '=', sl.id),
                                                                              ('create_date', '>', to_old)])
+            if not isinstance(always_refresh, bool):
+                always_refresh = False
             if matches_found and not always_refresh:
                 matches = self.env['account.bank.match'].search_read([('statement_line_id', '=', sl.id)],
-                                                                     order='score DESC', limit=2)
+                                                                     order='score DESC', limit=1)
 
             # ... otherwise search for matches add them to database
             else:
@@ -972,13 +974,13 @@ class AccountBankStatementLine(models.Model):
         """
         if (not vals.get('name', False)) or vals.get('name', False) == '/':
             # Only search for matches if match_id not set
-            # if not self._match_selected():
-            match = self.account_bank_match(False)
-            if match:
-                vals['so_ref'] = match['so_ref']
-                vals['name'] = match['name'] or '/'
-            _logger.debug("1200wd - matching %s with vals %s" % (match, vals))
-            vals = self.order_invoice_lookup(vals)
+            if not self._match_selected():
+                match = self.account_bank_match(always_refresh=False)
+                if match:
+                    vals['so_ref'] = match['so_ref']
+                    vals['name'] = match['name'] or '/'
+                _logger.debug("1200wd - matching %s with vals %s" % (match, vals))
+                vals = self.order_invoice_lookup(vals)
         return vals
 
 
