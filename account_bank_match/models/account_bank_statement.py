@@ -1137,6 +1137,7 @@ class AccountBankStatement(models.Model):
         for err in match_errors:
             match_errors_str += "Line ID: %d; Reference: %s, %s; Message: %s\n\n" % (err[0], err[1], err[2],err[3])
         if match_errors_str:
+            _logger.info("Matching finished\nErrors matching the following statement lines:\n\n" + match_errors_str)
             # FIXME: Open popup with result, one error or 'match not found' causes all matches to fail!!
             # if show_errors:
             #     raise Warning("Matching finished\nErrors matching the following statement lines:\n\n" + match_errors_str)
