@@ -259,15 +259,15 @@ class StockPicking(models.Model):
         r = super(StockPicking, self).create(vals)
         return r
 
-
-    def copy(self, cr, uid, ids, defaults=None, context=None):
-        if context and context.get('ingoing_override', False):
-            return super(StockPicking, self).copy(cr, uid, ids, defaults, context)
-        if not defaults:
-            defaults = {}
-        defaults.update({
-            'transsmart_confirmed': False,
-            'transsmart_id': 0,
-            'delivery_cost': 0
-        })
-        return super(StockPicking, self).copy(cr, uid, ids, defaults, context)
+    def copy(self, cr, uid, id, default=None, context=None):
+        context = context or {}
+        default = default or {}
+        if not context.get('ingoing_override', True):
+            default.update({
+                'transsmart_confirmed': False,
+                'transsmart_id': 0,
+                'delivery_cost': 0
+            })
+        return super(StockPicking, self).copy(
+            cr, uid, id, default=default, context=context
+        )
