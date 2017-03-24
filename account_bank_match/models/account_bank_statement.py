@@ -892,6 +892,7 @@ class AccountBankStatementLine(models.Model):
                                                                              ('create_date', '>', to_old)])
             if not isinstance(always_refresh, bool):
                 always_refresh = False
+
             if matches_found and not always_refresh:
                 matches = self.env['account.bank.match'].search_read([('statement_line_id', '=', sl.id)],
                                                                      order='score DESC', limit=1)

@@ -150,19 +150,19 @@ class AccountBankMatch(models.Model):
 
     @api.multi
     def compute_payment_difference(self):
-        self.ensure_one()
-        if self.model == 'account.invoice':
-            SIGN = {'out_invoice': -1, 'in_invoice': 1, 'out_refund': 1, 'in_refund': -1}
-            invoice = self.env[self.model].search([('number', '=', self.name)])
-            if not invoice:
-                _logger.debug("1200wd - compute_payment_difference - invoice %s not found" % self.name)
-                self.payment_difference = 0
+        for m in self:
+            if m.model == 'account.invoice':
+                SIGN = {'out_invoice': -1, 'in_invoice': 1, 'out_refund': 1, 'in_refund': -1}
+                invoice = self.env[m.model].search([('number', '=', m.name)])
+                if not invoice:
+                    _logger.debug("1200wd - compute_payment_difference - invoice %s not found" % m.name)
+                    m.payment_difference = 0
+                else:
+                    direction = SIGN[invoice.type]
+                    m.payment_difference = invoice.residual + (direction * m.statement_line_id.amount)
             else:
-                direction = SIGN[invoice.type]
-                self.payment_difference = invoice.residual + (direction * self.statement_line_id.amount)
-        else:
-            # TODO: Add difference calculation for sale.order model
-            self.payment_difference = 0
+                # TODO: Add difference calculation for sale.order model
+                m.payment_difference = 0
 
     payment_difference = fields.Float(string="Payment Difference", digits=dp.get_precision('Account'),
                                       readonly=True, compute='compute_payment_difference')
