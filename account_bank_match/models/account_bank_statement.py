@@ -554,6 +554,7 @@ class AccountBankStatementLine(models.Model):
 
         # Search supplier reference in bank statement line
         ref_matches = []
+        # TODO: Specify fields=[] in this search_read
         supplier_inv_list = self.env['account.invoice'].search_read([
             ('supplier_invoice_number', '!=', False),
             ('state', '=', 'open')],['number', 'supplier_invoice_number'])
@@ -894,8 +895,9 @@ class AccountBankStatementLine(models.Model):
                 always_refresh = False
 
             if matches_found and not always_refresh:
-                matches = self.env['account.bank.match'].search_read([('statement_line_id', '=', sl.id)],
-                                                                     order='score DESC', limit=1)
+                matches = self.env['account.bank.match'].\
+                    search_read([('statement_line_id', '=', sl.id)], order='score DESC', limit=1,
+                                fields=['id', 'name', 'model', 'statement_line_id', 'description', 'so_ref', 'score'])
 
             # ... otherwise search for matches add them to database
             else:
