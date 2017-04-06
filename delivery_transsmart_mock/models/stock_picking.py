@@ -72,3 +72,7 @@ class StockPicking(models.Model):
             "1200wd - Write Transsmart tracking data: {}".format(data)
         )
         self.write(data)
+
+    def get_tracking_transsmart(self, transsmart_id):
+        """For the moment do actually nothing."""
+        pass

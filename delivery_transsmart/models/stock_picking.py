@@ -1,30 +1,15 @@
 # -*- coding: utf-8 -*-
-##############################################################################
-#
-#    Delivery Transsmart Ingegration
-#    © 2016 - 1200 Web Development <http://1200wd.com/>
-#    © 2015 - ONESTEiN BV (<http://www.onestein.nl>)
-#
-#    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU Affero General Public License as
-#    published by the Free Software Foundation, either version 3 of the
-#    License, or (at your option) any later version.
-#
-#    This program is distributed in the hope that it will be useful,
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#    GNU Affero General Public License for more details.
-#
-#    You should have received a copy of the GNU Affero General Public License
-#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-##############################################################################
+# © 2015 ONESTEiN BV <http://www.onestein.nl>
+# © 2016 1200 Web Development <http://1200wd.com/>
+# © 2017 Therp BV <http://therp.nl>
+# License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
+import json
+import logging
 
 from openerp import models, fields, api, _
 import openerp.addons.decimal_precision as dp
 from openerp.exceptions import Warning
-import json
-import logging
+
 
 _logger = logging.getLogger(__name__)
 
@@ -39,6 +24,18 @@ def price_from_transsmart_price(price_str):
 class StockPicking(models.Model):
     _inherit = 'stock.picking'
 
+    @api.one
+    def _carrier_tracking_url_html(self):
+        url = self.carrier_tracking_url or ''
+        linktext = self.carrier_tracking_ref or ''
+        if url:
+            if not linktext:
+                linktext = _('Track shipment')
+            s = '''<a href="%s" target="_blank">%s</a>''' % (url, linktext)
+        else:
+            s = linktext
+        self.carrier_tracking_url_html = s
+
     delivery_service_level_time_id = fields.Many2one(
         'delivery.service.level.time',
         string='Delivery Service Level Time (PreBook)',
@@ -46,7 +43,6 @@ class StockPicking(models.Model):
     cost_center_id = fields.Many2one(
         'transsmart.cost.center',
         string='Delivery Cost Center')
-
     delivery_cost = fields.Float(
         'Delivery Cost',
         digits_compute=dp.get_precision('Product Price'),
@@ -59,6 +55,11 @@ class StockPicking(models.Model):
         compute="_compute_transsmart_confirmed",
         readonly=True,
         store=True)
+    carrier_tracking_url = fields.Char("Carrier Tracking URL")
+    carrier_tracking_url_html = fields.Char(
+        "Carrier Tracking URL",
+        compute='_carrier_tracking_url_html',
+    )
 
     @api.depends('transsmart_id')
     def _compute_transsmart_confirmed(self):
@@ -116,9 +117,7 @@ class StockPicking(models.Model):
             "RefYourReference": self.sale_id.name or '',
             "RefOther": self.get_invoice_name(),
             "RefInvoice": self.get_invoice_name(),
-
             # take into account warehouse address, not just company address
-
             "AddressNamePickup": self.company_id.name or '',
             "AddressStreetPickup": self.company_id.street or '',
             "AddressStreet2Pickup": self.company_id.street2 or '',
@@ -267,7 +266,7 @@ class StockPicking(models.Model):
         return r
 
     @api.multi
-    def copy(self, default=None):
+    def copy(self, cr, uid, id, default=None, context=context):
         context = context or {}
         default = default or {}
         default.update({
@@ -275,4 +274,52 @@ class StockPicking(models.Model):
             'transsmart_id': 0,
             'delivery_cost': 0
         })
-        return super(StockPicking, self).copy(default=default)
+        return super(StockPicking, self).copy(
+            cr, uid, id, default=default, context=context
+        )
+
+    def get_tracking_transsmart(self, transsmart_id):
+        transsmart_config = self.env['delivery.transsmart.config.settings']
+        transsmart = transsmart_config.get_transsmart_service()
+        rs = [transsmart.receive('/Document/' + str(transsmart_id))]
+        if type(rs) != list or not len(rs):
+            _logger.error(
+                "1200wd - Error retrieving tracking info from Transsmart."
+            )
+            return
+        for r in rs:
+            if r['TrackingNumber']:
+                sp = self.env['stock.picking'].search([
+                    ('name', '=', r['Reference']),
+                ])
+                if sp:
+                    carrier = transsmart_config.\
+                        lookup_transsmart_delivery_carrier(r)
+                    data = {
+                        'transsmart_id': r['Id'],
+                        'date_done': r['ActualPickupDate'],
+                        'carrier_tracking_ref': r['TrackingNumber'],
+                        'carrier_tracking_url': r['TrackingUrl'],
+                        'carrier_id': carrier.id,
+                        'delivery_cost': r['ShipmentTariff'],
+                    }
+                    _logger.debug(
+                        "1200wd - Update transfer {} shipped on {}"
+                        " tracking {}".format(
+                            r['Reference'],
+                            r['ActualPickupDate'],
+                            r['TrackingNumber'])
+                    )
+                    sp.write(data)
+
+    @api.one
+    def action_get_tracking(self):
+        if self.transsmart_id:
+            _logger.debug(
+                "1200wd - Get tracking info from transsmart with"
+                " transsmart id {}".format(self.transsmart_id)
+            )
+            return self.get_tracking_transsmart(self.transsmart_id)
+        else:
+            raise Warning('Picking not found in Transsmart')
+>>>>>>> [RFR] Move transsmart functions to 1200wd addons from customer module.

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<openerp>
+    <data>
+
+        <record id="view_picking_form" model="ir.ui.view">
+            <field name="name">view.picking.form.transsmart</field>
+            <field name="model">stock.picking</field>
+            <field name="inherit_id" ref="stock.view_picking_form"/>
+            <field name="arch" type="xml">
+                <xpath
+                    expr="//field[@name='carrier_tracking_ref']"
+                    position="after"
+                    >
+                    <field
+                        name="carrier_tracking_url_html"
+                        string="Carrier Tracking"
+                        widget="html"
+                        />
+                </xpath>
+                <xpath
+                    expr="//button[@name='action_create_transsmart_document']"
+                    position="after"
+                    >
+                    <button
+                        name="action_get_tracking"
+                        string="Update Tracking info"
+                        type="object"
+                        />
+                </xpath>
+                <xpath
+                    expr="//field[@name='carrier_tracking_ref']"
+                    position="attributes"
+                    >
+                    <attribute name="invisible">1</attribute>
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</openerp>
