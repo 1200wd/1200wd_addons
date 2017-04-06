@@ -27,11 +27,9 @@ class SaleOrder(models.Model):
         return res
 
     @api.model
-    def _prepare_invoice(self, order, lines, context=None):
+    def _prepare_invoice(self, order, lines):
         """Make sure sales_channel_id is set on invoice."""
-        val = super(SaleOrder, self)._prepare_invoice(
-            order, lines, context=context
-        )
+        val = super(SaleOrder, self)._prepare_invoice(order, lines)
         if order.sales_channel_id:
             val.update({
                 'sales_channel_id': order.sales_channel_id.id,
