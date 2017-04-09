@@ -303,7 +303,8 @@ class StockPicking(models.Model):
         r = super(StockPicking, self).create(vals)
         return r
 
-    @api.multi
+    # cannot be multi. copy() can only receive single id.
+    # also it is really singular default, not defaultS.
     def copy(self, cr, uid, id, default=None, context=None):
         context = context or {}
         default = default or {}
