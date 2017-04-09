@@ -266,15 +266,13 @@ class StockPicking(models.Model):
         r = super(StockPicking, self).create(vals)
         return r
 
-    def copy(self, cr, uid, id, default=None, context=None):
+    @api.multi
+    def copy(self, default=None):
         context = context or {}
         default = default or {}
-        if not context.get('ingoing_override', True):
-            default.update({
-                'transsmart_confirmed': False,
-                'transsmart_id': 0,
-                'delivery_cost': 0
-            })
-        return super(StockPicking, self).copy(
-            cr, uid, id, default=default, context=context
-        )
+        default.update({
+            'transsmart_confirmed': False,
+            'transsmart_id': 0,
+            'delivery_cost': 0
+        })
+        return super(StockPicking, self).copy(default=default)
