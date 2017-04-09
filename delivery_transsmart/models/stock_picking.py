@@ -17,8 +17,9 @@ _logger = logging.getLogger(__name__)
 def price_from_transsmart_price(price_str):
     """convert transsmart price string to odoo float field."""
     if price_str.startswith('EUR '):
-        return float(price_str[4:].replace(',','.'))
-    raise Warning(_("Couldn't convert transsmart price %s to float") % (price_str,))
+        return float(price_str[4:].replace(',', '.'))
+    raise Warning(_(
+        "Couldn't convert transsmart price %s to float") % (price_str,))
 
 
 class StockPicking(models.Model):
@@ -75,31 +76,40 @@ class StockPicking(models.Model):
 
     @api.multi
     def get_service_level_time_id(self):
-        if self.carrier_id and self.carrier_id.product_id and self.carrier_id.product_id.service_level_time_id:
-            return self.carrier_id.product_id.service_level_time_id.transsmart_id
-        elif self.delivery_service_level_time_id.transsmart_id and not self.carrier_id:
+        if self.carrier_id.product_id.service_level_time_id:
+            return self.carrier_id.product_id.service_level_time_id\
+                    .transsmart_id
+        elif self.delivery_service_level_time_id.transsmart_id and \
+                not self.carrier_id:
             return self.delivery_service_level_time_id.transsmart_id
         else:
-            return self.env['delivery.transsmart.config.settings'].transsmart_default_service_level_time_id()
+            return self.env[
+                'delivery.transsmart.config.settings'
+            ].transsmart_default_service_level_time_id()
 
     @api.multi
     def get_carrier_id(self):
         if self.carrier_id.partner_id.transsmart_id:
             carrier_id = self.carrier_id.partner_id.transsmart_id
         else:
-            carrier_id = self.env['delivery.transsmart.config.settings'].transsmart_default_carrier_id()
+            carrier_id = self.env[
+                'delivery.transsmart.config.settings'
+            ].transsmart_default_carrier_id()
         return carrier_id
 
     @api.multi
     def get_invoice_name(self):
         invoice_name = ''
         if self.sale_id.name:
-            invoice_name = self.env['account.invoice'].search([('origin', '=', self.sale_id.name)]).number or ''
+            invoice_name = self.env['account.invoice'].search([
+                ('origin', '=', self.sale_id.name),
+            ]).number or ''
         return invoice_name
 
     def _transsmart_document_from_stock_picking(self):
         # TODO: Move to transsmart settings
-        # HARDCODED weight correction: +3% +0.05kg , round to 1 decimal (=0.1kg)
+        # HARDCODED weight correction:
+        #   +3% +0.05kg , round to 1 decimal (=0.1kg)
         weight = float(round(((self.weight * 1.03) + 0.05), 1))
 
         document = {
@@ -157,47 +167,65 @@ class StockPicking(models.Model):
             })
 
         if self.group_id:
-            related_sale = self.env['sale.order'].search([('procurement_group_id','=',self.group_id.id)])
-
+            related_sale = self.env['sale.order'].search([
+                ('procurement_group_id', '=', self.group_id.id),
+            ])
             if related_sale:
                 document.update({
-                    "AddressNameInvoice": related_sale.partner_invoice_id.name or '',
-                    "AddressStreetInvoice": related_sale.partner_invoice_id.street or '',
-                    "AddressStreet2Invoice": related_sale.partner_invoice_id.street2 or '',
+                    "AddressNameInvoice":
+                        related_sale.partner_invoice_id.name or '',
+                    "AddressStreetInvoice":
+                        related_sale.partner_invoice_id.street or '',
+                    "AddressStreet2Invoice":
+                        related_sale.partner_invoice_id.street2 or '',
                     "AddressStreetNoInvoice": ".",
-                    "AddressZipcodeInvoice": related_sale.partner_invoice_id.zip or '',
-                    "AddressCityInvoice": related_sale.partner_invoice_id.city or '',
-                    "AddressStateInvoice": related_sale.partner_invoice_id.state_id.name or '',
-                    "AddressCountryInvoice": related_sale.partner_invoice_id.country_id.code or '',
+                    "AddressZipcodeInvoice":
+                        related_sale.partner_invoice_id.zip or '',
+                    "AddressCityInvoice":
+                        related_sale.partner_invoice_id.city or '',
+                    "AddressStateInvoice":
+                        related_sale.partner_invoice_id.state_id.name or '',
+                    "AddressCountryInvoice":
+                        related_sale.partner_invoice_id.country_id.code or '',
                 })
-
         return document
 
     @api.one
     def action_get_transsmart_rate(self):
-        if not self.company_id.transsmart_enabled or self.picking_type_id.code != 'outgoing':
+        if not self.company_id.transsmart_enabled or \
+                self.picking_type_id.code != 'outgoing':
             return
         # Exit if carrier is a not a Transsmart carrier
-        if self.carrier_id.partner_id and not self.carrier_id.partner_id.transsmart_id:
-            _logger.debug("1200wd - [{}] {} is not a Transsmart carrier. Skip prebooking.".
-                          format(self.carrier_id.id, self.carrier_id.name))
+        if self.carrier_id.partner_id and \
+                not self.carrier_id.partner_id.transsmart_id:
+            _logger.debug(
+                "1200wd - [{}] {} is not a Transsmart carrier."
+                " Skip prebooking.".format(
+                    self.carrier_id.id, self.carrier_id.name)
+            )
             return
-
         document = self._transsmart_document_from_stock_picking()
-
-        _logger.info("transsmart.getrates with document: %s" % (json.dumps(document),))
+        _logger.info(
+            "transsmart.getrates with document: %s" %
+            (json.dumps(document),)
+        )
         r = self.env['delivery.transsmart.config.settings'].\
-            get_transsmart_service().send('/Rates', params={'prebooking': 1, 'getrates': 0}, payload=document)
+            get_transsmart_service().send(
+                '/Rates', params={'prebooking': 1, 'getrates': 0},
+                payload=document
+            )
         if len(r):
             if type(r) == list:
                 r = r[0]
         else:
-            _logger.error("1200wd - Transsmart returned empty result: %s" % self.name)
+            _logger.error(
+                "1200wd - Transsmart returned empty result: %s" % self.name
+            )
             return
         _logger.info("transsmart.getrates returned: %s" % (json.dumps(r),))
-
-        carrier = self.env['delivery.transsmart.config.settings'].lookup_transsmart_delivery_carrier(r)
-
+        carrier = self.env[
+            'delivery.transsmart.config.settings'
+        ].lookup_transsmart_delivery_carrier(r)
         self.write({
             'carrier_id': carrier.id,
             'delivery_cost': price_from_transsmart_price(r['Price']),
@@ -205,31 +233,43 @@ class StockPicking(models.Model):
 
     @api.one
     def action_create_transsmart_document(self):
-        if not self.company_id.transsmart_enabled or self.picking_type_id.code != 'outgoing':
+        if not self.company_id.transsmart_enabled or \
+                self.picking_type_id.code != 'outgoing':
             return
         # Exit if carrier is a not a Transsmart carrier
-        if self.carrier_id.partner_id and not self.carrier_id.partner_id.transsmart_id:
-            _logger.debug("1200wd - [{}] {} is not a Transsmart carrier. Skip create shipment.".
-                          format(self.carrier_id.id, self.carrier_id.name))
+        if self.carrier_id.partner_id and \
+                not self.carrier_id.partner_id.transsmart_id:
+            _logger.debug(
+                "1200wd - [{}] {} is not a Transsmart carrier."
+                " Skip create shipment.".format(
+                    self.carrier_id.id, self.carrier_id.name)
+            )
             return
-
         if self.transsmart_id:
-            raise Warning(_("This picking is already exported to Transsmart! : ") + self.name)
-
+            raise Warning(_(
+                "This picking is already exported to Transsmart! : ") +
+                self.name
+            )
         document = self._transsmart_document_from_stock_picking()
-
-        _logger.info("transsmart.document with document: %s" % (json.dumps(document),))
+        _logger.info(
+            "transsmart.document with document: %s" % (json.dumps(document),)
+        )
         r = self.env['delivery.transsmart.config.settings'].\
-            get_transsmart_service().send('/Document', params={'autobook': 1}, payload=document)
+            get_transsmart_service().send(
+                '/Document', params={'autobook': 1}, payload=document
+            )
         if len(r):
             if type(r) == list:
                 r = r[0]
         else:
-            _logger.error("1200wd - Transsmart returned empty result: %s" % self.name)
+            _logger.error(
+                "1200wd - Transsmart returned empty result: %s" % self.name
+            )
             return
         _logger.info("transsmart.document returned: %s" % (json.dumps(r),))
-
-        carrier = self.env['delivery.transsmart.config.settings'].lookup_transsmart_delivery_carrier(r)
+        carrier = self.env[
+            'delivery.transsmart.config.settings'
+        ].lookup_transsmart_delivery_carrier(r)
         data = {
             'transsmart_id': r['Id'],
             'carrier_id': carrier.id or '',
@@ -237,7 +277,9 @@ class StockPicking(models.Model):
             'carrier_tracking_ref': r['TrackingNumber'] or '',
             'carrier_tracking_url': r['TrackingUrl'] or '',
         }
-        _logger.info("1200wd - Write Transsmart tracking data: {}".format(data))
+        _logger.info(
+            "1200wd - Write Transsmart tracking data: {}".format(data)
+        )
         self.write(data)
 
     @api.multi
@@ -251,15 +293,18 @@ class StockPicking(models.Model):
     def create(self, vals):
         if 'action_ship_create' in self.env.context:
             vals.update({
-                'cost_center_id': self.env.context['action_ship_create'].cost_center_id.id,
+                'cost_center_id':
+                    self.env.context['action_ship_create'].cost_center_id.id,
                 'delivery_service_level_time_id':
-                    self.env.context['action_ship_create'].delivery_service_level_time_id.id
+                    self.env.context[
+                        'action_ship_create'
+                    ].delivery_service_level_time_id.id
             })
         r = super(StockPicking, self).create(vals)
         return r
 
     @api.multi
-    def copy(self, cr, uid, id, default=None, context=context):
+    def copy(self, cr, uid, id, default=None, context=None):
         context = context or {}
         default = default or {}
         default.update({
