@@ -18,11 +18,7 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ##############################################################################
-
-
-from openerp import models, fields, api, _
-import openerp.addons.decimal_precision as dp
-from openerp.exceptions import Warning
+from openerp import models, fields
 
 
 class ResPartner(models.Model):
@@ -36,7 +32,3 @@ class ResPartner(models.Model):
     transsmart_package_type_id = fields.Many2one(
             'delivery.package.type',
             string='Package Type')
-
-
-
-

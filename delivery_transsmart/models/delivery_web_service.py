@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-#
 #    odoodev web_service.py
 #    © 2016 December - 1200 Web Development <http://1200wd.com/>
 #
@@ -15,14 +14,14 @@
 #
 #    You should have received a copy of the GNU Affero General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
 
 import requests
 from requests.auth import HTTPBasicAuth
 import json
-from openerp import models, fields, api, _
+from openerp import models, fields
 from openerp.exceptions import Warning
 import logging
+
 
 _logger = logging.getLogger(__name__)
 TRANS_API_ENDPOINTS = {
@@ -71,22 +70,30 @@ TRANS_MODELS_VALS = {
         }
 
 
+
 class DeliveryWebService(models.Model):
     _name = 'delivery.web.service'
 
     name = fields.Char(string="Title", required=True)
-    url = fields.Char(string="URL", required=True, default="https://connect.test.api.transwise.eu/Api/")
+    url = fields.Char(
+        string="URL",
+        required=True,
+        default="https://connect.test.api.transwise.eu/Api/")
     username = fields.Char(string="Username", required=True)
     password = fields.Char(string="Password", required=True)
-
-    type = fields.Selection([('http_rest', 'HTTP REST')], 'Service Type', required=True)
-
+    type = fields.Selection(
+        selection=[('http_rest', 'HTTP REST')],
+        string='Service Type',
+        required=True,
+    )
     description = fields.Text()
 
     def send(self, method, params=None, payload=None):
         if self.type == 'http_rest':
-            headers = {'content-type': 'application/json', 'charset': 'UTF-8'}
-
+            headers = {
+                'content-type': 'application/json',
+                'charset': 'UTF-8',
+            }
             response = requests.post(
                 self.url + method,
                 params=params,
@@ -96,23 +103,32 @@ class DeliveryWebService(models.Model):
                 auth=HTTPBasicAuth(self.username, self.password))
 
             if response.status_code < 200 or response.status_code >= 300:
-                _logger.error("HTTP ERROR {} - {}".format(response.status_code, response.text))
+                _logger.error(
+                    "HTTP ERROR {} - {}".format(
+                        response.status_code, response.text)
+                )
                 if "Message" in response.text:
                     data = json.loads(response.text)
                     error_message = data["Message"]
                 else:
-                    error_message = "Transsmart communication error\n\n{}".format(response.text)
-                raise Warning("ERROR {}: {}".format(response.status_code, error_message))
-
+                    error_message = \
+                        "Transsmart communication error\n\n{}".format(
+                            response.text
+                        )
+                raise Warning(
+                    "ERROR {}: {}".format(response.status_code, error_message)
+                )
             return response.json()
         else:
-            raise Warning('Transsmart connection error. Implementation for this web service type is missing: '
-                          + self.type)
+            raise Warning(
+                "Transsmart connection error."
+                " Implementation for this web service type is missing: " +
+                self.type
+            )
 
     def receive(self, method, params=None):
         if self.type == 'http_rest':
             headers = {'content-type': 'application/json'}
-
             response = requests.get(
                 self.url + method,
                 params=params,
@@ -121,15 +137,25 @@ class DeliveryWebService(models.Model):
                 auth=HTTPBasicAuth(self.username, self.password))
 
             if response.status_code < 200 or response.status_code >= 300:
-                _logger.error("HTTP ERROR {} - {}".format(response.status_code, response.text))
+                _logger.error(
+                    "HTTP ERROR {} - {}".format(
+                        response.status_code, response.text)
+                )
                 if "Message" in response.text:
                     data = json.loads(response.text)
                     error_message = data["Message"]
                 else:
-                    error_message = "Transsmart communication error\n\n{}".format(response.text)
-                raise Warning("ERROR {}: {}".format(response.status_code, error_message))
-
+                    error_message = \
+                            "Transsmart communication error\n\n{}".format(
+                                response.text
+                            )
+                raise Warning(
+                    "ERROR {}: {}".format(response.status_code, error_message)
+                )
             return response.json()
         else:
-            raise Warning('Transsmart connection error. Implementation for this web service type is missing: '
-                          + self.type)
+            raise Warning(
+                "Transsmart connection error."
+                " Implementation for this web service type is missing: " +
+                self.type
+            )

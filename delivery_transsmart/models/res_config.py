@@ -19,12 +19,12 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ##############################################################################
-
 from openerp import models, fields, api, _
 from openerp.exceptions import Warning
 import logging
 from .delivery_web_service import TRANS_API_ENDPOINTS, TRANS_MODELS_LOCAL, \
         TRANS_MODELS_VALS
+
 
 _logger = logging.getLogger(__name__)
 
@@ -54,65 +54,94 @@ class DeliveryTranssmartConfiguration(models.TransientModel):
     @api.multi
     def get_default_transsmart(self):
         ir_values_obj = self.env['ir.values']
-        carrier_id = ir_values_obj.get_default('delivery.transsmart', 'transsmart_default_carrier')
-        service_level_time_id = ir_values_obj.get_default('delivery.transsmart', 'transsmart_default_service_level')
-        web_service_transsmart = ir_values_obj.get_default('delivery.transsmart', 'web_service_transsmart')
+        carrier_id = ir_values_obj.get_default(
+            'delivery.transsmart', 'transsmart_default_carrier'
+        )
+        service_level_time_id = ir_values_obj.get_default(
+            'delivery.transsmart', 'transsmart_default_service_level'
+        )
+        web_service_transsmart = ir_values_obj.get_default(
+            'delivery.transsmart', 'web_service_transsmart'
+        )
         return {
             'carrier_id': carrier_id,
             'service_level_time_id': service_level_time_id,
             'web_service_transsmart': web_service_transsmart,
         }
-   
+
     @api.multi
     def transsmart_default_carrier_id(self):
         ir_values_obj = self.env['ir.values']
-        carrier_id = ir_values_obj.get_default('delivery.transsmart', 'transsmart_default_carrier')
+        carrier_id = ir_values_obj.get_default(
+            'delivery.transsmart', 'transsmart_default_carrier'
+        )
         carrier = self.env['res.partner'].browse([carrier_id])
         if carrier:
             return carrier[0].transsmart_id
         else:
-            raise Warning(_('No default Default Prebooking Carrier found. Please change Transsmart settings'))
+            raise Warning(_(
+                "No default Default Prebooking Carrier found."
+                " Please change Transsmart settings"
+            ))
 
     @api.multi
     def transsmart_default_service_level_time_id(self):
         ir_values_obj = self.env['ir.values']
-        service_level_time_id = ir_values_obj.get_default('delivery.transsmart', 'transsmart_default_service_level')
-        service = self.env['delivery.service.level.time'].browse([service_level_time_id])
+        service_level_time_id = ir_values_obj.get_default(
+            'delivery.transsmart', 'transsmart_default_service_level'
+        )
+        service = self.env[
+            'delivery.service.level.time'].browse([service_level_time_id])
         if service:
             return service[0].transsmart_id
         else:
-            raise Warning(_('No default Prebooking Service Level Time found. Please change Transsmart settings'))
+            raise Warning(_(
+                "No default Default Prebooking Carrier found."
+                " Please change Transsmart settings"
+            ))
 
     @api.multi
     def set_transsmart_defaults(self):
         ir_values_obj = self.env['ir.values']
-        ir_values_obj.set_default('delivery.transsmart', 'transsmart_default_carrier',
-                                  self.carrier_id and self.carrier_id.id or None)
-        ir_values_obj.set_default('delivery.transsmart', 'transsmart_default_service_level',
-                                  self.service_level_time_id and self.service_level_time_id.id or None)
-        ir_values_obj.set_default('delivery.transsmart', 'web_service_transsmart',
-                                  self.web_service_transsmart and self.web_service_transsmart.id or None)
+        ir_values_obj.set_default(
+            'delivery.transsmart', 'transsmart_default_carrier',
+            self.carrier_id and self.carrier_id.id or None
+        )
+        ir_values_obj.set_default(
+            'delivery.transsmart', 'transsmart_default_service_level',
+            self.service_level_time_id and self.service_level_time_id.id or
+            None
+        )
+        ir_values_obj.set_default(
+            'delivery.transsmart', 'web_service_transsmart',
+            self.web_service_transsmart and self.web_service_transsmart.id or
+            None
+        )
 
     def get_transsmart_service(self):
-        """
-        If no default connection is set and there is only one connection return that connection.
+        """If no default connection is set and there is only one connection
+            return that connection.
         :return: Transsmart delivery webservice object.
         """
         if self.web_service_transsmart:
             return self.web_service_transsmart
         else:
-            wst = self.env['ir.values'].get_default('delivery.transsmart', 'web_service_transsmart')
+            wst = self.env['ir.values'].get_default(
+                'delivery.transsmart', 'web_service_transsmart'
+            )
         if not wst:
             if len(self.env['delivery.web.service'].search([])) == 1:
                 return self.env['delivery.web.service'].search([])
             else:
-                raise Warning(_('No Transsmart connection information found or no default connection selected'))
+                raise Warning(_(
+                    "No Transsmart connection information found or no"
+                    " default connection selected"
+                ))
         return self.env['delivery.web.service'].browse([wst])
 
     def get_transsmart_carrier_tag(self):
         return self.env.ref(
-                'delivery_transsmart.res_partner_category_transsmart_carrier'
-        ).id
+            'delivery_transsmart.res_partner_category_transsmart_carrier').id
 
     def _sync_transsmart_model(self, model_name):
         model_obj = self.env[model_name]
@@ -155,52 +184,81 @@ class DeliveryTranssmartConfiguration(models.TransientModel):
     @api.multi
     def lookup_transsmart_delivery_carrier(self, transsmart_document):
         if 'ServiceLevelOtherId' not in transsmart_document:
-            raise Warning(_('No Service Level Other Id found in Transsmart Document'))
+            raise Warning(_(
+                "No Service Level Other Id found in Transsmart Document"
+            ))
         service_level_other = self.env['delivery.service.level'].\
-            search([('transsmart_id','=',transsmart_document['ServiceLevelOtherId'])])
+            search([
+                ('transsmart_id', '=', transsmart_document[
+                    'ServiceLevelOtherId'])
+            ])
         if len(service_level_other) != 1:
-            raise Warning(_('No unique Service Level Other found with transsmart Id %s. Found %d. '
-                            'You have to refresh or review the transsmart data!') %
-                          (transsmart_document['ServiceLevelOtherId'], len(service_level_other)))
-
+            raise Warning(_(
+                "No unique Service Level Other found with transsmart Id %s."
+                " Found %d.\n"
+                "You have to refresh or review the transsmart data!") %
+                (transsmart_document['ServiceLevelOtherId'],
+                 len(service_level_other))
+            )
         if 'ServiceLevelTimeId' not in transsmart_document:
-            raise Warning(_('No Service Level Time Id found in Transsmart Document'))
+            raise Warning(_(
+                "No Service Level Time Id found in Transsmart Document"
+            ))
         service_level_time = self.env['delivery.service.level.time'].\
-            search([('transsmart_id','=',transsmart_document['ServiceLevelTimeId'])])
+            search([
+                ('transsmart_id', '=', transsmart_document[
+                    'ServiceLevelTimeId'])
+            ])
         if len(service_level_time) != 1:
-            raise Warning(_('No unique Service Level Time found with transsmart Id %s. Found %d. '
-                            'You have to refresh or review the transsmart data!') %
-                          (transsmart_document['ServiceLevelTimeId'], len(service_level_time)))
-
+            raise Warning(_(
+                "No unique Service Level Time found with transsmart Id %s."
+                " Found %d.\n"
+                "You have to refresh or review the transsmart data!") %
+                (transsmart_document['ServiceLevelTimeId'],
+                 len(service_level_time))
+            )
         if 'CarrierId' not in transsmart_document:
             raise Warning(_('No Carrier Id found in Transsmart Document'))
-        carrier = self.env['res.partner'].search([('transsmart_id','=',transsmart_document['CarrierId'])])
+        carrier = self.env['res.partner'].search([
+            ('transsmart_id', '=', transsmart_document['CarrierId']),
+        ])
         if len(carrier) != 1:
-            raise Warning(_('No unique Carrier found with transsmart Id %s. Found %d. '
-                            'You have to refresh or review the transsmart data!') %
-                          (transsmart_document['CarrierId'],len(carrier)))
-
+            raise Warning(_(
+                "No unique Carrier found with transsmart Id %s."
+                " Found %d.\n"
+                "You have to refresh or review the transsmart data!") %
+                (transsmart_document['CarrierId'],
+                 len(carrier))
+            )
         products = self.env['product.product'].search([
-            ('service_level_id', '=', service_level_other[0].id), 
+            ('service_level_id', '=', service_level_other[0].id),
             ('service_level_time_id', '=', service_level_time[0].id)
         ])
         if len(products) > 1:
-            raise Warning(_('More then one delivery product with Service Level ID %d and Service Level Time ID %d'),
-                          (service_level_other[0].id, service_level_time[0].id))
+            raise Warning(_(
+                "More then one delivery product with Service Level ID %d"
+                " and Service Level Time ID %d"),
+                (service_level_other[0].id, service_level_time[0].id)
+            )
         if len(products) < 1:
             # autocreate product
             products = [self.env['product.product'].create({
-                'name': "({} {})".format(service_level_time[0].name, service_level_other[0].name),
+                'name': "({} {})".format(
+                    service_level_time[0].name, service_level_other[0].name),
                 'type': 'service',
-                'service_level_id': service_level_other[0].id, 
+                'service_level_id': service_level_other[0].id,
                 'service_level_time_id': service_level_time[0].id
             })]
-
-        delivery_carrier = self.env['delivery.carrier'].search(
-            [('partner_id','=', carrier[0].id), ('product_id','=',products[0].id)])
+        delivery_carrier = self.env['delivery.carrier'].search([
+            ('partner_id', '=', carrier[0].id),
+            ('product_id', '=', products[0].id),
+        ])
         if len(delivery_carrier) > 1:
-            raise Warning(_('More then one delivery carrier found for partner %d and product %d'),
-                          (carrier[0].id, products[0].id))
+            raise Warning(_(
+                "More then one delivery carrier found for partner %d"
+                " and product %d"),
+                (carrier[0].id, products[0].id)
+            )
         if len(delivery_carrier) < 1:
             # autcreate delivery.carrier
             delivery_carrier = self.env['delivery.carrier'].create({
@@ -208,7 +266,6 @@ class DeliveryTranssmartConfiguration(models.TransientModel):
                 'partner_id': carrier[0].id,
                 'product_id': products[0].id
             })
-
         return delivery_carrier[0]
 
 
