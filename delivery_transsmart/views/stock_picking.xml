@@ -2,11 +2,56 @@
 <openerp>
     <data>
 
-        <record id="view_picking_form" model="ir.ui.view">
-            <field name="name">view.picking.form.transsmart</field>
+        <record id="view_picking_transsmart_out_form" model="ir.ui.view">
+            <field name="name">transsmart.stock.picking.form.view</field>
             <field name="model">stock.picking</field>
-            <field name="inherit_id" ref="stock.view_picking_form"/>
+            <field
+                name="inherit_id"
+                ref="delivery.view_picking_withcarrier_out_form"
+                />
             <field name="arch" type="xml">
+                <xpath
+                    expr="//field[@name='carrier_tracking_ref']"
+                    position="after"
+                    >
+                    <field name="delivery_cost" />
+                    <field name="transsmart_confirmed" />
+                    <button
+                        name="action_get_transsmart_rate"
+                        string="Transsmart Prebooking"
+                        type="object"
+                        attrs="{'invisible':[('transsmart_confirmed','=',True)]}"
+                        />
+                    <button
+                        name="action_create_transsmart_document"
+                        string="Create in Transsmart"
+                        type="object"
+                        attrs="{'invisible':[('transsmart_confirmed','=',True)]}"
+                        />
+                    <button
+                        name="action_get_tracking"
+                        string="Update Tracking info"
+                        type="object"
+                        />
+                </xpath>
+                <xpath
+                    expr="//field[@name='carrier_id']"
+                    position="replace"
+                    >
+                    <field
+                        name="carrier_id"
+                        attrs="{'readonly':[('transsmart_confirmed','=',True)]}"
+                        />
+                    <field
+                        name="delivery_service_level_time_id" 
+                        attrs="{'readonly':['|',('carrier_id', '!=', False),('transsmart_confirmed','=',True)]}" 
+                        domain="[('pre_book','=',True)]"
+                        />
+                    <field
+                        name="cost_center_id"
+                        attrs="{'readonly':[('transsmart_confirmed','=',True)]}"
+                        />
+                </xpath>
                 <xpath
                     expr="//field[@name='carrier_tracking_ref']"
                     position="after"
@@ -18,20 +63,56 @@
                         />
                 </xpath>
                 <xpath
-                    expr="//button[@name='action_create_transsmart_document']"
-                    position="after"
-                    >
-                    <button
-                        name="action_get_tracking"
-                        string="Update Tracking info"
-                        type="object"
-                        />
-                </xpath>
-                <xpath
                     expr="//field[@name='carrier_tracking_ref']"
                     position="attributes"
                     >
                     <attribute name="invisible">1</attribute>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="view_picking_transsmart_out_tree" model="ir.ui.view">
+            <field name="name">transsmart.stock.picking.tree</field>
+            <field name="model">stock.picking</field>
+            <field name="inherit_id" ref="stock.vpicktree"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='backorder_id']" position="after">
+                     <field name="carrier_id"/>
+                     <field name="transsmart_confirmed"/>
+                </xpath>
+            </field>
+        </record>
+
+        <record
+            id="view_picking_internal_search_transsmart"
+            model="ir.ui.view"
+            >
+            <field
+                name="name">view.picking.internal.search.transssmart</field>
+            <field name="model">stock.picking</field>
+            <field
+                name="inherit_id"
+                ref="stock.view_picking_internal_search"
+                />
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='partner_id']" position="after">
+                    <field name="carrier_id"/>
+                </xpath>
+                <xpath expr="//filter[@name='confirmed']" position="after">
+                    <!-- <separator/> -->
+                    <filter
+                        name="no_transssmart_confirmed"
+                        string="No Transsmart"
+                        domain="[('transsmart_confirmed','!=', True)]"
+                        />
+                </xpath>
+                <xpath
+                    expr="//filter[@string='Procurement Group']"
+                    position="after">
+                    <filter
+                        name="carrier_id"
+                        string="Carrier"
+                        context="{'group_by':'carrier_id'}"/>
                 </xpath>
             </field>
         </record>
