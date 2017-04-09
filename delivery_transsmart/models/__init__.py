@@ -25,5 +25,4 @@ from . import delivery_service_level
 from . import stock_picking
 from . import res_config
 from . import res_partner
-from . import stock_return_picking
 from . import delivery_web_service
