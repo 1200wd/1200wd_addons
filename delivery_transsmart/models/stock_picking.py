@@ -309,9 +309,12 @@ class StockPicking(models.Model):
         context = context or {}
         default = default or {}
         default.update({
+            'delivery_service_level_time_id': False,
+            'cost_center_id': False,
             'transsmart_confirmed': False,
             'transsmart_id': 0,
             'delivery_cost': 0
+            'carrier_tracking_url': False,
         })
         return super(StockPicking, self).copy(
             cr, uid, id, default=default, context=context
