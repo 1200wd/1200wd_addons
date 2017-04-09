@@ -315,7 +315,7 @@ class StockPicking(models.Model):
             'cost_center_id': False,
             'transsmart_confirmed': False,
             'transsmart_id': 0,
-            'delivery_cost': 0
+            'delivery_cost': 0,
             'carrier_tracking_url': False,
         })
         return super(StockPicking, self).copy(
