@@ -315,4 +315,3 @@ class StockPicking(models.Model):
             return self.get_tracking_transsmart(self.transsmart_id)
         else:
             raise Warning('Picking not found in Transsmart')
->>>>>>> [RFR] Move transsmart functions to 1200wd addons from customer module.
