@@ -108,7 +108,6 @@
                     <group col="4" readonly="1">
                         <field name="statement_id" readonly="1"/>
                         <field name="journal_id" readonly="1" invisible="1"/>
-                        <field name="journal_code" readonly="1"/>
                         <field name="date" readonly="1"/>
                         <field name="name" readonly="1"/>
                         <field name="ref" readonly="1"/>

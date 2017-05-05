@@ -8,7 +8,12 @@
             <field name="inherit_id" ref="account.view_bank_statement_form"/>
             <field name="arch" type="xml">
                 <xpath expr="//field[@name='line_ids']/tree/field[@name='bank_account_id']" position="after">
-                    <button name="action_statement_line_match" attrs="{'invisible': [('move_state', '!=', False)]}" string="Match" type="object" icon="STOCK_INDEX"/>
+                    <button
+                        name="action_statement_line_match"
+                        string="Match"
+                        type="object"
+                        icon="STOCK_INDEX"
+                        />
                 </xpath>
             </field>
         </record>
@@ -34,21 +39,10 @@
             </field>
         </record>
 
-        <record id="view_bank_statement_line_form_inherit_match" model="ir.ui.view">
-            <field name="name">bank.statement.line.form.match</field>
-            <field name="model">account.bank.statement.line</field>
-            <field name="inherit_id" ref="account_bank_statement_advanced.view_bank_statement_line_form"/>
-            <field name="arch" type="xml">
-                <xpath expr="//field[@name='ref']" position="after">
-                    <field name="so_ref"/>
-                </xpath>
-            </field>
-        </record>
-
-        <record id="view_bank_statement_line_list_inherit_match" model="ir.ui.view">
-            <field name="name">bank.statement.line.list.match</field>
-            <field name="model">account.bank.statement.line</field>
-            <field name="inherit_id" ref="account_bank_statement_advanced.view_bank_statement_line_list"/>
+        <record id="view_bank_statement_form" model="ir.ui.view">
+            <field name="name">bank.statement.form.match</field>
+            <field name="model">account.bank.statement</field>
+            <field name="inherit_id" ref="account.view_bank_statement_form"/>
             <field name="arch" type="xml">
                 <xpath expr="//field[@name='ref']" position="after">
                     <field name="so_ref"/>

@@ -20,7 +20,6 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ##############################################################################
-
 {
     'name': "Account Bank Match",
     'summary': """Match bank statement lines to sale orders or invoices""",
@@ -33,9 +32,8 @@ If one correct match is found automatically link and reconcile the statement lin
     'author': "1200 Web Development",
     'website': "http://1200wd.com",
     'category': 'Accounting & Finance',
-    'version': '8.0.1.4',
+    'version': '8.0.1.4.1',
     'depends': [
-        'account_bank_statement_advanced',
         'account_bank_statement_import',
         'sale',
     ],

@@ -25,7 +25,6 @@
                     <attribute name="class">oe_inline</attribute>
                     <attribute name="groups">account.group_account_manager</attribute>
                 </xpath>
-
             </field>
         </record>
 
