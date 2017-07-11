@@ -32,7 +32,7 @@
     'author': "1200 Web Development",
     'website': "http://1200wd.com",
     'category': 'Accounting & Finance',
-    'version': '8.0.1.0',
+    'version': '9.0.1.0',
     'depends': [
         'account',
     ],
@@ -42,7 +42,7 @@
     'price': 10.00,
     'currency': 'EUR',
     'demo': [],
-    'installable': True,
+    'installable': False,
     'auto_install': False,
     'application': False,
 }

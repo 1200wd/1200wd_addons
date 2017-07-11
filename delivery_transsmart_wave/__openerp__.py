@@ -30,7 +30,7 @@ This module allows the user to send delivvery orders to transsmart from using th
     'author': "1200 Web Development",
     'website': "http://1200wd.com",
     'category': 'Warehouse',
-    'version': '8.0.2.0',
+    'version': '9.0.2.0',
     'depends': [
         'delivery_transsmart',
         'stock_picking_wave'
@@ -39,7 +39,7 @@ This module allows the user to send delivvery orders to transsmart from using th
         'delivery_transsmart_wave_views.xml'
     ],
     'demo': [],
-    'installable': True,
+    'installable': False,
     'auto_install': False,
     'application': False,
 }

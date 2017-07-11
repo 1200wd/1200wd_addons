@@ -33,7 +33,7 @@
     'author': "1200 Web Development",
     'website': "http://1200wd.com",
     'category': 'Project',
-    'version': '8.0.1.1',
+    'version': '9.0.1.1',
     'depends': [
         'project',
         'project_issue',
@@ -43,7 +43,7 @@
         'views/project_issue_view.xml',
     ],
     'demo': [],
-    'installable': True,
+    'installable': False,
     'auto_install': False,
     'application': False,
 }

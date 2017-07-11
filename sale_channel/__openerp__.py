@@ -32,7 +32,7 @@
     'author': "1200 Web Development",
     'website': "http://www.1200wd.com",
     'category': 'Sales',
-    'version': '8.0.1.1.2',
+    'version': '9.0.1.1.2',
     'depends': [
         'sale',
         'account',
@@ -46,7 +46,7 @@
         'report/invoice_report_view.xml',
     ],
     'demo': [],
-    'installable': True,
+    'installable': False,
     'auto_install': False,
     'application': False,
     'price': 0.00,

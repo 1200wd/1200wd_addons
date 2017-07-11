@@ -30,7 +30,7 @@
     'author': "1200 Web Development",
     'website': "http://1200wd.com",
     'category': 'Warehouse',
-    'version': '8.0.1.1',
+    'version': '9.0.1.1',
     'depends': [
         'product',
     ],
@@ -40,7 +40,7 @@
     'price': 10.00,
     'currency': 'EUR',
     'demo': [],
-    'installable': True,
+    'installable': False,
     'auto_install': False,
     'application': False,
 }

@@ -30,13 +30,13 @@
     'author': "1200 Web Development",
     'website': "http://1200wd.com",
     'category': 'Custom',
-    'version': '8.0.1.2',
+    'version': '9.0.1.2',
     'depends': [],
     'data': [
          'change_menu_color.xml'
     ],
     'demo': [],
-    'installable': True,
+    'installable': False,
     'auto_install': False,
     'application': False,
     'price': 0.00,

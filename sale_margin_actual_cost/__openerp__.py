@@ -31,7 +31,7 @@
     'author': "1200 Web Development",
     'website': "http://www.1200wd.com",
     'category': 'Sales',
-    'version': '8.0.1.3',
+    'version': '9.0.1.3',
     'depends': [
         'product',
         'sale',
@@ -45,7 +45,7 @@
         'views/sale_cost_view.xml',
     ],
     'demo': [],
-    'installable': True,
+    'installable': False,
     'auto_install': False,
     'application': False,
     'price': 50.00,

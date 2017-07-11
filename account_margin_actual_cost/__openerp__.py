@@ -28,7 +28,7 @@
     'author': "1200 Web Development",
     'website': "http://www.1200wd.com",
     'category': 'Accounting & Finance',
-    'version': '8.0.1.3',
+    'version': '9.0.1.3',
     'depends': [
         'sale_margin_actual_cost',
     ],
@@ -38,7 +38,7 @@
         'report/account_invoice_report_view.xml',
     ],
     'demo': [],
-    'installable': True,
+    'installable': False,
     'auto_install': False,
     'application': False,
     'price': 40.00,
