@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+
+        <record id="key_form" model="ir.ui.view">
+            <field name="name">Cryptocurrency Key Form</field>
+            <field name="model">key</field>
+            <field name="arch" type="xml">
+                <form>
+                    <group>
+                        <field name="name"/>
+                        <field name="key_id"/>
+                        <field name="address"/>
+                    </group>
+                </form>
+            </field>
+        </record>
+
+        <act_window
+            id="key_action"
+            name="Keys"
+            res_model="key" />
+
+        <menuitem
+            id="key_menu"
+            name="Keys"
+            action="key_action" />
+
+    </data>
+</openerp>
