@@ -10,7 +10,6 @@ import openerp.addons.decimal_precision as dp
 from openerp.exceptions import Warning
 
 
-
 _logger = logging.getLogger(__name__)
 
 
@@ -218,10 +217,9 @@ class StockPicking(models.Model):
             if type(r) == list:
                 r = r[0]
         else:
-            _logger.error(
-                "1200wd - Transsmart returned empty result: %s" % self.name
+            raise Warning(_(
+                "Transsmart returned empty result: %s") % self.name
             )
-            return
         _logger.info("transsmart.getrates returned: %s" % (json.dumps(r),))
         carrier = self.env[
             'delivery.transsmart.config.settings'
@@ -233,18 +231,21 @@ class StockPicking(models.Model):
 
     @api.one
     def action_create_transsmart_document(self):
-        if not self.company_id.transsmart_enabled or \
-                self.picking_type_id.code != 'outgoing':
-            return
-        # Exit if carrier is a not a Transsmart carrier
+        if not self.company_id.transsmart_enabled:
+            raise Warning(_(
+                "Company for picking %s is not Transsmart enabled!") %
+                self.name
+            )
+        if self.picking_type_id.code != 'outgoing':
+            raise Warning(_(
+                "Transsmart documents are only valid for outgoing transfers!"
+            ))
         if self.carrier_id.partner_id and \
                 not self.carrier_id.partner_id.transsmart_id:
-            _logger.debug(
-                "1200wd - [{}] {} is not a Transsmart carrier."
-                " Skip create shipment.".format(
-                    self.carrier_id.id, self.carrier_id.name)
+            raise Warning(_(
+                "Carrier %d - %s is not a Transsmart carrier!") %
+                (self.carrier_id.id, self.carrier_id.name)
             )
-            return
         if self.transsmart_id:
             raise Warning(_(
                 "This picking is already exported to Transsmart! : ") +
@@ -262,10 +263,9 @@ class StockPicking(models.Model):
             if type(r) == list:
                 r = r[0]
         else:
-            _logger.error(
-                "1200wd - Transsmart returned empty result: %s" % self.name
+            raise Warning(_(
+                "Transsmart returned empty result: %s") % self.name
             )
-            return
         _logger.info("transsmart.document returned: %s" % (json.dumps(r),))
         carrier = self.env[
             'delivery.transsmart.config.settings'
@@ -325,10 +325,9 @@ class StockPicking(models.Model):
         transsmart = transsmart_config.get_transsmart_service()
         rs = [transsmart.receive('/Document/' + str(transsmart_id))]
         if type(rs) != list or not len(rs):
-            _logger.error(
-                "1200wd - Error retrieving tracking info from Transsmart."
-            )
-            return
+            raise Warning(_(
+                "Error retrieving tracking info from Transsmart."
+            ))
         for r in rs:
             if r['TrackingNumber']:
                 sp = self.env['stock.picking'].search([
