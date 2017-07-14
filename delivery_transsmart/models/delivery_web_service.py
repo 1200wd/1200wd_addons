@@ -11,7 +11,6 @@ from openerp import fields, models, registry
 from openerp.exceptions import Warning
 
 
-
 _logger = logging.getLogger(__name__)
 
 

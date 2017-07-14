@@ -33,12 +33,18 @@ class SaleOrder(models.Model):
         string='Delivery Cost Center')
 
     def action_ship_create(self, cr, uid, ids, context=None):
-        context = context.copy() or {}
+        context = context and context.copy() or {}
         sales = self.browse(cr, uid, ids, context=context)
         context['action_ship_create'] = sales
-        r = super(SaleOrder, self).action_ship_create(
+        result = super(SaleOrder, self).action_ship_create(
             cr, uid, ids, context=context
         )
-        for sale in sales:
-            sale.picking_ids.action_get_transsmart_rate()
-        return r
+        try:
+            # Should test beforehand wether transsmart applies. For
+            # the moment surpress warning. Transsmart will be unlinked from
+            # sales_order anyway:
+            for sale in sales:
+                sale.picking_ids.action_get_transsmart_rate()
+        except:
+            pass
+        return result

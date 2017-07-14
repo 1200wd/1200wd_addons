@@ -110,7 +110,6 @@ class StockPicking(models.Model):
         # HARDCODED weight correction:
         #   +3% +0.05kg , round to 1 decimal (=0.1kg)
         weight = float(round(((self.weight * 1.03) + 0.05), 1))
-
         document = {
             "Reference": filter(unicode.isalnum, self.name),
             "RefOrder": self.sale_id.name or '',
@@ -128,7 +127,6 @@ class StockPicking(models.Model):
             "AddressCountryPickup": self.company_id.country_id.code or '',
             "AddressEmailPickup": self.company_id.email or '',
             "AddressPhonePickup": self.company_id.phone or '',
-
             "AddressName": self.partner_id.name or '',
             "AddressStreet": self.partner_id.street or '',
             "AddressStreet2": self.partner_id.street2 or '',
@@ -148,23 +146,19 @@ class StockPicking(models.Model):
                     "Weight": weight,
                 }
             ],
-
             "CarrierId": self.get_carrier_id(),
             "ServiceLevelTimeId": self.get_service_level_time_id(),
             "ShipmentValue": self.sale_id.amount_total,
             "ShipmentValueCurrency": "EUR",
-
             "AddressContact": self.partner_id.name or '',
             "AddressPhone": self.partner_id.phone or '',
             "AddressEmail": self.partner_id.email or '',
             "AddressCustomerNo": self.partner_id.ref or '',
         }
-
         if self.transsmart_cost_center_id():
             document.update({
                 "CostCenterId": self.transsmart_cost_center_id()
             })
-
         if self.group_id:
             related_sale = self.env['sale.order'].search([
                 ('procurement_group_id', '=', self.group_id.id),
@@ -190,19 +184,28 @@ class StockPicking(models.Model):
         return document
 
     @api.one
-    def action_get_transsmart_rate(self):
-        if not self.company_id.transsmart_enabled or \
-                self.picking_type_id.code != 'outgoing':
-            return
-        # Exit if carrier is a not a Transsmart carrier
+    def _check_valid_in_transsmart(self):
+        """Check wether communication with Transsmart valid for recordset."""
+        if not self.company_id.transsmart_enabled:
+            raise Warning(_(
+                "Company for picking %s is not Transsmart enabled!") %
+                self.name
+            )
+        if self.picking_type_id.code != 'outgoing':
+            raise Warning(_(
+                "Transsmart documents are only valid for outgoing transfers!"
+            ))
         if self.carrier_id.partner_id and \
                 not self.carrier_id.partner_id.transsmart_id:
-            _logger.debug(
-                "1200wd - [{}] {} is not a Transsmart carrier."
-                " Skip prebooking.".format(
-                    self.carrier_id.id, self.carrier_id.name)
+            raise Warning(_(
+                "Carrier %d - %s is not a Transsmart carrier!") %
+                (self.carrier_id.id, self.carrier_id.name)
             )
-            return
+
+    @api.one
+    def action_get_transsmart_rate(self):
+        """Get rate and carrier from transsmart."""
+        self._check_valid_in_transsmart(self)
         document = self._transsmart_document_from_stock_picking()
         _logger.info(
             "transsmart.getrates with document: %s" %
@@ -231,21 +234,7 @@ class StockPicking(models.Model):
 
     @api.one
     def action_create_transsmart_document(self):
-        if not self.company_id.transsmart_enabled:
-            raise Warning(_(
-                "Company for picking %s is not Transsmart enabled!") %
-                self.name
-            )
-        if self.picking_type_id.code != 'outgoing':
-            raise Warning(_(
-                "Transsmart documents are only valid for outgoing transfers!"
-            ))
-        if self.carrier_id.partner_id and \
-                not self.carrier_id.partner_id.transsmart_id:
-            raise Warning(_(
-                "Carrier %d - %s is not a Transsmart carrier!") %
-                (self.carrier_id.id, self.carrier_id.name)
-            )
+        self._check_valid_in_transsmart(self)
         if self.transsmart_id:
             raise Warning(_(
                 "This picking is already exported to Transsmart! : ") +
@@ -286,7 +275,12 @@ class StockPicking(models.Model):
     def action_confirm(self):
         if self.env.context.get('ingoing_override', False):
             return super(StockPicking, self).action_confirm()
-        self.action_get_transsmart_rate()
+        try:
+            # For the moment surpress warning. But action should really
+            # only be called for transsmart enebled pcikings:
+            self.action_get_transsmart_rate()
+        except:
+            pass
         return super(StockPicking, self).action_confirm()
 
     @api.model
@@ -355,6 +349,7 @@ class StockPicking(models.Model):
 
     @api.one
     def action_get_tracking(self):
+        self._check_valid_in_transsmart(self)
         if self.transsmart_id:
             _logger.debug(
                 "1200wd - Get tracking info from transsmart with"
