@@ -205,7 +205,7 @@ class StockPicking(models.Model):
     @api.one
     def action_get_transsmart_rate(self):
         """Get rate and carrier from transsmart."""
-        self._check_valid_in_transsmart(self)
+        self._check_valid_in_transsmart()
         document = self._transsmart_document_from_stock_picking()
         _logger.info(
             "transsmart.getrates with document: %s" %
@@ -234,7 +234,7 @@ class StockPicking(models.Model):
 
     @api.one
     def action_create_transsmart_document(self):
-        self._check_valid_in_transsmart(self)
+        self._check_valid_in_transsmart()
         if self.transsmart_id:
             raise Warning(_(
                 "This picking is already exported to Transsmart! : ") +
@@ -349,7 +349,7 @@ class StockPicking(models.Model):
 
     @api.one
     def action_get_tracking(self):
-        self._check_valid_in_transsmart(self)
+        self._check_valid_in_transsmart()
         if self.transsmart_id:
             _logger.debug(
                 "1200wd - Get tracking info from transsmart with"
