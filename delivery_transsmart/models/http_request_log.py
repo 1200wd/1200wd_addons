@@ -12,30 +12,38 @@ class HTTPRequestLog(models.Model):
         string='Date/time',
         default=fields.datetime.now(),
         required=True,
+        readonly=True,
     )
-    request_type = fields.String(
+    request_type = fields.Char(
         string='Type',
         default='get',
         required=True,
+        readonly=True,
     )
-    request_url = fields.String(
+    request_url = fields.Char(
         string='Url',
         required=True,
+        readonly=True,
     )
     request_headers = fields.Text(
         string='Headers',
         required=True,
+        readonly=True,
     )
     request_params = fields.Text(
         string='Params',
+        readonly=True,
     )
     request_payload = fields.Text(
         string='Payload',
+        readonly=True,
     )
     response_status_code = fields.Integer(
         string='HTTP response code',
         required=True,
+        readonly=True,
     )
     response_data = fields.Text(
         string='Response data',
+        readonly=True,
     )
