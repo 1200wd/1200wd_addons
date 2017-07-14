@@ -7,7 +7,7 @@ import requests
 from requests.auth import HTTPBasicAuth
 import json
 
-from openerp import fields, models
+from openerp import fields, models, registry
 from openerp.exceptions import Warning
 
 
@@ -84,8 +84,9 @@ class DeliveryWebService(models.Model):
 
         returns warnings and errors and takes care of logging.
         """
-        log_model = self.env['http.request.log']
-        log_model.create({
+        log_cr = registry(self.env.cr.dbname).cursor()
+        log_model = self.env['http.request.log'].with_env(self.env(cr=log_cr))
+        log_line = log_model.create({
             'request_type': request_type,
             'request_url': request_url,
             'request_headers': str(request_headers),
@@ -94,6 +95,13 @@ class DeliveryWebService(models.Model):
             'response_status_code': response.status_code,
             'response_data': response.text,
         })
+        log_cr.commit()
+        try:
+            log_cr.close()
+        except:
+            _logger.warn("Could not close HHTP request logging cursor.")
+        if not log_line:
+            _logger.warn("Could not create HTTP Request log!")
         if response.status_code < 200 or response.status_code >= 300:
             _logger.error(
                 "HTTP ERROR {} - {}".format(
@@ -104,9 +112,9 @@ class DeliveryWebService(models.Model):
                 error_message = data["Message"]
             else:
                 error_message = \
-                        "Transsmart communication error\n\n{}".format(
-                            response.text
-                        )
+                    "Transsmart communication error\n\n{}".format(
+                        response.text
+                    )
             raise Warning(
                 "ERROR {}: {}".format(
                     response.status_code, error_message)
