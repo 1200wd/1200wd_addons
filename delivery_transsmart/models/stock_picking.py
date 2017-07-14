@@ -132,7 +132,6 @@ class StockPicking(models.Model):
             "AddressCountryPickup": self.company_id.country_id.code or '',
             "AddressEmailPickup": self.company_id.email or '',
             "AddressPhonePickup": self.company_id.phone or '',
-
             "AddressName": self.partner_id.name or '',
             "AddressStreet": self.partner_id.street or '',
             "AddressStreet2": self.partner_id.street2 or '',
@@ -155,18 +154,15 @@ class StockPicking(models.Model):
             "ServiceLevelTimeId": self.get_service_level_time_id(),
             "ShipmentValue": self.sale_id.amount_total,
             "ShipmentValueCurrency": "EUR",
-
             "AddressContact": self.partner_id.name or '',
             "AddressPhone": self.partner_id.phone or '',
             "AddressEmail": self.partner_id.email or '',
             "AddressCustomerNo": self.partner_id.ref or '',
         }
-
         if self.transsmart_cost_center_id():
             document.update({
                 "CostCenterId": self.transsmart_cost_center_id()
             })
-
         if self.group_id:
             related_sale = self.env['sale.order'].search([
                 ('procurement_group_id', '=', self.group_id.id),
@@ -192,19 +188,28 @@ class StockPicking(models.Model):
         return document
 
     @api.one
-    def action_get_transsmart_rate(self):
-        if not self.company_id.transsmart_enabled or \
-                self.picking_type_id.code != 'outgoing':
-            return
-        # Exit if carrier is a not a Transsmart carrier
+    def _check_valid_in_transsmart(self):
+        """Check wether communication with Transsmart valid for recordset."""
+        if not self.company_id.transsmart_enabled:
+            raise Warning(_(
+                "Company for picking %s is not Transsmart enabled!") %
+                self.name
+            )
+        if self.picking_type_id.code != 'outgoing':
+            raise Warning(_(
+                "Transsmart documents are only valid for outgoing transfers!"
+            ))
         if self.carrier_id.partner_id and \
                 not self.carrier_id.partner_id.transsmart_id:
-            _logger.debug(
-                "1200wd - [{}] {} is not a Transsmart carrier."
-                " Skip prebooking.".format(
-                    self.carrier_id.id, self.carrier_id.name)
+            raise Warning(_(
+                "Carrier %d - %s is not a Transsmart carrier!") %
+                (self.carrier_id.id, self.carrier_id.name)
             )
-            return
+
+    @api.one
+    def action_get_transsmart_rate(self):
+        """Get rate and carrier from transsmart."""
+        self._check_valid_in_transsmart()
         document = self._transsmart_document_from_stock_picking()
         _logger.info(
             "transsmart.getrates with document: %s" %
@@ -219,10 +224,9 @@ class StockPicking(models.Model):
             if type(r) == list:
                 r = r[0]
         else:
-            _logger.error(
-                "1200wd - Transsmart returned empty result: %s" % self.name
+            raise Warning(_(
+                "Transsmart returned empty result: %s") % self.name
             )
-            return
         _logger.info("transsmart.getrates returned: %s" % (json.dumps(r),))
         carrier = self.env[
             'delivery.transsmart.config.settings'
@@ -234,18 +238,7 @@ class StockPicking(models.Model):
 
     @api.one
     def action_create_transsmart_document(self):
-        if not self.company_id.transsmart_enabled or \
-                self.picking_type_id.code != 'outgoing':
-            return
-        # Exit if carrier is a not a Transsmart carrier
-        if self.carrier_id.partner_id and \
-                not self.carrier_id.partner_id.transsmart_id:
-            _logger.debug(
-                "1200wd - [{}] {} is not a Transsmart carrier."
-                " Skip create shipment.".format(
-                    self.carrier_id.id, self.carrier_id.name)
-            )
-            return
+        self._check_valid_in_transsmart()
         if self.transsmart_id:
             raise Warning(_(
                 "This picking is already exported to Transsmart! : ") +
@@ -263,10 +256,9 @@ class StockPicking(models.Model):
             if type(r) == list:
                 r = r[0]
         else:
-            _logger.error(
-                "1200wd - Transsmart returned empty result: %s" % self.name
+            raise Warning(_(
+                "Transsmart returned empty result: %s") % self.name
             )
-            return
         _logger.info("transsmart.document returned: %s" % (json.dumps(r),))
         carrier = self.env[
             'delivery.transsmart.config.settings'
@@ -287,7 +279,12 @@ class StockPicking(models.Model):
     def action_confirm(self):
         if self.env.context.get('ingoing_override', False):
             return super(StockPicking, self).action_confirm()
-        self.action_get_transsmart_rate()
+        try:
+            # For the moment surpress warning. But action should really
+            # only be called for transsmart enebled pcikings:
+            self.action_get_transsmart_rate()
+        except:
+            pass
         return super(StockPicking, self).action_confirm()
 
     @api.model
@@ -326,10 +323,9 @@ class StockPicking(models.Model):
         transsmart = transsmart_config.get_transsmart_service()
         rs = [transsmart.receive('/Document/' + str(transsmart_id))]
         if type(rs) != list or not len(rs):
-            _logger.error(
-                "1200wd - Error retrieving tracking info from Transsmart."
-            )
-            return
+            raise Warning(_(
+                "Error retrieving tracking info from Transsmart."
+            ))
         for r in rs:
             if r['TrackingNumber']:
                 sp = self.env['stock.picking'].search([
@@ -357,6 +353,7 @@ class StockPicking(models.Model):
 
     @api.one
     def action_get_tracking(self):
+        self._check_valid_in_transsmart()
         if self.transsmart_id:
             _logger.debug(
                 "1200wd - Get tracking info from transsmart with"

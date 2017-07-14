@@ -86,7 +86,8 @@ class DeliveryWebService(models.Model):
         """
         log_cr = registry(self.env.cr.dbname).cursor()
         log_model = self.env['http.request.log'].with_env(self.env(cr=log_cr))
-        log_line = log_model.create({
+        # use sudo() because it must always be possible to create a log
+        log_line = log_model.sudo().create({
             'request_type': request_type,
             'request_url': request_url,
             'request_headers': str(request_headers),
