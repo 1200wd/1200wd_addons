@@ -10,5 +10,4 @@ from . import stock_picking
 from . import delivery_transsmart_config_settings
 from . import res_company
 from . import res_partner
-from . import stock_return_picking
 from . import delivery_web_service
