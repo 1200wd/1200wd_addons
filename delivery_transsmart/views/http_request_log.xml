@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+        <record id="http_request_log_form" model="ir.ui.view">
+            <field name="name">HTTP.request.log</field>
+            <field name="model">http.request.log</field>
+            <field name="arch" type="xml">
+                <form string="HTTP request log">
+                    <group>
+                        <field name="request_timestamp"/>
+                        <field name="request_type"/>
+                        <field name="request_url"/>
+                        <field name="response_status_code"/>
+                        <field name="request_headers"/>
+                        <field name="request_params"/>
+                        <field name="request_payload"/>
+                        <field name="response_data"/>
+                    </group>
+               </form>
+           </field>
+        </record>
+        <record id="http_request_log_tree" model="ir.ui.view">
+            <field name="name">HTTP.request.log</field>
+            <field name="model">http.request.log</field>
+            <field name="arch" type="xml">
+                <tree string="HTTP request log">
+                    <field name="request_timestamp"/>
+                    <field name="request_type"/>
+                    <field name="request_url"/>
+                    <field name="response_status_code"/>
+               </tree>
+           </field>
+        </record>
+       
+        <record
+            id="action_http_request_log"
+            model="ir.actions.act_window"
+            >
+            <field name="name">Configure Transsmart</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">delivery.transsmart.config.settings</field>
+            <field name="view_mode">form</field>
+            <field name="target">inline</field>
+        </record>
+
+        <menuitem
+            id="menu_http_request_log"
+            name="HTTP Request log"
+            parent="menu_transsmart_configuration"
+            sequence="20"
+            action="action_http_request_log"
+            />
+            
+   </data>
+</openerp>

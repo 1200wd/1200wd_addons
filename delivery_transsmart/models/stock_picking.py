@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-# © 2015 ONESTEiN BV <http://www.onestein.nl>
 # © 2016 1200 Web Development <http://1200wd.com/>
 # © 2017 Therp BV <http://therp.nl>
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
