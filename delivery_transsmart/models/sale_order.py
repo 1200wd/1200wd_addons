@@ -18,11 +18,7 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ##############################################################################
-
-
-from openerp import models, fields, api, _
-import openerp.addons.decimal_precision as dp
-from openerp.exceptions import Warning
+from openerp import models, fields
 
 
 class SaleOrder(models.Model):
@@ -36,12 +32,13 @@ class SaleOrder(models.Model):
         'transsmart.cost.center',
         string='Delivery Cost Center')
 
-
     def action_ship_create(self, cr, uid, ids, context=None):
         context = context.copy() or {}
         sales = self.browse(cr, uid, ids, context=context)
         context['action_ship_create'] = sales
-        r = super(SaleOrder, self).action_ship_create(cr, uid, ids, context=context)
+        r = super(SaleOrder, self).action_ship_create(
+            cr, uid, ids, context=context
+        )
         for sale in sales:
             sale.picking_ids.action_get_transsmart_rate()
         return r
