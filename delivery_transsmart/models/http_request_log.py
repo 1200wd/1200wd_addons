@@ -6,7 +6,7 @@ from openerp import fields, models
 
 class HTTPRequestLog(models.Model):
     _name = 'http.request.log'
-    _order = 'request_timestamp'
+    _order = 'request_timestamp desc'
 
     request_timestamp = fields.Datetime(
         string='Date/time',
