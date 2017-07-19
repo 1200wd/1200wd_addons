@@ -1,0 +1,5 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_delivery_web_service,access_delivery_web_service,model_delivery_web_service,,1,0,0,0
+access_delivery_web_service_manage,access_delivery_web_service,model_delivery_web_service,stock.group_stock_manager,1,1,1,1
+access_http_request_log_managers,access_http_request_log_managers,model_http_request_log,stock.group_stock_manager,1,0,1,0
+access_http_request_log_readers,access_http_request_log_readers,model_http_request_log,stock.group_stock_user,1,0,0,0
