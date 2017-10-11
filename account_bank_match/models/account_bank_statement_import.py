@@ -46,9 +46,10 @@ class AccountBankStatementImport(models.TransientModel):
                 transaction['ref'] = ''
             if (transaction['name'] and transaction['name'] != '/' and
                     transaction['name'] != transaction['ref']):
-                transaction['ref'] += (
-                    (transaction['ref'] and ' ' or '') + transaction['name']
-                )
+                ref_trans = (transaction['ref'] and ' ' or '') + \
+                    transaction['name']
+                if transaction['ref'] not in ref_trans or not transaction['ref'] and ref_trans:
+                    transaction['ref'] += ref_trans
                 transaction['name'] = '/'
 
         stmt_vals = super(AccountBankStatementImport, self)._complete_statement(stmt_vals, journal_id, account_number)
@@ -73,5 +74,4 @@ class AccountBankStatementImport(models.TransientModel):
             # Fill partner_name and counterparty_name:
             if transaction.get('partner_name'):
                 transaction['counterparty_name'] = transaction['partner_name']
-
         return stmt_vals
