@@ -108,47 +108,87 @@ class DeliveryTranssmartConfiguration(models.TransientModel):
     def get_transsmart_carrier_tag(self):
         return self.env['ir.model.data'].get_object('delivery_transsmart', 'res_partner_category_transsmart_carrier')        
 
+    def _get_odata_filter(self, transsmart_ids):
+        """
+        assembling an odata $filter
+        http://www.odata.org/documentation/
+        odata-version-2-0/uri-conventions/
+
+        Gets all the records that their Id is not in transsmart_ids
+        """
+        _filter = ''
+        for index, code in enumerate(transsmart_ids):
+            if index < len(transsmart_ids) - 1:
+                _filter += 'Id ne {} and '.format(transsmart_ids[index])
+            else:
+                _filter += 'Id ne {}'.format(transsmart_ids[index])
+        return _filter
+
     @api.multi
     def sync_transsmart_models(self):
-        raise Warning("This option is disabled at the moment. Please update transsmart data manually or remove"
-                      "this warning from the code in the Transsmart Delivery module")
-        remote_data = self.get_transsmart_service().receive('/ServiceLevelOther')
+        # if true, fetch everything from the server and overwrite the existing
+        # values of the local records
+        # if false, set up a filter on our request and don't fetch stuff we
+        # already have.
+        update_local_data = True
         local_data = self.env['delivery.service.level'].search([])
-        local_codes = {local.code: local for local in local_data}
+        local_transsmart_ids = [local.transsmart_id for local in local_data]
+        params = {'$filter': self._get_odata_filter(local_transsmart_ids)}
+        remote_data = self.get_transsmart_service().receive(
+            '/ServiceLevelOther',
+            params=params if not update_local_data else {})
         for data in remote_data:
-            if not data['Code'] in local_codes:
+            if not data['Id'] in local_transsmart_ids:
                 self.env['delivery.service.level'].create({
                     'code': data['Code'], 
                     'name': data['Name'], 
                     'transsmart_id': data['Id']})
-                _logger.info("Created transsmart delivery.service.level %s" % (data['Code'],))
+                _logger.info("Created transsmart delivery.service.level %s" % (data['Id'],))
             else:
-                local_codes[data['Code']].write({
+                rec_to_be_updated = local_data.filtered(
+                        lambda rec: rec.transsmart_id == data['Id'])
+                rec_to_be_updated.write({
                     'code': data['Code'], 
                     'name': data['Name'], 
                     'transsmart_id': data['Id']})
+                _logger.info("Updated Service Level {}".format(
+                    rec_to_be_updated.transsmart_id))
 
-        remote_data = self.get_transsmart_service().receive('/ServiceLevelTime')
         local_data = self.env['delivery.service.level.time'].search([])
-        local_codes = {local.code: local for local in local_data}
+        local_transsmart_ids = [local.transsmart_id for local in local_data]
+        params = {'$filter': self._get_odata_filter(local_transsmart_ids)}
+        remote_data = self.get_transsmart_service().receive(
+                '/ServiceLevelTime',
+                params=params if not update_local_data else {})
         for data in remote_data:
-            if not data['Code'] in local_codes:
+            if not data['Id'] in local_transsmart_ids:
                 self.env['delivery.service.level.time'].create({
                     'code': data['Code'], 
                     'name': data['Name'], 
                     'transsmart_id': data['Id']})
-                _logger.info("Created transsmart delivery.service.level.time %s" % (data['Code'],))
+                _logger.info("Created transsmart delivery.service.level.time %s" % (data['Id'],))
             else:
-                local_codes[data['Code']].write({
+                rec_to_be_updated = local_data.filtered(
+                        lambda rec: rec.transsmart_id == data['Id'])
+                rec_to_be_updated.write({
                     'code': data['Code'], 
                     'name': data['Name'], 
                     'transsmart_id': data['Id']})
+                _logger.info("Updated Service Level Time {}".format(
+                    rec_to_be_updated.transsmart_id))
 
-        remote_data = self.get_transsmart_service().receive('/Carrier')
-        local_data = self.env['res.partner'].search([])
-        local_codes = {local.transsmart_code: local for local in local_data}
+        # this is how you indentify res.partners that are carriers 
+        # some carriers have a transsmart_id of 0, we cannot be sure to which
+        # carrier in transsmart our local res.partner maps to so we ignore it
+        local_data = self.env['res.partner'].search(
+                [('transsmart_id', 'not in', [None, 0])])
+        local_transsmart_ids = [local.transsmart_id for local in local_data]
+        params = {'$filter': self._get_odata_filter(local_transsmart_ids)}
+        remote_data = self.get_transsmart_service().receive(
+                '/Carrier',
+                params=params if not update_local_data else {})
         for data in remote_data:
-            if not data['Code'] in local_codes:
+            if not data['Id'] in local_transsmart_ids:
                 self.env['res.partner'].create({
                     'transsmart_code': data['Code'], 
                     'name': data['Name'], 
@@ -157,32 +197,43 @@ class DeliveryTranssmartConfiguration(models.TransientModel):
                     'is_company': True, 
                     'transsmart_id': data['Id'],
                     'category_id': [(4,self.get_transsmart_carrier_tag().id)]})
-                _logger.info("Created transsmart res.partner %s" % (data['Code'],))
+                _logger.info("Created transsmart res.partner %s" % (data['Id'],))
             else:
-                local_codes[data['Code']].write({
+                rec_to_be_updated = local_data.filtered(
+                        lambda rec: rec.transsmart_id == data['Id'])
+                rec_to_be_updated.write({
                     'transsmart_code': data['Code'], 
                     'name': data['Name'], 
                     'supplier': True, 
                     'is_company': True, 
                     'transsmart_id': data['Id'],
                     'category_id': [(4,self.get_transsmart_carrier_tag().id)]})
+                _logger.info("Updated res.partner {}".format(
+                    rec_to_be_updated.transsmart_id))
 
-        remote_data = self.get_transsmart_service().receive('/Costcenter')
         local_data = self.env['transsmart.cost.center'].search([])
-        local_codes = {local.code: local for local in local_data}
+        local_transsmart_ids = [local.transsmart_id for local in local_data]
+        params = {'$filter': self._get_odata_filter(local_transsmart_ids)}
+        remote_data = self.get_transsmart_service().receive(
+            '/Costcenter',
+            params=params if not update_local_data else {})
         for data in remote_data:
-            if not data['Code'] in local_codes:
+            if not data['Id'] in local_transsmart_ids:
                 self.env['transsmart.cost.center'].create({
                     'code': data['Code'], 
                     'name': data['Name'], 
                     'transsmart_id': data['Id']})
                 _logger.info("Created transsmart.cost.center %s" % (data['Code'],))
             else:
-                local_codes[data['Code']].write({
-                    'code': data['Code'], 
-                    'name': data['Name'], 
+                rec_to_be_updated = local_data.filtered(
+                    lambda rec: rec.transsmart_id == data['Id'])
+                rec_to_be_updated.write({
+                    'code': data['Code'],
+                    'name': data['Name'],
                     'transsmart_id': data['Id']})
-
+                _logger.info("Updated transsmart.cost.center {}".format(
+                    rec_to_be_updated.transsmart_id))
+        return True
 
     @api.multi
     def lookup_transsmart_delivery_carrier(self, transsmart_document):
