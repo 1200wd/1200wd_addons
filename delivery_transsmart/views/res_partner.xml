@@ -1,0 +1,16 @@
+<openerp>
+    <data>
+
+        <record id="form_res_partner_carrier_package" model="ir.ui.view">
+            <field name="name">Carrier package field</field>
+            <field name="model">res.partner</field>
+            <field name="inherit_id" ref="base.view_partner_form" />
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='date']" position="after">
+                    <field name="transsmart_package_type_id" />
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</openerp>
