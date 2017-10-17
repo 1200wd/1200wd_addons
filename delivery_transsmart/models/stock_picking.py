@@ -99,8 +99,17 @@ class StockPicking(models.Model):
     def _transsmart_document_from_stock_picking(self):
         # TODO: Move to transsmart settings
         # HARDCODED weight correction: +3% +0.05kg , round to 1 decimal (=0.1kg)
-        weight = float(round(((self.weight * 1.03) + 0.05), 1))
-
+        #weight = float(round(((self.weight * 1.03) + 0.05), 1))
+        # the code below assumes that trassmart_id is unique...
+        carrier = self.env['res.partner'].search(
+                [('transsmart_id', '=', self.get_carrier_id())])
+        colli_information = carrier.transsmart_package_type_id
+        if not colli_information:
+            raise Warning(_(
+                "You have not set a package type for"
+                " the carrier {}, please do".format(carrier.name) + 
+                " so by going to that carrier's form"
+                " Sales and Purchases page"))
         document = {
             "Reference": filter(unicode.isalnum, self.name),
             "RefOrder": self.sale_id.name or '',
@@ -131,13 +140,13 @@ class StockPicking(models.Model):
             "AddressCountry": self.partner_id.country_id.code or '',
             "ColliInformation": [
                 {
-                    "PackagingType": "BOX",
-                    "Description": "Description",
+                    "PackagingType": colli_information._type,
+                    "Description": colli_information.name,
                     "Quantity": 1,
-                    "Length": 8,
-                    "Width": 10,
-                    "Height": 30,
-                    "Weight": weight,
+                    "Length": colli_information.length,
+                    "Width": colli_information.width,
+                    "Height": colli_information.height,
+                    "Weight": colli_information.weight,
                 }
             ],
 

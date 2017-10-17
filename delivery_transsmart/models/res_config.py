@@ -233,6 +233,41 @@ class DeliveryTranssmartConfiguration(models.TransientModel):
                     'transsmart_id': data['Id']})
                 _logger.info("Updated transsmart.cost.center {}".format(
                     rec_to_be_updated.transsmart_id))
+        # get the packages (box, pallet etc...)
+        local_data = self.env['transsmart.package.type'].search([])
+        local_transsmart_ids = [local.transsmart_id for local in local_data]
+        params = {'$filter': self._get_odata_filter(local_transsmart_ids)}
+        remote_data = self.get_transsmart_service().receive(
+                '/Package',
+                params=params if not update_local_data else {})
+        for data in remote_data:
+            if not data['Id'] in local_transsmart_ids:
+                self.env['transsmart.package.type'].create({
+                    'name': data['Name'],
+                    '_type': data['Type'],
+                    'length': data['Length'],
+                    'width': data['Width'],
+                    'height': data['Height'],
+                    'weight': data['Weight'],
+                    'is_default': data['IsDefault'],
+                    'transsmart_id': data['Id'],
+                })
+                _logger.info("Created transsmart.package.type {}".format(
+                    data['Id']))
+            else:
+                rec_to_be_updated = local_data.filtered(
+                        lambda rec: rec.transsmart_id == data['Id'])
+                rec_to_be_updated.write({
+                    'name': data['Name'],
+                    '_type': data['Type'],
+                    'length': data['Length'],
+                    'width': data['Width'],
+                    'height': data['Height'],
+                    'weight': data['Weight'],
+                    'is_default': data['IsDefault'],
+                })
+                _logger.info("Updated transsmart.package.type {}".format(
+                    data['Id']))
         return True
 
     @api.multi

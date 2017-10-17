@@ -13,4 +13,5 @@ class TranssmartPackageType(models.Model):
     width = fields.Float()
     height = fields.Float()
     weight = fields.Float()
-    isDefault = fields.Boolean()
+    is_default = fields.Boolean()
+    transsmart_id = fields.Integer()
