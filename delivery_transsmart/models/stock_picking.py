@@ -107,7 +107,7 @@ class StockPicking(models.Model):
         if not colli_information:
             raise Warning(_(
                 "You have not set a package type for"
-                " the carrier {}, please do".format(carrier.name) + 
+                " the carrier %s, please do" % carrier.name +
                 " so by going to that carrier's form"
                 " Sales and Purchases page"))
         document = {
@@ -138,17 +138,15 @@ class StockPicking(models.Model):
             "AddressCity": self.partner_id.city or '',
             "AddressState": self.partner_id.state_id.name or '',
             "AddressCountry": self.partner_id.country_id.code or '',
-            "ColliInformation": [
-                {
-                    "PackagingType": colli_information._type,
-                    "Description": colli_information.name,
-                    "Quantity": 1,
-                    "Length": colli_information.length,
-                    "Width": colli_information.width,
-                    "Height": colli_information.height,
-                    "Weight": colli_information.weight,
-                }
-            ],
+            "ColliInformation": [{
+                "PackagingType": colli_information.package_type,
+                "Description": colli_information.name,
+                "Quantity": 1,
+                "Length": colli_information.length,
+                "Width": colli_information.width,
+                "Height": colli_information.height,
+                "Weight": colli_information.weight,
+                    }],
 
             "CarrierId": self.get_carrier_id(),
             "ServiceLevelTimeId": self.get_service_level_time_id(),

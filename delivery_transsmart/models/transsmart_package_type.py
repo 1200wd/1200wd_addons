@@ -8,7 +8,7 @@ class TranssmartPackageType(models.Model):
     _name = 'transsmart.package.type'
 
     name = fields.Char()
-    _type = fields.Char()
+    package_type = fields.Char()
     length = fields.Float()
     width = fields.Float()
     height = fields.Float()
