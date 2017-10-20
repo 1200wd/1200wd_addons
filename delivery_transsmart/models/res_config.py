@@ -108,28 +108,10 @@ class DeliveryTranssmartConfiguration(models.TransientModel):
     def get_transsmart_carrier_tag(self):
         return self.env.ref(
                 'delivery_transsmart.res_partner_category_transsmart_carrier'
-                ).id
-
-    def _get_odata_filter(self, transsmart_ids):
-        """
-        assembling an odata $filter
-        http://www.odata.org/documentation/
-        odata-version-2-0/uri-conventions/
-
-        Gets all the records that their Id is not in transsmart_ids
-        """
-        _filter = ''
-        for index, code in enumerate(transsmart_ids):
-            if index < len(transsmart_ids) - 1:
-                _and = ' and '
-            else:
-                _and = ''
-            _filter += 'Id ne {}{}'.format(transsmart_ids[index], _and)
-        return _filter
+        ).id
 
     @api.multi
     def sync_transsmart_models(self):
-        update_local_data = True
         delivery_service_level_model = self.env['delivery.service.level']
         delivery_service_level_time_model = self.env[
                 'delivery.service.level.time']
@@ -138,10 +120,8 @@ class DeliveryTranssmartConfiguration(models.TransientModel):
         transsmart_package_type_model = self.env['transsmart.package.type']
         local_data = delivery_service_level_model.search([])
         local_transsmart_ids = [local.transsmart_id for local in local_data]
-        params = {'$filter': self._get_odata_filter(local_transsmart_ids)}
         remote_data = self.get_transsmart_service().receive(
-            '/ServiceLevelOther',
-            params=params if not update_local_data else {})
+                '/ServiceLevelOther')
         for data in remote_data:
             vals = {'code': data['Code'],
                     'name': data['Name'],
@@ -158,10 +138,8 @@ class DeliveryTranssmartConfiguration(models.TransientModel):
 
         local_data = delivery_service_level_time_model.search([])
         local_transsmart_ids = [local.transsmart_id for local in local_data]
-        params = {'$filter': self._get_odata_filter(local_transsmart_ids)}
         remote_data = self.get_transsmart_service().receive(
-            '/ServiceLevelTime',
-            params=params if not update_local_data else {})
+                '/ServiceLevelTime')
         for data in remote_data:
             vals = {'code': data['Code'],
                     'name': data['Name'],
@@ -182,10 +160,7 @@ class DeliveryTranssmartConfiguration(models.TransientModel):
         local_data = res_partner_model.search(
                 [('transsmart_id', 'not in', [None, 0])])
         local_transsmart_ids = [local.transsmart_id for local in local_data]
-        params = {'$filter': self._get_odata_filter(local_transsmart_ids)}
-        remote_data = self.get_transsmart_service().receive(
-                '/Carrier',
-                params=params if not update_local_data else {})
+        remote_data = self.get_transsmart_service().receive('/Carrier')
         for data in remote_data:
             vals = {'transsmart_code': data['Code'],
                     'name': data['Name'],
@@ -206,10 +181,7 @@ class DeliveryTranssmartConfiguration(models.TransientModel):
 
         local_data = transsmart_cost_center_model.search([])
         local_transsmart_ids = [local.transsmart_id for local in local_data]
-        params = {'$filter': self._get_odata_filter(local_transsmart_ids)}
-        remote_data = self.get_transsmart_service().receive(
-            '/Costcenter',
-            params=params if not update_local_data else {})
+        remote_data = self.get_transsmart_service().receive('/Costcenter')
         for data in remote_data:
             vals = {'code': data['Code'],
                     'name': data['Name'],
@@ -226,10 +198,7 @@ class DeliveryTranssmartConfiguration(models.TransientModel):
         # get the packages (box, pallet etc...)
         local_data = transsmart_package_type_model.search([])
         local_transsmart_ids = [local.transsmart_id for local in local_data]
-        params = {'$filter': self._get_odata_filter(local_transsmart_ids)}
-        remote_data = self.get_transsmart_service().receive(
-                '/Package',
-                params=params if not update_local_data else {})
+        remote_data = self.get_transsmart_service().receive('/Package')
         for data in remote_data:
             vals = {'name': data['Name'],
                     'package_type': data['Type'],
