@@ -27,4 +27,4 @@ from . import res_config
 from . import res_partner
 from . import stock_return_picking
 from . import delivery_web_service
-from . import transsmart_package_type
+from . import delivery_package_type

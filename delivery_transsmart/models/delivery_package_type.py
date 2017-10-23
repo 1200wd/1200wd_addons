@@ -4,8 +4,8 @@
 from openerp import fields, models
 
 
-class TranssmartPackageType(models.Model):
-    _name = 'transsmart.package.type'
+class DeliveryPackageType(models.Model):
+    _name = 'delivery.package.type'
     _description = 'Package types accepted by Transsmart'
 
     name = fields.Char()

@@ -34,7 +34,7 @@ class ResPartner(models.Model):
     transsmart_id = fields.Integer(
         "Transsmart ID")
     transsmart_package_type_id = fields.Many2one(
-            'transsmart.package.type',
+            'delivery.package.type',
             string='Package Type')
 
 

@@ -25,12 +25,57 @@ from openerp.exceptions import Warning
 import logging
 
 _logger = logging.getLogger(__name__)
+TRANS_API_ENDPOINTS = {
+        'delivery.service.level': 'ServiceLevelOther',
+        'delivery.service.level.time': 'ServiceLevelTime',
+        'res.partner': 'Carrier',
+        'transsmart.cost.center': 'Costcenter',
+        'delivery.package.type': 'Package',}
+TRANS_MODELS_LOCAL = [
+        'delivery.service.level',
+        'delivery.service.level.time',
+        'res.partner',
+        'transsmart.cost.center',
+        'delivery.package.type',
+        ]
+TRANS_MODELS_VALS = {
+        'delivery.service.level':{'code': 'Code',
+            'name': 'Name',
+            'transsmart_id': 'Id',
+            },
+        'delivery.service.level.time': {'code': 'Code',
+            'name': 'Name',
+            'transsmart_id': 'Id',
+            },
+        'res.partner': {'transsmart_code': 'Code',
+            'name': 'Name',
+            'supplier': True,
+            'customer': False,
+            'is_company': True,
+            'transsmart_id': 'Id',
+            'category_id': [(4, )],
+            },
+        'transsmart.cost.center': {'code': 'Code',
+            'name': 'Name',
+            'transsmart_id': 'Id',
+            },
+        'delivery.package.type': {'name': 'Name',
+            'package_type': 'Type',
+            'length': 'Length',
+            'width': 'Width',
+            'height': 'Height',
+            'weight': 'Weight',
+            'is_default': 'IsDefault',
+            'transsmart_id': 'Id',
+            },
+        }
+
 
 class DeliveryWebService(models.Model):
     _name = 'delivery.web.service'
 
     name = fields.Char(string="Title", required=True)
-    url = fields.Char(string="URL", required=True, default="https://connect.test.api.transwise.eu/Api")
+    url = fields.Char(string="URL", required=True, default="https://connect.test.api.transwise.eu/Api/")
     username = fields.Char(string="Username", required=True)
     password = fields.Char(string="Password", required=True)
 

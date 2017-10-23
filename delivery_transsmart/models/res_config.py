@@ -23,8 +23,11 @@
 from openerp import models, fields, api, _
 from openerp.exceptions import Warning
 import logging
+from .delivery_web_service import TRANS_API_ENDPOINTS, TRANS_MODELS_LOCAL, \
+        TRANS_MODELS_VALS
 
 _logger = logging.getLogger(__name__)
+
 
 class DeliveryTranssmartConfiguration(models.TransientModel):
     _name = 'delivery.transsmart.config.settings'
@@ -46,6 +49,7 @@ class DeliveryTranssmartConfiguration(models.TransientModel):
         string='Connection',
         help='Transsmart connection for this Odoo instance'
     )
+    log = fields.Text(string='Synchronisation log')
 
     @api.multi
     def get_default_transsmart(self):
@@ -110,114 +114,42 @@ class DeliveryTranssmartConfiguration(models.TransientModel):
                 'delivery_transsmart.res_partner_category_transsmart_carrier'
         ).id
 
+    def _sync_transsmart_model(self, model_name):
+        model_obj = self.env[model_name]
+        if model_name == 'res.partner':
+            local_data = model_obj.search([
+                ('transsmart_id', 'not in', [None, 0])])
+        else:
+            local_data = model_obj.search([])
+        local_transsmart_ids = [local.transsmart_id for local in local_data]
+        remote_data = self.get_transsmart_service().receive(
+                TRANS_API_ENDPOINTS[model_name])
+        for data in remote_data:
+            template_vals = TRANS_MODELS_VALS[model_name]
+            vals = {}
+            for key in template_vals.keys():
+                if key == 'category_id':
+                    vals[key] = [(4, self.get_transsmart_carrier_tag())]
+                    continue
+                if template_vals[key] in [False, True]:
+                    vals[key] = template_vals[key]
+                else:
+                    vals[key] = data[template_vals[key]]
+            if not data['Id'] in local_transsmart_ids:
+                model_obj.create(vals)
+            else:
+                rec_to_be_updated = local_data.filtered(
+                        lambda rec: rec.transsmart_id == data['Id'])
+                rec_to_be_updated.write(vals)
+
     @api.multi
     def sync_transsmart_models(self):
-        delivery_service_level_model = self.env['delivery.service.level']
-        delivery_service_level_time_model = self.env[
-                'delivery.service.level.time']
-        res_partner_model = self.env['res.partner']
-        transsmart_cost_center_model = self.env['transsmart.cost.center']
-        transsmart_package_type_model = self.env['transsmart.package.type']
-        local_data = delivery_service_level_model.search([])
-        local_transsmart_ids = [local.transsmart_id for local in local_data]
-        remote_data = self.get_transsmart_service().receive(
-                '/ServiceLevelOther')
-        for data in remote_data:
-            vals = {'code': data['Code'],
-                    'name': data['Name'],
-                    'transsmart_id': data['Id'],}
-            if not data['Id'] in local_transsmart_ids:
-                delivery_service_level_model.create(vals)
-                _logger.info("Created transsmart delivery.service.level %s" % (data['Id'],))
-            else:
-                rec_to_be_updated = local_data.filtered(
-                        lambda rec: rec.transsmart_id == data['Id'])
-                rec_to_be_updated.write(vals)
-                _logger.info("Updated Service Level {}".format(
-                    rec_to_be_updated.transsmart_id))
-
-        local_data = delivery_service_level_time_model.search([])
-        local_transsmart_ids = [local.transsmart_id for local in local_data]
-        remote_data = self.get_transsmart_service().receive(
-                '/ServiceLevelTime')
-        for data in remote_data:
-            vals = {'code': data['Code'],
-                    'name': data['Name'],
-                    'transsmart_id': data['Id']}
-            if not data['Id'] in local_transsmart_ids:
-                delivery_service_level_time_model.create(vals)
-                _logger.info("Created transsmart delivery.service.level.time %s" % (data['Id'],))
-            else:
-                rec_to_be_updated = local_data.filtered(
-                        lambda rec: rec.transsmart_id == data['Id'])
-                rec_to_be_updated.write(vals)
-                _logger.info("Updated Service Level Time {}".format(
-                    rec_to_be_updated.transsmart_id))
-
-        # this is how you indentify res.partners that are carriers 
-        # some carriers have a transsmart_id of 0, we cannot be sure to which
-        # carrier in transsmart our local res.partner maps to so we ignore it
-        local_data = res_partner_model.search(
-                [('transsmart_id', 'not in', [None, 0])])
-        local_transsmart_ids = [local.transsmart_id for local in local_data]
-        remote_data = self.get_transsmart_service().receive('/Carrier')
-        for data in remote_data:
-            vals = {'transsmart_code': data['Code'],
-                    'name': data['Name'],
-                    'supplier': True,
-                    'customer': False,
-                    'is_company': True,
-                    'transsmart_id': data['Id'],
-                    'category_id': [(4, self.get_transsmart_carrier_tag())]}
-            if not data['Id'] in local_transsmart_ids:
-                res_partner_model.create(vals)
-                _logger.info("Created transsmart res.partner %s" % (data['Id'],))
-            else:
-                rec_to_be_updated = local_data.filtered(
-                        lambda rec: rec.transsmart_id == data['Id'])
-                rec_to_be_updated.write(vals)
-                _logger.info("Updated res.partner {}".format(
-                    rec_to_be_updated.transsmart_id))
-
-        local_data = transsmart_cost_center_model.search([])
-        local_transsmart_ids = [local.transsmart_id for local in local_data]
-        remote_data = self.get_transsmart_service().receive('/Costcenter')
-        for data in remote_data:
-            vals = {'code': data['Code'],
-                    'name': data['Name'],
-                    'transsmart_id': data['Id']}
-            if not data['Id'] in local_transsmart_ids:
-                transsmart_cost_center_model.create(vals)
-                _logger.info("Created transsmart.cost.center %s" % (data['Code'],))
-            else:
-                rec_to_be_updated = local_data.filtered(
-                    lambda rec: rec.transsmart_id == data['Id'])
-                rec_to_be_updated.write(vals)
-                _logger.info("Updated transsmart.cost.center {}".format(
-                    rec_to_be_updated.transsmart_id))
-        # get the packages (box, pallet etc...)
-        local_data = transsmart_package_type_model.search([])
-        local_transsmart_ids = [local.transsmart_id for local in local_data]
-        remote_data = self.get_transsmart_service().receive('/Package')
-        for data in remote_data:
-            vals = {'name': data['Name'],
-                    'package_type': data['Type'],
-                    'length': data['Length'],
-                    'width': data['Width'],
-                    'height': data['Height'],
-                    'weight': data['Weight'],
-                    'is_default': data['IsDefault'],
-                    'transsmart_id': data['Id']}
-            if not data['Id'] in local_transsmart_ids:
-                transsmart_package_type_model.create(vals)
-                _logger.info("Created transsmart.package.type {}".format(
-                    data['Id']))
-            else:
-                rec_to_be_updated = local_data.filtered(
-                        lambda rec: rec.transsmart_id == data['Id'])
-                rec_to_be_updated.write(vals)
-                _logger.info("Updated transsmart.package.type {}".format(
-                    data['Id']))
+        self.log = 'Synchronisation started at {} \n'.format(
+                fields.Datetime.now())
+        for model_name in TRANS_MODELS_LOCAL:
+            self._sync_transsmart_model(model_name)
+        self.log += 'Synchronisation finished at {} \n'.format(
+                fields.Datetime.now())
         return True
 
     @api.multi
