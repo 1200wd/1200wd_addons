@@ -37,6 +37,9 @@
                             </div>
                         </div>
                     </group>
+                    <group name="Synchronisation log">
+                        <field name="log" nolabel="1" readonly="1" />
+                    </group>
                </form>
            </field>
         </record>

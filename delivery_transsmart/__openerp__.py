@@ -39,6 +39,7 @@
         "views/service_level_views.xml",
         "views/res_config_views.xml",
         "views/delivery_web_service_views.xml",
+        "views/res_partner.xml",
         "data/data.xml",
     ],
     'demo': [],

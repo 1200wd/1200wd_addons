@@ -23,8 +23,11 @@
 from openerp import models, fields, api, _
 from openerp.exceptions import Warning
 import logging
+from .delivery_web_service import TRANS_API_ENDPOINTS, TRANS_MODELS_LOCAL, \
+        TRANS_MODELS_VALS
 
 _logger = logging.getLogger(__name__)
+
 
 class DeliveryTranssmartConfiguration(models.TransientModel):
     _name = 'delivery.transsmart.config.settings'
@@ -46,6 +49,7 @@ class DeliveryTranssmartConfiguration(models.TransientModel):
         string='Connection',
         help='Transsmart connection for this Odoo instance'
     )
+    log = fields.Text(string='Synchronisation log')
 
     @api.multi
     def get_default_transsmart(self):
@@ -106,83 +110,47 @@ class DeliveryTranssmartConfiguration(models.TransientModel):
         return self.env['delivery.web.service'].browse([wst])
 
     def get_transsmart_carrier_tag(self):
-        return self.env['ir.model.data'].get_object('delivery_transsmart', 'res_partner_category_transsmart_carrier')        
+        return self.env.ref(
+                'delivery_transsmart.res_partner_category_transsmart_carrier'
+        ).id
+
+    def _sync_transsmart_model(self, model_name):
+        model_obj = self.env[model_name]
+        if model_name == 'res.partner':
+            local_data = model_obj.search([
+                ('transsmart_id', 'not in', [None, 0])])
+        else:
+            local_data = model_obj.search([])
+        local_transsmart_ids = [local.transsmart_id for local in local_data]
+        remote_data = self.get_transsmart_service().receive(
+                TRANS_API_ENDPOINTS[model_name])
+        for data in remote_data:
+            template_vals = TRANS_MODELS_VALS[model_name]
+            vals = {}
+            for key in template_vals.keys():
+                if key == 'category_id':
+                    vals[key] = [(4, self.get_transsmart_carrier_tag())]
+                    continue
+                if template_vals[key] in [False, True]:
+                    vals[key] = template_vals[key]
+                else:
+                    vals[key] = data[template_vals[key]]
+            if not data['Id'] in local_transsmart_ids:
+                model_obj.create(vals)
+            else:
+                rec_to_be_updated = local_data.filtered(
+                        lambda rec: rec.transsmart_id == data['Id'])
+                rec_to_be_updated.write(vals)
 
     @api.multi
     def sync_transsmart_models(self):
-        raise Warning("This option is disabled at the moment. Please update transsmart data manually or remove"
-                      "this warning from the code in the Transsmart Delivery module")
-        remote_data = self.get_transsmart_service().receive('/ServiceLevelOther')
-        local_data = self.env['delivery.service.level'].search([])
-        local_codes = {local.code: local for local in local_data}
-        for data in remote_data:
-            if not data['Code'] in local_codes:
-                self.env['delivery.service.level'].create({
-                    'code': data['Code'], 
-                    'name': data['Name'], 
-                    'transsmart_id': data['Id']})
-                _logger.info("Created transsmart delivery.service.level %s" % (data['Code'],))
-            else:
-                local_codes[data['Code']].write({
-                    'code': data['Code'], 
-                    'name': data['Name'], 
-                    'transsmart_id': data['Id']})
-
-        remote_data = self.get_transsmart_service().receive('/ServiceLevelTime')
-        local_data = self.env['delivery.service.level.time'].search([])
-        local_codes = {local.code: local for local in local_data}
-        for data in remote_data:
-            if not data['Code'] in local_codes:
-                self.env['delivery.service.level.time'].create({
-                    'code': data['Code'], 
-                    'name': data['Name'], 
-                    'transsmart_id': data['Id']})
-                _logger.info("Created transsmart delivery.service.level.time %s" % (data['Code'],))
-            else:
-                local_codes[data['Code']].write({
-                    'code': data['Code'], 
-                    'name': data['Name'], 
-                    'transsmart_id': data['Id']})
-
-        remote_data = self.get_transsmart_service().receive('/Carrier')
-        local_data = self.env['res.partner'].search([])
-        local_codes = {local.transsmart_code: local for local in local_data}
-        for data in remote_data:
-            if not data['Code'] in local_codes:
-                self.env['res.partner'].create({
-                    'transsmart_code': data['Code'], 
-                    'name': data['Name'], 
-                    'supplier': True, 
-                    'customer': False,
-                    'is_company': True, 
-                    'transsmart_id': data['Id'],
-                    'category_id': [(4,self.get_transsmart_carrier_tag().id)]})
-                _logger.info("Created transsmart res.partner %s" % (data['Code'],))
-            else:
-                local_codes[data['Code']].write({
-                    'transsmart_code': data['Code'], 
-                    'name': data['Name'], 
-                    'supplier': True, 
-                    'is_company': True, 
-                    'transsmart_id': data['Id'],
-                    'category_id': [(4,self.get_transsmart_carrier_tag().id)]})
-
-        remote_data = self.get_transsmart_service().receive('/Costcenter')
-        local_data = self.env['transsmart.cost.center'].search([])
-        local_codes = {local.code: local for local in local_data}
-        for data in remote_data:
-            if not data['Code'] in local_codes:
-                self.env['transsmart.cost.center'].create({
-                    'code': data['Code'], 
-                    'name': data['Name'], 
-                    'transsmart_id': data['Id']})
-                _logger.info("Created transsmart.cost.center %s" % (data['Code'],))
-            else:
-                local_codes[data['Code']].write({
-                    'code': data['Code'], 
-                    'name': data['Name'], 
-                    'transsmart_id': data['Id']})
-
+        self.log = 'Synchronisation started at {} \n'.format(
+                fields.Datetime.now())
+        for model_name in TRANS_MODELS_LOCAL:
+            self._sync_transsmart_model(model_name)
+        self.log += 'Synchronisation finished at {} \n'.format(
+                fields.Datetime.now())
+        return True
 
     @api.multi
     def lookup_transsmart_delivery_carrier(self, transsmart_document):
