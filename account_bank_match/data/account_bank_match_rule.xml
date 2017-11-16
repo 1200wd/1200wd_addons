@@ -62,7 +62,7 @@
 
         <record id="account_bank_match.account_bank_match_rule_7" model="account.bank.match.rule">
             <field name="active">True</field>
-            <field name="rule"> [('amount_total', '>', '@amount-0.10@'), ('amount_total', '&lt;', '@amount+0.10@')]</field>
+            <field name="rule">[('amount_total', '>', '@amount-0.10@'), ('amount_total', '&lt;', '@amount+0.10@')]</field>
             <field name="model">sale.order</field>
             <field name="score_item">3</field>
             <field name="score">25</field>
@@ -82,7 +82,7 @@
 
         <record id="account_bank_match.account_bank_match_rule_9" model="account.bank.match.rule">
             <field name="active">True</field>
-            <field name="rule"> [('id', '=', '@partner_id.id@')]</field>
+            <field name="rule">[('id', '=', '@partner_id.id@')]</field>
             <field name="model">res.partner</field>
             <field name="score_item">0</field>
             <field name="score">80</field>
@@ -92,7 +92,7 @@
 
         <record id="account_bank_match.account_bank_match_rule_10" model="account.bank.match.rule">
             <field name="active">True</field>
-            <field name="rule"> [('name', 'ilike', '@partner_name@')]</field>
+            <field name="rule">[('name', 'ilike', '@partner_name@')]</field>
             <field name="model">res.partner</field>
             <field name="score_item">0</field>
             <field name="score">70</field>
@@ -102,7 +102,7 @@
 
         <record id="account_bank_match.account_bank_match_rule_11" model="account.bank.match.rule">
             <field name="active">True</field>
-            <field name="rule"> [('partner_id', '!=', '@partner_id.id@')]</field>
+            <field name="rule">[('partner_id', '!=', '@partner_id.id@')]</field>
             <field name="model">account.invoice</field>
             <field name="score_item">-25</field>
             <field name="score">0</field>
@@ -112,7 +112,7 @@
 
         <record id="account_bank_match.account_bank_match_rule_12" model="account.bank.match.rule">
             <field name="active">True</field>
-            <field name="rule"> [('type', 'not in', ['out_invoice', 'in_refund']), ('amount_total', '=', '@amount@*-1')]</field>
+            <field name="rule">[('type', 'not in', ['out_invoice', 'in_refund']), ('amount_total', '=', '@amount@*-1')]</field>
             <field name="model">account.invoice</field>
             <field name="score_item">10</field>
             <field name="score">50</field>
@@ -122,7 +122,7 @@
 
         <record id="account_bank_match.account_bank_match_rule_13" model="account.bank.match.rule">
             <field name="active">True</field>
-            <field name="rule"> [('type', 'not in', ['out_invoice', 'in_refund']), ('amount_total', '>', '-1*@amount-0.10@'), ('amount_total', '&lt;', '-1*@amount+0.10@')]</field>
+            <field name="rule">[('type', 'not in', ['out_invoice', 'in_refund']), ('amount_total', '>', '-1*@amount-0.10@'), ('amount_total', '&lt;', '-1*@amount+0.10@')]</field>
             <field name="model">account.invoice</field>
             <field name="score_item">5</field>
             <field name="score">25</field>
@@ -132,7 +132,7 @@
 
         <record id="account_bank_match.account_bank_match_rule_14" model="account.bank.match.rule">
             <field name="active">True</field>
-            <field name="rule"> [('type', 'not in', ['out_invoice', 'in_refund']), ('amount_total', '>', '@amount@*-0.9'), ('amount_total', '&lt;', '@amount@*-1.1')]</field>
+            <field name="rule">[('type', 'not in', ['out_invoice', 'in_refund']), ('amount_total', '>', '@amount@*-0.9'), ('amount_total', '&lt;', '@amount@*-1.1')]</field>
             <field name="model">account.invoice</field>
             <field name="score_item">1</field>
             <field name="score">5</field>
@@ -142,7 +142,7 @@
 
         <record id="account_bank_match.account_bank_match_rule_15" model="account.bank.match.rule">
             <field name="active">True</field>
-            <field name="rule"> [('type', 'not in', ['out_invoice', 'in_refund']), ('amount_total', '&lt;', '@amount@*-0.5')]</field>
+            <field name="rule">[('type', 'not in', ['out_invoice', 'in_refund']), ('amount_total', '&lt;', '@amount@*-0.5')]</field>
             <field name="model">account.invoice</field>
             <field name="score_item">-50</field>
             <field name="score">0</field>
@@ -152,7 +152,7 @@
 
         <record id="account_bank_match.account_bank_match_rule_16" model="account.bank.match.rule">
             <field name="active">True</field>
-            <field name="rule"> [('type', 'in', ['out_invoice', 'in_refund']), ('amount_total', '>', '@amount@*1.2')]</field>
+            <field name="rule">[('type', 'in', ['out_invoice', 'in_refund']), ('amount_total', '>', '@amount@*1.2')]</field>
             <field name="model">account.invoice</field>
             <field name="score_item">-50</field>
             <field name="score">0</field>
@@ -162,7 +162,7 @@
 
         <record id="account_bank_match.account_bank_match_rule_17" model="account.bank.match.rule">
             <field name="active">True</field>
-            <field name="rule"> [('date_invoice', '>', '@date-days(40)@'), ('date_invoice', '&lt;', '@date-days(1)@')]</field>
+            <field name="rule">[('date_invoice', '>', '@date-days(40)@'), ('date_invoice', '&lt;', '@date-days(1)@')]</field>
             <field name="model">account.invoice</field>
             <field name="score_item">10</field>
             <field name="score">0</field>
