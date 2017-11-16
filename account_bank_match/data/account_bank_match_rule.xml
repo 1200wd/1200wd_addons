@@ -1,0 +1,174 @@
+<openerp>
+    <data noupdate="1">
+        <record id="account_bank_match.account_bank_match_rule_1" model="account.bank.match.rule">
+            <field name="active">True</field>
+            <field name="rule">[('type', 'in', ['out_invoice', 'in_refund']), ('amount_total', '>', '@amount-0.10@'), ('amount_total', '&lt;', '@amount+0.10@')]</field>
+            <field name="model">account.invoice</field>
+            <field name="score_item">5</field>
+            <field name="score">25</field>
+            <field name="name">Amount: Small difference Invoice</field>
+            <field name="type">extraction</field>
+        </record>
+
+        <record id="account_bank_match.account_bank_match_rule_2" model="account.bank.match.rule">
+            <field name="active">True</field>
+            <field name="rule">[('type', 'in', ['out_invoice', 'in_refund']), ('amount_total', '=', '@amount@')]</field>
+            <field name="model">account.invoice</field>
+            <field name="score_item">10</field>
+            <field name="score">50</field>
+            <field name="name">Amount: Exact Invoice</field>
+            <field name="type">extraction</field>
+        </record>
+
+        <record id="account_bank_match.account_bank_match_rule_3" model="account.bank.match.rule">
+            <field name="active">True</field>
+            <field name="rule">[('date_invoice', '&lt;', '@date-days(100)@')]</field>
+            <field name="model">account.invoice</field>
+            <field name="score_item">-10</field>
+            <field name="score">0</field>
+            <field name="name">Date: Old Invoice</field>
+            <field name="type">bonus</field>
+        </record>
+
+        <record id="account_bank_match.account_bank_match_rule_4" model="account.bank.match.rule">
+            <field name="active">True</field>
+            <field name="rule">[('date_order', '&lt;', '@date-days(100)@')]</field>
+            <field name="model">sale.order</field>
+            <field name="score_item">-20</field>
+            <field name="score">0</field>
+            <field name="name">Date: Old Order</field>
+            <field name="type">bonus</field>
+        </record>
+
+        <record id="account_bank_match.account_bank_match_rule_5" model="account.bank.match.rule">
+            <field name="active">True</field>
+            <field name="rule">[('date_order', '>', '@date-days(40)@'), ('date_order', '&lt;', '@date-days(1)@')]</field>
+            <field name="model">sale.order</field>
+            <field name="score_item">10</field>
+            <field name="score">0</field>
+            <field name="name">Date: Recent Order</field>
+            <field name="type">bonus</field>
+        </record>
+
+        <record id="account_bank_match.account_bank_match_rule_6" model="account.bank.match.rule">
+            <field name="active">True</field>
+            <field name="rule">[('amount_total', '=', '@amount@')]</field>
+            <field name="model">sale.order</field>
+            <field name="score_item">10</field>
+            <field name="score">50</field>
+            <field name="name">Amount: Exact Order</field>
+            <field name="type">extraction</field>
+        </record>
+
+        <record id="account_bank_match.account_bank_match_rule_7" model="account.bank.match.rule">
+            <field name="active">True</field>
+            <field name="rule"> [('amount_total', '>', '@amount-0.10@'), ('amount_total', '&lt;', '@amount+0.10@')]</field>
+            <field name="model">sale.order</field>
+            <field name="score_item">3</field>
+            <field name="score">25</field>
+            <field name="name">Amount: Small difference Order</field>
+            <field name="type">extraction</field>
+        </record>
+
+        <record id="account_bank_match.account_bank_match_rule_8" model="account.bank.match.rule">
+            <field name="active">True</field>
+            <field name="rule">[('type', 'in', ['out_invoice', 'in_refund']), ('amount_total', '>', '@amount@*0.9'), ('amount_total', '&lt;', '@amount@*1.1')]</field>
+            <field name="model">account.invoice</field>
+            <field name="score_item">1</field>
+            <field name="score">5</field>
+            <field name="name">Amount: +-10% difference Invoice</field>
+            <field name="type">extraction</field>
+        </record>
+
+        <record id="account_bank_match.account_bank_match_rule_9" model="account.bank.match.rule">
+            <field name="active">True</field>
+            <field name="rule"> [('id', '=', '@partner_id.id@')]</field>
+            <field name="model">res.partner</field>
+            <field name="score_item">0</field>
+            <field name="score">80</field>
+            <field name="name">Partner ID</field>
+            <field name="type">extraction</field>
+        </record>
+
+        <record id="account_bank_match.account_bank_match_rule_10" model="account.bank.match.rule">
+            <field name="active">True</field>
+            <field name="rule"> [('name', 'ilike', '@partner_name@')]</field>
+            <field name="model">res.partner</field>
+            <field name="score_item">0</field>
+            <field name="score">70</field>
+            <field name="name">Partner Name</field>
+            <field name="type">extraction</field>
+        </record>
+
+        <record id="account_bank_match.account_bank_match_rule_11" model="account.bank.match.rule">
+            <field name="active">True</field>
+            <field name="rule"> [('partner_id', '!=', '@partner_id.id@')]</field>
+            <field name="model">account.invoice</field>
+            <field name="score_item">-25</field>
+            <field name="score">0</field>
+            <field name="name">Partner ID Wrong</field>
+            <field name="type">bonus</field>
+        </record>
+
+        <record id="account_bank_match.account_bank_match_rule_12" model="account.bank.match.rule">
+            <field name="active">True</field>
+            <field name="rule"> [('type', 'not in', ['out_invoice', 'in_refund']), ('amount_total', '=', '@amount@*-1')]</field>
+            <field name="model">account.invoice</field>
+            <field name="score_item">10</field>
+            <field name="score">50</field>
+            <field name="name">Amount: Exact Invoice OUT</field>
+            <field name="type">extraction</field>
+        </record>
+
+        <record id="account_bank_match.account_bank_match_rule_13" model="account.bank.match.rule">
+            <field name="active">True</field>
+            <field name="rule"> [('type', 'not in', ['out_invoice', 'in_refund']), ('amount_total', '>', '-1*@amount-0.10@'), ('amount_total', '&lt;', '-1*@amount+0.10@')]</field>
+            <field name="model">account.invoice</field>
+            <field name="score_item">5</field>
+            <field name="score">25</field>
+            <field name="name">Amount: Small difference Invoice OUT</field>
+            <field name="type">extraction</field>
+        </record>
+
+        <record id="account_bank_match.account_bank_match_rule_14" model="account.bank.match.rule">
+            <field name="active">True</field>
+            <field name="rule"> [('type', 'not in', ['out_invoice', 'in_refund']), ('amount_total', '>', '@amount@*-0.9'), ('amount_total', '&lt;', '@amount@*-1.1')]</field>
+            <field name="model">account.invoice</field>
+            <field name="score_item">1</field>
+            <field name="score">5</field>
+            <field name="name">Amount: +-10% difference Invoice OUT</field>
+            <field name="type">extraction</field>
+        </record>
+
+        <record id="account_bank_match.account_bank_match_rule_15" model="account.bank.match.rule">
+            <field name="active">True</field>
+            <field name="rule"> [('type', 'not in', ['out_invoice', 'in_refund']), ('amount_total', '&lt;', '@amount@*-0.5')]</field>
+            <field name="model">account.invoice</field>
+            <field name="score_item">-50</field>
+            <field name="score">0</field>
+            <field name="name">Amount: Large difference Invoice OUT</field>
+            <field name="type">bonus</field>
+        </record>
+
+        <record id="account_bank_match.account_bank_match_rule_16" model="account.bank.match.rule">
+            <field name="active">True</field>
+            <field name="rule"> [('type', 'in', ['out_invoice', 'in_refund']), ('amount_total', '>', '@amount@*1.2')]</field>
+            <field name="model">account.invoice</field>
+            <field name="score_item">-50</field>
+            <field name="score">0</field>
+            <field name="name">Amount: Large difference Invoice</field>
+            <field name="type">bonus</field>
+        </record>
+
+        <record id="account_bank_match.account_bank_match_rule_17" model="account.bank.match.rule">
+            <field name="active">True</field>
+            <field name="rule"> [('date_invoice', '>', '@date-days(40)@'), ('date_invoice', '&lt;', '@date-days(1)@')]</field>
+            <field name="model">account.invoice</field>
+            <field name="score_item">10</field>
+            <field name="score">0</field>
+            <field name="name">Date: Recent Invoice</field>
+            <field name="type">bonus</field>
+        </record>
+
+    </data>
+</openerp>
