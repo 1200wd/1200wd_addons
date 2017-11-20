@@ -18,17 +18,19 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ##############################################################################
-
-
-from openerp import models, fields, api, _
-from openerp.exceptions import Warning
+from openerp import models, fields
 
 
 class DeliveryServiceLevel(models.Model):
     _name = 'delivery.service.level'
 
     name = fields.Char(size=128, string="Name")
-    code = fields.Char(size=128, string="Code", help="This code should match the code in the Transsmart configuration.")
+    code = fields.Char(
+        size=128,
+        string="Code",
+        help="This code should match the code in the Transsmart"
+             " configuration."
+    )
     transsmart_id = fields.Integer("Transsmart ID")
     description = fields.Char(size=256, string="Description")
 
@@ -38,9 +40,17 @@ class DeliveryServiceLevelTime(models.Model):
 
     name = fields.Char(size=128, string="Name")
     transsmart_id = fields.Integer("Transsmart ID")
-    code = fields.Char(size=128, string="Code", help="This code should match the code in the Transsmart configuration.")
+    code = fields.Char(
+        size=128,
+        string="Code",
+        help="This code should match the code in the Transsmart"
+             " configuration."
+    )
     description = fields.Char(size=256, string="Description")
-    pre_book = fields.Boolean(string="Available for pre-booking", default=False)
+    pre_book = fields.Boolean(
+        string="Available for pre-booking",
+        default=False,
+    )
 
 
 class TranssmartCostCenter(models.Model):
@@ -48,5 +58,10 @@ class TranssmartCostCenter(models.Model):
 
     name = fields.Char(size=128, string="Name")
     transsmart_id = fields.Integer("Transsmart ID")
-    code = fields.Char(size=128, string="Code", help="This code should match the code in the Transsmart configuration.")
+    code = fields.Char(
+        size=128,
+        string="Code",
+        help="This code should match the code in the Transsmart"
+             " configuration."
+    )
     description = fields.Char(size=256, string="Description")
