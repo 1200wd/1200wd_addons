@@ -30,6 +30,7 @@ class DeliveryTranssmartConfiguration(models.TransientModel):
         string='Connection',
         help='Transsmart connection for this Odoo instance'
     )
+    log = fields.Text(string='Synchronisation log')
 
     @api.multi
     def get_default_transsmart(self):
