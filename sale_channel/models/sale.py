@@ -23,7 +23,7 @@ class SaleOrder(models.Model):
         if partner_id:
             partner = self.env['res.partner'].browse(partner_id)
             if partner.sales_channel_id:
-                res['value']['sales_channel_id'] = partner.sales_channel_id
+                res['value']['sales_channel_id'] = partner.sales_channel_id.id
         return res
 
     @api.model
