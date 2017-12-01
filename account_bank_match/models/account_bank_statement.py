@@ -711,6 +711,7 @@ class AccountBankStatementLine(models.Model):
             'currency_id': currency_id,
             'amount_currency': amount_currency or 0.0,
             'company_id': invoice.company_id.id,
+            'statement_id': self.statement_id.id,
         }))]
         if payment_difference and writeoff_acc_id and writeoff_difference:
             move_lines.append((0, 0, {
@@ -724,6 +725,7 @@ class AccountBankStatementLine(models.Model):
                 'currency_id': currency_id,
                 'amount_currency': amount_currency or 0.0,
                 'company_id': invoice.company_id.id,
+                'statement_id': self.statement_id.id,
             }))
             mv2_debit = invoice_total > 0 and invoice_total
             mv2_credit = invoice_total < 0 and -invoice_total
@@ -742,6 +744,7 @@ class AccountBankStatementLine(models.Model):
             'currency_id': currency_id,
             'amount_currency': inv_direction * (amount_currency or 0.0),
             'company_id': invoice.company_id.id,
+            'statement_id': self.statement_id.id,
         }))
         move = self.env['account.move'].create({
             'ref': ref,
