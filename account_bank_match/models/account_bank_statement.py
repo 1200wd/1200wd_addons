@@ -273,6 +273,10 @@ class AccountBankStatementLine(models.Model):
             ids = res_partner_model.search([
                 ('name', '=', 'Conscious Wholesale'),
                 ('category_id.name', '=', 'Sales Channel')]).ids
+        elif journal_name in ['Coinpayments Azarius2']:
+            ids = res_partner_model.search([
+                ('name', 'in', ['Azarius', 'Vaposhop']),
+                ('category_id.name', '=', 'Sales Channel')]).ids
         else:
             ids = res_partner_model.search([
                 ('name', '=', 'Azarius'),
