@@ -1102,6 +1102,14 @@ class AccountBankStatementLine(models.Model):
         # FIXME: Values are not saved anymore when removing this method
         return super(AccountBankStatementLine, self).write(vals)
 
+    @api.multi
+    def _get_iban_country_id(self):
+        self.ensure_one()
+        iban = self.bank_account_id.sanitized_acc_number
+        if self.env['res.partner.bank'].is_iban_valid(iban=iban):
+            return self.env['res.country'].search(
+                [('code', '=', iban[:2])]).id
+        return self.bank_account_id.country_id
 
 
 class AccountBankStatement(models.Model):
