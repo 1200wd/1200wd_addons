@@ -170,5 +170,17 @@
             <field name="type">bonus</field>
         </record>
 
+        <record
+            id="account_bank_match.account_bank_match_rule_18"
+            model="account.bank.match.rule">
+            <field name="active">True</field>
+            <field name="rule">[('partner_invoice_id.country_id', '=', '@_get_iban_country_id())@')]</field>
+            <field name="model">sale.order</field>
+            <field name="score_item">10</field>
+            <field name="score">0</field>
+            <field name="name">Country: Same country on payment and customer</field>
+            <field name="type">extraction</field>
+        </record>
+
     </data>
 </openerp>
