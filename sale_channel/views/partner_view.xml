@@ -56,7 +56,7 @@
         <menuitem id="menu_sales_channel"
                   action="action_sales_channels_view"
                   parent="base.menu_base_config"
-                  groups="base.group_sale_manager"/>
+                  groups="base.group_erp_manager"/>
 
     </data>
 </openerp>
