@@ -26,6 +26,17 @@ from openerp import api, models
 class AccountBankStatementImport(models.TransientModel):
     _inherit = 'account.bank.statement.import'
 
+    def empty_name(self, transaction):
+        """Empty name, moving possible info to ref field."""
+        ref = 'ref' in transaction and transaction['ref'] or ''
+        name = 'name' in transaction and transaction['name'] or ''
+        name = name != '/' and name or ''
+        if ref in name or not ref:
+            transaction['ref'] = name
+        else:
+            transaction['ref'] = ' '.join([ref, name])
+        transaction['name'] = '/'
+
     @api.model
     def _complete_statement(self, stmt_vals, journal_id, account_number):
         """Override to set statement name from journal sequence.
@@ -38,20 +49,6 @@ class AccountBankStatementImport(models.TransientModel):
         be available to fill in with invoice reference (this is copied more or
         less from existing code).
         """
-
-        def empty_name(transaction):
-            """Empty name, moving possible info to ref field."""
-            # Make absolutely sure transaction['ref'] contains a string:
-            if 'ref' not in transaction or not transaction['ref']:
-                transaction['ref'] = ''
-            if (transaction['name'] and transaction['name'] != '/' and
-                    transaction['name'] != transaction['ref']):
-                ref_trans = (transaction['ref'] and ' ' or '') + \
-                    transaction['name']
-                if transaction['ref'] not in ref_trans or not transaction['ref'] and ref_trans:
-                    transaction['ref'] += ref_trans
-                transaction['name'] = '/'
-
         stmt_vals = super(AccountBankStatementImport, self)._complete_statement(stmt_vals, journal_id, account_number)
         # set a custom statement name:
         if journal_id:
@@ -70,7 +67,7 @@ class AccountBankStatementImport(models.TransientModel):
                     'Referenz NOTPROVIDED',
                     'Verwendungszweck',
                 ])
-            empty_name(transaction)
+            self.empty_name(transaction)
             # Fill partner_name and counterparty_name:
             if transaction.get('partner_name'):
                 transaction['counterparty_name'] = transaction['partner_name']
