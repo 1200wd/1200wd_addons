@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 ##############################################################################
 #
-#    Delivery Transsmart Ingegration - Picking Waves
+#    Delivery Transsmart Ingegration - Address Consolidation
 #    Copyright (C) 2016 1200 Web Development (<http://1200wd.com/>)
-#              (C) 2015 ONESTEiN BV (<http://www.onestein.nl>).
-#              (C) 2015 1200 Web Development (<http://1200wd.com/>)
+#              (C) 2015 ONESTEiN BV (<http://www.onestein.nl>)
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -20,27 +19,21 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ##############################################################################
+from openerp import models
 
-{
-    'name': "Transsmart Wave",
-    'summary': """Picking Wave support for Transsmart integration""",
-    'description': """
-    This module allows the user to send delivvery orders to transsmart from
-    using the Picking waves.
-    """,
-    'author': "1200 Web Development",
-    'website': "http://1200wd.com",
-    'category': 'Warehouse',
-    'version': '8.0.2.0',
-    'depends': [
-        'delivery_transsmart',
-        'stock_picking_wave'
-    ],
-    'data': [
-        'views/stock_picking_wave.xml'
-    ],
-    'demo': [],
-    'installable': True,
-    'auto_install': False,
-    'application': False,
-}
+
+class StockPicking(models.Model):
+    _inherit = 'stock.picking'
+
+    def _transsmart_create_shipping(self):
+        document = super(StockPicking, self)._transsmart_create_shipping()
+        document[0]['addresses'][1].update({
+            "name": self.partner_id.name or '',
+            "addressLine1": self.shipping_partner_street or '',
+            "addressLine2": self.shipping_partner_street2 or '',
+            "zipCode": self.shipping_partner_zip or '',
+            "city": self.shipping_partner_city or '',
+            "state": self.shipping_partner_state_id.name or '',
+            "country": self.shipping_partner_country_id.code or '',
+        })
+        return document

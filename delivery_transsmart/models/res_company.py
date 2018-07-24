@@ -8,7 +8,4 @@ from openerp import fields, models
 class ResCompany(models.Model):
     _inherit = 'res.company'
 
-    transsmart_enabled = fields.Boolean(
-        'Use Transsmart',
-        default=True,
-    )
+    transsmart_enabled = fields.Boolean('Use Transsmart')

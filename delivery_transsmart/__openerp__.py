@@ -9,26 +9,30 @@
     Transsmart Integration for Odoo.
     Exchange delivery information between Odoo and Transsmart.
     """,
-    'author': "1200 Web Development",
-    'website': "http://1200wd.com",
+    'author': "1200 Web Development| Therp B.V",
     'category': 'Warehouse',
-    'version': '8.0.3.1',
+    'version': '8.0.3.3',
     'depends': [
+        'stock',
         'delivery',
+        'product_harmonized_system',
     ],
     'data': [
         "security/ir.model.access.csv",
-        "views/delivery_transsmart_views.xml",
-        "views/service_level_views.xml",
-        "views/res_config_views.xml",
-        "views/delivery_web_service_views.xml",
+        "data/ir_cron.xml",
+        "views/transsmart_config_settings.xml",
+        "views/res_company.xml",
+        "views/service_level_other.xml",
+        "views/service_level_time.xml",
+        "views/cost_center.xml",
         "views/res_partner.xml",
         "views/stock_picking.xml",
-        "views/http_request_log.xml",
-        "data/data.xml",
+        "views/product_template.xml",
+        "views/delivery_carrier.xml",
+        "wizards/stock_transfer_details.xml",
     ],
-    'demo': [],
-    'installable': True,
-    'auto_install': False,
-    'application': False,
+    'application': True,
+    'external_dependencies': {
+        'python': ['mock', 'transsmart']
+    },
 }

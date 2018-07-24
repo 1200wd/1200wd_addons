@@ -26,9 +26,12 @@
     'description': """
     Integrates delivery_transsmart with address_consolidation
     Uses the denormalized address from address_consolidation in all
-    stock_transsmart communication instead off the standard res_partner_address.
+    stock_transsmart communication instead off the standard
+    res_partner_address.
 
-    This module is based on Onestein's version but is compatible with the new Transsmart API and has many bug fixes and improvements.
+    This module is based on Onestein's version
+    but is compatible with the new Transsmart API
+    and has many bug fixes and improvements.
     """,
     'author': "1200 Web Development",
     'website': "http://1200wd.com",
