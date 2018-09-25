@@ -1,0 +1,9 @@
+<openerp>
+    <data noupdate="1">
+
+        <record id="sales_channel" model="res.partner.category">
+            <field name="name">Sales Channel</field>
+        </record>
+
+    </data>
+</openerp>
