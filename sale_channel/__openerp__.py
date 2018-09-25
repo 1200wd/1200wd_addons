@@ -24,7 +24,7 @@
         'account',
     ],
     'data': [
-        'data/res.partner.category.csv',
+        'data/res_partner_category.xml',
         'views/sale_view.xml',
         'views/partner_view.xml',
         'views/account_invoice_view.xml',
