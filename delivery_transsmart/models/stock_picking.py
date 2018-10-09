@@ -307,7 +307,6 @@ class StockPicking(models.Model):
         context = context or {}
         default = default or {}
         default.update({
-            'cost_center_id': False,
             'transsmart_confirmed': False,
             'transsmart_id': 0,
             'delivery_cost': 0,
