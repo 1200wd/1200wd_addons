@@ -1,5 +1,5 @@
 <openerp>
-    <data noupdate="1">
+    <data>
 
         <function name="_migrate_get_proper_channel" model="account.journal"/>
         <function

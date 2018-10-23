@@ -32,20 +32,26 @@ class AccountJournal(models.Model):
             ('name', '=', 'Vaposhop'),
             ('category_id.name', '=', 'Sales Channel')],
             limit=1)
-        self.search([('name', 'in', group_1)]).write({
-            'sales_channel_id':  vaposhop.id})
+        self.search([
+            ('name', 'in', group_1),
+            ('sales_channel_id', '=', False)]).write({
+                'sales_channel_id':  vaposhop.id})
         conscious = res_partner.search([
             ('name', '=', 'Conscious Wholesale'),
             ('category_id.name', '=', 'Sales Channel')],
             limit=1)
-        self.search([('name', 'in', group_2)]).write({
-            'sales_channel_id': conscious.id})
+        self.search([
+            ('name', 'in', group_2),
+            ('sales_channel_id', '=', False)]).write({
+                'sales_channel_id': conscious.id})
         azarius = res_partner.search([
             ('name', '=', 'Azarius'),
             ('category_id.name', '=', 'Sales Channel')],
             limit=1)
-        self.search([('name', 'not in', group_1 + group_2)]).write({
-            'sales_channel_id': azarius.id})
+        self.search([
+            ('name', 'not in', group_1 + group_2),
+            ('sales_channel_id', '=', False)]).write({
+                'sales_channel_id': azarius.id})
 
     @api.model
     def _migrate_add_sales_channel_on_rules(self):
