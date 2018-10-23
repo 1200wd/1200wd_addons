@@ -44,8 +44,10 @@ If one correct match is found automatically link and reconcile the statement lin
         'views/res_config_view.xml',
         'views/account_bank_match.xml',
         'views/account_bank_statement_view.xml',
+        'views/account_journal.xml',
         'data/account_bank_match_rule.xml',
-        'data/account_bank_match_cron.xml'
+        'data/account_bank_match_cron.xml',
+        'data/account_journal.xml',
     ],
     'price': 0.00,
     'currency': 'EUR',

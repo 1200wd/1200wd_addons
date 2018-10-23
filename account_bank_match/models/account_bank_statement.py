@@ -254,35 +254,6 @@ class AccountBankStatementLine(models.Model):
                 self._handle_error(msg)
         return matches
 
-    def get_proper_channel(self):
-        """
-        Get the journal_id from the statement line and return the
-        sales channels associated with it.
-        """
-        journal_name = self.journal_id.name
-        res_partner_model = self.env['res.partner']
-        if journal_name in [
-                'Tus. Rek. Pay.nl Shavita/ARI',
-                'Tus.rek. Shavita/ARI',
-                'Shavita Paypal',
-                'Shavita Sofort']:
-            ids = res_partner_model.search([
-                ('name', '=', 'Vaposhop'),
-                ('category_id.name', '=', 'Sales Channel')]).ids
-        elif journal_name in ['Tus.rek. Conscious/ARI']:
-            ids = res_partner_model.search([
-                ('name', '=', 'Conscious Wholesale'),
-                ('category_id.name', '=', 'Sales Channel')]).ids
-        elif journal_name in ['Coinpayments Azarius2']:
-            ids = res_partner_model.search([
-                ('name', 'in', ['Azarius', 'Vaposhop']),
-                ('category_id.name', '=', 'Sales Channel')]).ids
-        else:
-            ids = res_partner_model.search([
-                ('name', '=', 'Azarius'),
-                ('category_id.name', '=', 'Sales Channel')]).ids
-        return ids
-
     @api.model
     def _parse_rule(self, rule):
         """
