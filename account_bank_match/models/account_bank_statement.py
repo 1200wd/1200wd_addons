@@ -254,7 +254,6 @@ class AccountBankStatementLine(models.Model):
                 self._handle_error(msg)
         return matches
 
-
     @api.model
     def _parse_rule(self, rule):
         """
