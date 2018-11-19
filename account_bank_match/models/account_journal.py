@@ -21,19 +21,24 @@ class AccountJournal(models.Model):
         to Vaposhop, on group_2 to Conscious and everything else on Azarius.
         """
         group_1 = [
-            'Tus. Rek. Pay.nl Shavita/ARI',
-            'Tus.rek. Shavita/ARI',
-            'Shavita Paypal',
-            'Shavita Sofort',
+            'BNK16',
+            'BNK18',
+            'BNK20',
+            'BNK4'
+            'PAYPL',
+            'COIN',
             ]
-        group_2 = ['Tus.rek. Conscious/ARI']
+        group_2 = [
+            'BNK2',
+            'BNK3',
+            ]
         res_partner = self.env['res.partner']
         vaposhop = res_partner.search([
             ('name', '=', 'Vaposhop'),
             ('category_id.name', '=', 'Sales Channel')],
             limit=1)
         self.search([
-            ('name', 'in', group_1),
+            ('code', 'in', group_1),
             ('sales_channel_id', '=', False)]).write({
                 'sales_channel_id':  vaposhop.id})
         conscious = res_partner.search([
@@ -41,7 +46,7 @@ class AccountJournal(models.Model):
             ('category_id.name', '=', 'Sales Channel')],
             limit=1)
         self.search([
-            ('name', 'in', group_2),
+            ('code', 'in', group_2),
             ('sales_channel_id', '=', False)]).write({
                 'sales_channel_id': conscious.id})
         azarius = res_partner.search([
@@ -49,7 +54,7 @@ class AccountJournal(models.Model):
             ('category_id.name', '=', 'Sales Channel')],
             limit=1)
         self.search([
-            ('name', 'not in', group_1 + group_2),
+            ('code', 'not in', group_1 + group_2),
             ('sales_channel_id', '=', False)]).write({
                 'sales_channel_id': azarius.id})
 
