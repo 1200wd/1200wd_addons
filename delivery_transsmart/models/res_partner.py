@@ -14,11 +14,6 @@ class ResPartner(models.Model):
     nr = fields.Integer('Identifier')
     code = fields.Char()
     carrier = fields.Boolean()
-    package_type_id = fields.Many2one(
-        'product.template',
-        domain=[('code', '!=', False)],
-        string='Package Type',
-    )
 
     _sql_constrains = [
         ('nr_unique', 'unique(nr)', 'Identifier must be unique.')]

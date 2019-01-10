@@ -15,13 +15,6 @@
                                 'invisible': [('carrier', '=', False)],
                                 'required': [('carrier', '!=', False)],
                             }"/>
-                    <field
-                        name="package_type_id"
-                        attrs="
-                            {
-                                'invisible': [('carrier', '=', False)],
-                                'required': [('carrier', '!=', False)],
-                            }"/>
                 </xpath>
             </field>
         </record>

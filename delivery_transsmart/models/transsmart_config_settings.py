@@ -140,7 +140,6 @@ class TranssmartConfigSettings(models.TransientModel):
                 'name': value['name'],
                 'carrier': True,
                 'customer': False,
-                'package_type_id': self._get_default_package_id()
                 }
             res_partner_carrier = res_partner.search([
                 ('nr', '=', carrier['nr'])])
@@ -148,10 +147,3 @@ class TranssmartConfigSettings(models.TransientModel):
                 res_partner_carrier.create(value)
             else:
                 res_partner_carrier.write(value)
-
-    def _get_default_package_id(self):
-        default_package = self.env['product.template'].search([
-            ('package', '=', True),
-            ('is_default', '=', True)],
-            limit=1)
-        return default_package.id
