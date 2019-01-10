@@ -113,7 +113,7 @@ class StockPicking(models.Model):
                         'weight': self.carrier_id.product_id.weight,
                     },
                 'packageType': self.carrier_id.product_id._type,
-                'quantity': len(self.move_lines), 
+                'quantity': len(self.move_lines),
                 'deliveryNoteInfo': {
                     'deliveryNoteLines': [
                         {
@@ -178,25 +178,29 @@ class StockPicking(models.Model):
         for field in REQUIRED_FIELDS:
             if not document.get(field):
                 raise exceptions.ValidationError(_(
-                    "Field %s needs to have a value." % field))
+                    "Field %s on %s needs to have a value.") %
+                    field,
+                    self.name)
         for address in document.get('addresses'):
             for key in address.keys():
                 if not address[key] and key != 'addressLine2':
                     raise exceptions.ValidationError(_(
-                        "Field %s on address needs to have a value." % key))
+                        "Field %s on address on %s needs to have a value.") %
+                        key,
+                        self.name)
         for package in document.get('packages'):
             for key in package.get('measurements').keys():
                 if not package.get('measurements')[key]:
                     raise exceptions.ValidationError(_(
-                        "Make sure that Package Type is set on the order "
+                        "Make sure that Package Type is set on %s "
                         "or on the carrier "
                         "and its dimensions length, width, height and weight "
-                        "are filled."))
+                        "are filled.") % self.name)
             for field in REQUIRED_PACKAGE_FIELDS:
                 if not package.get(field):
                     raise exceptions.ValidationError(_(
-                        "Make sure that %s field of the Package Type has a "
-                        "value." % field))
+                        "Make sure that %s field of the Package Type %s has a "
+                        "value.") % field, self.carrier_id.product_id.name)
 
     @api.multi
     def action_create_transsmart_document(self):
