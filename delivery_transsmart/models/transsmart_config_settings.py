@@ -115,8 +115,8 @@ class TranssmartConfigSettings(models.TransientModel):
             value = json.loads(package['value'])
             value.update({'nr': package['nr']})
             _type = value['type']
-            value = _assemble_common_values(value)
-            value.update({
+            values = _assemble_common_values(value)
+            values.update({
                 'name': value['description'],
                 'type': 'service',
                 'package': True,
@@ -124,13 +124,17 @@ class TranssmartConfigSettings(models.TransientModel):
                 'sale_ok': False,
                 'purchase_ok': False,
                 'package': True,
+                'length': value['length'],
+                'width': value['width'],
+                'height': value['height'],
+                'weight': value['weight'],
                 })
             product_template = product_template.search([
-                ('nr', '=', value['nr'])])
+                ('nr', '=', values['nr'])])
             if not product_template:
-                product_template.create(value)
+                product_template.create(values)
             else:
-                product_template.write(value)
+                product_template.write(values)
         response = connection.Account.retrieve_carrier(self.account_code)
         for carrier in response.json():
             value = json.loads(carrier['value'])
