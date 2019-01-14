@@ -179,15 +179,13 @@ class StockPicking(models.Model):
             if not document.get(field):
                 raise exceptions.ValidationError(_(
                     "Field %s on %s needs to have a value.") %
-                    field,
-                    self.name)
+                    (field, self.name))
         for address in document.get('addresses'):
             for key in address.keys():
                 if not address[key] and key != 'addressLine2':
                     raise exceptions.ValidationError(_(
                         "Field %s on address on %s needs to have a value.") %
-                        key,
-                        self.name)
+                        (key, self.name))
         for package in document.get('packages'):
             for key in package.get('measurements').keys():
                 if not package.get('measurements')[key]:
@@ -195,12 +193,12 @@ class StockPicking(models.Model):
                         "Make sure that Package Type is set on %s "
                         "or on the carrier "
                         "and its dimensions length, width, height and weight "
-                        "are filled.") % self.name)
+                        "are filled.") % (self.name))
             for field in REQUIRED_PACKAGE_FIELDS:
                 if not package.get(field):
                     raise exceptions.ValidationError(_(
                         "Make sure that %s field of the Package Type %s has a "
-                        "value.") % field, self.carrier_id.product_id.name)
+                        "value.") % (field, self.carrier_id.product_id.name))
 
     @api.multi
     def action_create_transsmart_document(self):
@@ -214,8 +212,8 @@ class StockPicking(models.Model):
         for rec in self:
             document = rec._false_to_empty_string(
                 rec._transsmart_create_shipping())
-            self._validate_create_booking_document(document)
-            connection = self._get_transsmart_connection()
+            rec._validate_create_booking_document(document)
+            connection = rec._get_transsmart_connection()
             response = connection.Shipment.book(
                 account_code,
                 'BOOK',
@@ -223,11 +221,11 @@ class StockPicking(models.Model):
             response_json = response.json()
             if not response.ok:
                 raise exceptions.ValidationError(_(
-                    "%s %s" % (
+                    "%s %s") % (
                         response_json['message'],
                         '\n'.join([
                             error['errorDescription'] for error in
-                            response_json['details']]))))
+                            response_json['details']])))
             response_json = response_json[0]  # unpack
             data = {
                 'delivery_cost': response_json['price'],
@@ -302,7 +300,7 @@ class StockPicking(models.Model):
                 if not address[key] and key != 'addressLine2':
                     raise exceptions.ValidationError(_(
                         "Field %s in the receiving and sending addresses must "
-                        "be filled." % key))
+                        "be filled.") % (key))
 
     @api.multi
     def transsmart_get_rates(self):
@@ -324,9 +322,9 @@ class StockPicking(models.Model):
                 document).json()
             if 'errors' in response[0]:
                 raise exceptions.ValidationError(_(
-                    "%s \n %s" % (
+                    "%s \n %s") % (
                         response[0]['errors']['message'],
-                        response[0]['errors']['description'])))
+                        response[0]['errors']['description']))
             rate_obj = sorted(
                 response[0]['rates'],
                 key=lambda x: x['price'])[0]
