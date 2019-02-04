@@ -218,15 +218,10 @@ class StockPicking(models.Model):
                 account_code,
                 'BOOK',
                 document)
-            response_json = response.json()
             if not response.ok:
                 raise exceptions.ValidationError(_(
-                    "%s %s") % (
-                        response_json['message'],
-                        '\n'.join([
-                            error['errorDescription'] for error in
-                            response_json['details']])))
-            response_json = response_json[0]  # unpack
+                    response.json()))
+            response_json = response.json()[0]  # unpack
             data = {
                 'delivery_cost': response_json['price'],
                 'carrier_tracking_ref': response_json['trackingUrl'],
@@ -319,14 +314,12 @@ class StockPicking(models.Model):
             self._validate_get_rates_document(document)
             response = connection.Rate.calculate(
                 account_code,
-                document).json()
-            if 'errors' in response[0]:
+                document)
+            if not response.ok:
                 raise exceptions.ValidationError(_(
-                    "%s \n %s") % (
-                        response[0]['errors']['message'],
-                        response[0]['errors']['description']))
+                    response.json()))
             rate_obj = sorted(
-                response[0]['rates'],
+                response.json()[0]['rates'],
                 key=lambda x: x['price'])[0]
             rec.write({
                 'delivery_cost': rate_obj['price'],
