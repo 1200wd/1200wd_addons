@@ -113,7 +113,7 @@ class StockPicking(models.Model):
                         'weight': self.carrier_id.product_id.weight,
                     },
                 'packageType': self.carrier_id.product_id._type,
-                'quantity': len(self.move_lines),
+                'quantity': 1,  # one package for everything
                 'deliveryNoteInfo': {
                     'deliveryNoteLines': [
                         {
