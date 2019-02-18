@@ -29,6 +29,10 @@ class StockPicking(models.Model):
         'service.level.other',
         string='Service Level Other',
     )
+    incoterm_id = fields.Many2one(
+        'stock.incoterms',
+        string='Incoterm',
+    )
 
     @api.depends('partner_id.country_id')
     def _compute_service(self):
@@ -133,6 +137,7 @@ class StockPicking(models.Model):
             'serviceLevelTime':
                 self._get_service_level_time_id().code,
             'serviceLevelOther': self._get_service_level_other_id().code,
+            'incoterms': self.incoterm_id.code,
             'costCenter': self.cost_center_id.code,
             'pickupDate': fields.Datetime.from_string(
                 self.min_date).date().isoformat(),

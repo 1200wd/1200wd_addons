@@ -43,6 +43,11 @@
                         groups="stock.group_stock_manager"
                         widget="monetary"
                         options="{'currency_field': 'delivery_cost_currency_id'}"/>
+                    <field
+                        name="incoterm_id"
+                        attrs="{'readonly': [
+                            '|', ('state', '=', ['cancel', 'done']),
+                            ('carrier_id', '=', False)]}"/>
                 </xpath>
                 <xpath expr="//header//field[@name='state']" position="before">
                     <button
