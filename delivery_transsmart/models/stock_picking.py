@@ -34,6 +34,17 @@ class StockPicking(models.Model):
         string='Incoterm',
     )
 
+    @api.onchange('carrier_id')
+    def onchange_carrier_id(self):
+        return {
+            'domain': {
+                'service_level_time_id': [(
+                    'carrier_id', '=', self.carrier_id.id)],
+                'service_level_other_id': [(
+                    'carrier_id', '=', self.carrier_id.id)],
+                }
+            }
+
     @api.depends('partner_id.country_id')
     def _compute_service(self):
         for rec in self:
@@ -122,10 +133,18 @@ class StockPicking(models.Model):
                     'deliveryNoteLines': [
                         {
                             'hsCode': line.product_id.hs_code_id.hs_code,
+                            'hsCodeDescription':
+                                line.product_id.hs_code_id.description,
                             'description': line.name,
                             'price': line.product_id.lst_price,
                             'currency': self.sale_id.currency_id.name,
                             'quantity': line.product_uom_qty,
+                            'countryOrigin':
+                                line.product_id.origin_country_id.code,
+                            'articleId': self.product_id.default_code,
+                            'articleName': self.product_id.name,
+                            'articleEanCode': self.product_id.ean13,
+                            'reasonOfExport': self.reason_for_export,
                         } for line in self.move_lines],
                     }
                 }

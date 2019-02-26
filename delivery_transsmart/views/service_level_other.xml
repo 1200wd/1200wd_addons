@@ -10,6 +10,7 @@
                     <field name="name" string="Name"/>
                     <field name="code"/>
                     <field name="description"/>
+                    <field name="carrier_id"/>
                 </tree>
             </field>
         </record>
@@ -23,6 +24,7 @@
                         <field name="name" string="Name"/>
                         <field name="code"/>
                         <field name="description"/>
+                        <field name="carrier_id"/>
                     </group>
                 </form>
             </field>
