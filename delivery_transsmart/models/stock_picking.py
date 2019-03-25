@@ -132,9 +132,13 @@ class StockPicking(models.Model):
                 'deliveryNoteInfo': {
                     'deliveryNoteLines': [
                         {
-                            'hsCode': line.product_id.hs_code_id.hs_code,
+                            'hsCode':
+                                line.product_id.hs_code_id.hs_code or
+                                line.product_id.category_hs_code_id.hs_code,
                             'hsCodeDescription':
-                                line.product_id.hs_code_id.description,
+                                line.product_id.hs_code_id.description or
+                                line.product_id.category_hs_code_id \
+                                .description,
                             'description': line.name,
                             'price': line.product_id.lst_price,
                             'currency': self.sale_id.currency_id.name,
