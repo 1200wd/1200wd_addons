@@ -210,7 +210,7 @@ class StockPicking(models.Model):
                     (field, self.name))
         for address in document.get('addresses'):
             for key in address.keys():
-                if not address[key] and key != 'addressLine2':
+                if not address[key] and key not in ['addressLine2', 'state']:
                     raise exceptions.ValidationError(_(
                         "Field %s on address on %s needs to have a value.") %
                         (key, self.name))
