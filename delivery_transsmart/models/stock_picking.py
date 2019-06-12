@@ -115,7 +115,6 @@ class StockPicking(models.Model):
                     'contact': self.partner_id.name,
                     'telNo': self.partner_id.phone,
                     'email': self.partner_id.email,
-                    'customerNumber': self.partner_id.ref,
                 },
             ],
             # for now a single package that contains everything
