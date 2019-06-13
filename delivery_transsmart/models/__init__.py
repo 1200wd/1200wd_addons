@@ -11,3 +11,4 @@ from . import cost_center
 from . import res_partner
 from . import product_template
 from . import delivery_carrier
+from . import booking_profile

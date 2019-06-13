@@ -62,6 +62,7 @@ class TranssmartConfigSettings(models.TransientModel):
         service_level_time = self.env['service.level.time']
         product_template = self.env['product.template']
         res_partner = self.env['res.partner']
+        booking_profile = self.env['booking.profile']
         connection = Connection().connect(
             self.username,
             self.password,
@@ -151,3 +152,24 @@ class TranssmartConfigSettings(models.TransientModel):
                 res_partner_carrier.create(value)
             else:
                 res_partner_carrier.write(value)
+        response = connection.Account.retrieve_bookingprofiles(
+            self.account_code)
+        for profile in response.json():
+            value = json.loads(profile['value'])
+            value = {
+                'nr': profile['nr'],
+                'code': value['code'],
+                'name': value['description'],
+                'carrier_id': value['carrier'],
+                'service_level_time_id': value['serviceLevelTime'],
+                'service_level_other_id': value['serviceLevelOther'],
+                'incoterms_id': value['incoterms'],
+                'costcenter_id': value['costCenter'],
+                'mailtype': value['mailType'],
+                }
+            booking_profile = booking_profile.search([
+                ('nr', '=', carrier['nr'])])
+            if not booking_profile:
+                booking_profile.create(value)
+            else:
+                booking_profile.write(value)

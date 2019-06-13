@@ -33,6 +33,18 @@ class StockPicking(models.Model):
         'stock.incoterms',
         string='Incoterm',
     )
+    booking_profile_id = fields.Many2one('booking.profile', 'Booking Profile')
+    send_to_transsmart = fields.Boolean(
+        compute='_compute_send_to_transsmart',
+        store=True,
+    )
+
+    @api.depends('company_id', 'picking_type_id', 'carrier_id')
+    @api.multi
+    def _compute_send_to_transsmart(self):
+        for rec in self.filtered(
+                lambda x: x.picking_type_id.code == 'outgoing'):
+            rec.send_to_transsmart = rec._send_to_transsmart()
 
     @api.onchange('carrier_id')
     def onchange_carrier_id(self):
@@ -44,6 +56,17 @@ class StockPicking(models.Model):
                     'carrier_id', '=', self.carrier_id.id)],
                 }
             }
+
+    @api.onchange('booking_profile_id')
+    def onchange_booking_profile_id(self):
+        self.update({
+            'cost_center_id': self.booking_profile_id.costcenter_id.id,
+            'service_level_time_id':
+                self.booking_profile_id.service_level_time_id.id,
+            'service_level_other_id':
+                self.booking_profile_id.service_level_other_id.id,
+            'incoterm_id': self.booking_profile_id.incoterms_id.id,
+        })
 
     @api.depends('partner_id.country_id')
     def _compute_service(self):

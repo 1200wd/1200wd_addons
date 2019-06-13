@@ -12,42 +12,26 @@
                 <xpath
                     expr="//field[@name='carrier_id']"
                     position="attributes">
-                    <attribute name="attrs">
-                        {'readonly': [('state', 'in', ['cancel', 'done'])]}
-                    </attribute>
-                    <attribute name="string">
-                        Delivery Method
-                    </attribute>
+                    <attribute name="invisible">1</attribute>
+                    <attribute name="string">Delivery Method</attribute>
                 </xpath>
                 <xpath
                     expr="//field[@name='carrier_id']"
                     position="after">
+                    <field name="send_to_transsmart" invisible="1"/>
                     <field
-                        name="cost_center_id"
-                        attrs="{'readonly': [('state', 'in', ['cancel', 'done'])]}"/>
-                    <field
-                        name="service_level_time_id"
-                        attrs="{
-                            'readonly': [
-                                '|', ('state', 'in', ['cancel', 'done']),
-                                ('carrier_id', '=', False)]}"/>
-                    <field
-                        name="service_level_other_id"
-                        attrs="{
-                            'readonly': [
-                                '|', ('state', 'in', ['cancel', 'done']),
-                                ('carrier_id', '=', False)]}"/>
+                        name="booking_profile_id"
+                        attrs="{'readonly': [('send_to_transsmart', '=', False)]}"/>
+                    <field name="cost_center_id" readonly="1"/>
+                    <field name="service_level_time_id" readonly="1"/>
+                    <field name="service_level_other_id" readonly="1"/>
                     <field name="delivery_cost_currency_id" invisible="1" />
                     <field
                         name="delivery_cost"
                         groups="stock.group_stock_manager"
                         widget="monetary"
                         options="{'currency_field': 'delivery_cost_currency_id'}"/>
-                    <field
-                        name="incoterm_id"
-                        attrs="{'readonly': [
-                            '|', ('state', '=', ['cancel', 'done']),
-                            ('carrier_id', '=', False)]}"/>
+                    <field name="incoterm_id" readonly="1"/>
                 </xpath>
                 <xpath expr="//header//field[@name='state']" position="before">
                     <button
@@ -97,6 +81,10 @@
                         context="{'group_by':'carrier_id'}"/>
                 </xpath>
             </field>
+        </record>
+
+        <record id="stock.action_picking_tree" model="ir.actions.act_window">
+            <field name="context">{'readonly_by_pass': True}</field>
         </record>
 
     </data>

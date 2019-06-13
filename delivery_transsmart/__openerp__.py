@@ -16,6 +16,7 @@
         'stock',
         'delivery',
         'product_harmonized_system',
+        'web_readonly_bypass',
     ],
     'data': [
         "security/ir.model.access.csv",
@@ -29,6 +30,7 @@
         "views/stock_picking.xml",
         "views/product_template.xml",
         "views/delivery_carrier.xml",
+        "views/booking_profile.xml",
         "wizards/stock_transfer_details.xml",
     ],
     'application': True,
