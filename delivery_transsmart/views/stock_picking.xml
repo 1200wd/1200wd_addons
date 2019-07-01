@@ -31,7 +31,8 @@
                         groups="stock.group_stock_manager"
                         widget="monetary"
                         options="{'currency_field': 'delivery_cost_currency_id'}"/>
-                    <field name="incoterm_id" readonly="1"/>
+                        <field name="incoterm_id" readonly="1"/>
+                        <field name="service"/>
                 </xpath>
                 <xpath expr="//header//field[@name='state']" position="before">
                     <button

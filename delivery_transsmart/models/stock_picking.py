@@ -68,15 +68,10 @@ class StockPicking(models.Model):
             'incoterm_id': self.booking_profile_id.incoterms_id.id,
         })
 
-    @api.depends('partner_id.country_id')
-    def _compute_service(self):
-        for rec in self:
-            if self._is_in_european_union(rec.partner_id.country_id):
-                rec.service = 'NON-DOCS'
-            else:
-                rec.service = 'DOCS'
-
-    service = fields.Char('Service', compute='_compute_service', store=False)
+    service = fields.Selection(
+        [('DOCS', 'DOCS'), ('NON-DOCS', 'NON-DOCS')],
+        default='NON-DOCS',
+    )
 
     def _is_in_european_union(self, country_id):
         return country_id in self.env.ref('base.europe').country_ids
