@@ -19,9 +19,7 @@
                     expr="//field[@name='carrier_id']"
                     position="after">
                     <field name="send_to_transsmart" invisible="1"/>
-                    <field
-                        name="booking_profile_id"
-                        attrs="{'readonly': [('send_to_transsmart', '=', False)]}"/>
+                    <field name="booking_profile_id"/>
                     <field name="cost_center_id" readonly="1"/>
                     <field name="service_level_time_id" readonly="1"/>
                     <field name="service_level_other_id" readonly="1"/>
@@ -33,6 +31,7 @@
                         options="{'currency_field': 'delivery_cost_currency_id'}"/>
                         <field name="incoterm_id" readonly="1"/>
                         <field name="service"/>
+                        <field name="package_type_id" string="Package Type"/>
                 </xpath>
                 <xpath expr="//header//field[@name='state']" position="before">
                     <button

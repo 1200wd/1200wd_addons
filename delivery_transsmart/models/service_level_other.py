@@ -16,7 +16,6 @@ class ServiceLevelOther(models.Model):
     code = fields.Char()
     description = fields.Char()
     is_default = fields.Char()
-    carrier_id = fields.Many2one('delivery.carrier', string='Carrier')
 
     _sql_constraints = [
         ('nr_unique', 'unique(nr)', 'Identifier field should be unique.')]

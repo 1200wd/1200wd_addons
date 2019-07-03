@@ -124,7 +124,6 @@ class TranssmartConfigSettings(models.TransientModel):
                 '_type': _type,
                 'sale_ok': False,
                 'purchase_ok': False,
-                'package': True,
                 'length': value['length'],
                 'width': value['width'],
                 'height': value['height'],
@@ -139,12 +138,17 @@ class TranssmartConfigSettings(models.TransientModel):
         response = connection.Account.retrieve_carrier(self.account_code)
         for carrier in response.json():
             value = json.loads(carrier['value'])
+            package_type_id = product_template.search([
+                ('package', '=', True), ('is_default', '=', True)],
+                limit=1,
+            )
             value = {
                 'nr': carrier['nr'],
                 'code': value['code'],
                 'name': value['name'],
                 'carrier': True,
                 'customer': False,
+                'package_type_id': package_type_id.id,
                 }
             res_partner_carrier = res_partner.search([
                 ('nr', '=', carrier['nr'])])

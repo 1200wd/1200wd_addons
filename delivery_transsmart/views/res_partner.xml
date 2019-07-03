@@ -15,6 +15,15 @@
                                 'invisible': [('carrier', '=', False)],
                                 'required': [('carrier', '!=', False)],
                             }"/>
+                    <field
+                        name="package_type_id"
+                        domain="[('package', '=', True)]"
+                        string="Package Type"
+                        attrs="
+                            {
+                                'invisible': [('carrier', '=', False)],
+                                'required': [('carrier', '!=', False)],
+                            }"/>
                 </xpath>
             </field>
         </record>

@@ -17,6 +17,8 @@
         'delivery',
         'product_harmonized_system',
         'web_readonly_bypass',
+        'ari_product',
+        'ari_intrastat',
     ],
     'data': [
         "security/ir.model.access.csv",
@@ -29,7 +31,6 @@
         "views/res_partner.xml",
         "views/stock_picking.xml",
         "views/product_template.xml",
-        "views/delivery_carrier.xml",
         "views/booking_profile.xml",
         "wizards/stock_transfer_details.xml",
     ],

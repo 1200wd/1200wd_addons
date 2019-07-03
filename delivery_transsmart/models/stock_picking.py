@@ -38,24 +38,14 @@ class StockPicking(models.Model):
         compute='_compute_send_to_transsmart',
         store=True,
     )
+    package_type_id = fields.Many2one('product.template')
 
-    @api.depends('company_id', 'picking_type_id', 'carrier_id')
+    @api.depends('company_id', 'picking_type_id')
     @api.multi
     def _compute_send_to_transsmart(self):
         for rec in self.filtered(
                 lambda x: x.picking_type_id.code == 'outgoing'):
             rec.send_to_transsmart = rec._send_to_transsmart()
-
-    @api.onchange('carrier_id')
-    def onchange_carrier_id(self):
-        return {
-            'domain': {
-                'service_level_time_id': [(
-                    'carrier_id', '=', self.carrier_id.id)],
-                'service_level_other_id': [(
-                    'carrier_id', '=', self.carrier_id.id)],
-                }
-            }
 
     @api.onchange('booking_profile_id')
     def onchange_booking_profile_id(self):
@@ -66,25 +56,14 @@ class StockPicking(models.Model):
             'service_level_other_id':
                 self.booking_profile_id.service_level_other_id.id,
             'incoterm_id': self.booking_profile_id.incoterms_id.id,
+            'package_type_id':
+                self.booking_profile_id.carrier_id.package_type_id.id
         })
 
     service = fields.Selection(
         [('DOCS', 'DOCS'), ('NON-DOCS', 'NON-DOCS')],
         default='NON-DOCS',
     )
-
-    def _is_in_european_union(self, country_id):
-        return country_id in self.env.ref('base.europe').country_ids
-
-    def _get_service_level_time_id(self):
-        self.ensure_one()
-        return self.service_level_time_id or \
-            self.carrier_id.product_id.service_level_time_id
-
-    def _get_service_level_other_id(self):
-        self.ensure_one()
-        return self.service_level_other_id or \
-            self.carrier_id.product_id.service_level_other_id
 
     @api.multi
     def _get_invoice_name(self):
@@ -139,12 +118,12 @@ class StockPicking(models.Model):
             'packages': [{
                 'measurements':
                     {
-                        'length': self.carrier_id.product_id.length,
-                        'width': self.carrier_id.product_id.width,
-                        'height': self.carrier_id.product_id.height,
-                        'weight': self.carrier_id.product_id.weight,
+                        'length': self.package_type_id.length,
+                        'width': self.package_type_id.width,
+                        'height': self.package_type_id.height,
+                        'weight': self.package_type_id.weight,
                     },
-                'packageType': self.carrier_id.product_id._type,
+                'packageType': self.package_type_id._type,
                 'quantity': 1,  # one package for everything
                 'deliveryNoteInfo': {
                     'deliveryNoteLines': [
@@ -170,13 +149,12 @@ class StockPicking(models.Model):
                     }
                 }
             ],
-            'carrier': self.carrier_id.partner_id.code,
+            'carrier': self.booking_profile_id.carrier_id.code,
             'value': self.sale_id.amount_total,
             'valueCurrency': self.sale_id.currency_id.name,
             'service': self.service,
-            'serviceLevelTime':
-                self._get_service_level_time_id().code,
-            'serviceLevelOther': self._get_service_level_other_id().code,
+            'serviceLevelTime': self.service_level_time_id.code,
+            'serviceLevelOther': self.service_level_other_id.code,
             'incoterms': self.incoterm_id.code,
             'costCenter': self.cost_center_id.code,
             'pickupDate': fields.Datetime.from_string(
@@ -211,13 +189,12 @@ class StockPicking(models.Model):
         document = document[0]
         REQUIRED_FIELDS = [
             'reference',
-            'carrier',
             'service',
             'serviceLevelTime',
             'pickupDate',
             ]
         REQUIRED_PACKAGE_FIELDS = [
-            'packageType',
+            #'packageType',
             'quantity',
             ]
         for field in REQUIRED_FIELDS:
@@ -233,7 +210,7 @@ class StockPicking(models.Model):
                         (key, self.name))
         for package in document.get('packages'):
             for key in package.get('measurements').keys():
-                if not package.get('measurements')[key]:
+                if package.get('measurements')[key] is None:
                     raise exceptions.ValidationError(_(
                         "Make sure that Package Type is set on %s "
                         "or on the carrier "
@@ -243,7 +220,11 @@ class StockPicking(models.Model):
                 if not package.get(field):
                     raise exceptions.ValidationError(_(
                         "Make sure that %s field of the Package Type %s has a "
-                        "value.") % (field, self.carrier_id.product_id.name))
+                        "value.") % (
+                            field,
+                            self.package_type_id.name,
+                        )
+                    )
 
     @api.multi
     def action_create_transsmart_document(self):
@@ -280,7 +261,7 @@ class StockPicking(models.Model):
         """
         return self.company_id.transsmart_enabled \
             and self.picking_type_id.code == 'outgoing' \
-            and self.carrier_id.partner_id.code
+            and self.booking_profile_id.carrier_id.partner_id.code
 
     def _get_transsmart_connection(self):
         """
@@ -291,30 +272,6 @@ class StockPicking(models.Model):
         password = ir_config_parameter.get_param('transsmart_password')
         demo = ir_config_parameter.get_param('transsmart_demo')
         return Connection().connect(username, password, demo)
-
-    @api.multi
-    def action_transsmart_print_proforma(self):
-        """
-        Get the proforma invoice from Transsmart and print it.
-        """
-        raise NotImplementedError
-        ir_config_parameter = self.env['ir.config_parameter']
-        account_code = ir_config_parameter.get_param('transsmart_account_code')
-        for rec in self:
-            connection = rec._get_transsmart_connection()
-            response = connection.Prints.prints(
-                account_code,
-                rec.name,
-                rawJob=True)
-            # we only need the proforma document
-            # TODO documentation does not clarify what values can
-            # docType take so that I can separate the different kinds
-            # documents.
-            proforma = filter(
-                lambda x: x['docType'] == '',
-                response.json()[0]['packageDocs'])
-            if proforma['encodingFormat'] == 'base64':
-                pass
 
     def _validate_get_rates_document(self, document):
         document = document[0]

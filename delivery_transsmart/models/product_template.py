@@ -12,14 +12,6 @@ class ProductTemplate(models.Model):
     _inherit = 'product.template'
 
     package = fields.Boolean()
-    service_level_other_id = fields.Many2one(
-        'service.level.other',
-        string='Service Level Other',
-    )
-    service_level_time_id = fields.Many2one(
-        'service.level.time',
-        string='Service Level Time',
-    )
     code = fields.Char()
     nr = fields.Integer('Identifier')
     description = fields.Char()
