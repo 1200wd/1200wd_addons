@@ -201,7 +201,7 @@ class TestTranssmart(TransactionCase):
             'account_code': 'code',
         })
         settings.set_transsmart_defaults()
-        settings._synchronize_models()
+        settings.synchronize_models()
         booking_profile_id = self.env['booking.profile'].search(
             [],
             limit=1,

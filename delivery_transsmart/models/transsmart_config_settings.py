@@ -46,13 +46,13 @@ class TranssmartConfigSettings(models.TransientModel):
             self.account_code,
         )
         try:
-            self._synchronize_models()
+            self.synchronize_models()
         except HTTPError as e:
             raise ValidationError(
                 _("Error: %s" % (e.response.json()['message'])))
 
     @api.multi
-    def _synchronize_models(self):
+    def synchronize_models(self):
         """
         This will be invoked when the user saves the settings and by the cron
         job.
@@ -63,12 +63,14 @@ class TranssmartConfigSettings(models.TransientModel):
         product_template = self.env['product.template']
         res_partner = self.env['res.partner']
         booking_profile = self.env['booking.profile']
+        settings = self.get_default_transsmart()
         connection = Connection().connect(
-            self.username,
-            self.password,
-            self.demo,
+            settings['username'],
+            settings['password'],
+            settings['demo'],
         )
-        response = connection.Account.retrieve_costcenter(self.account_code)
+        response = connection.Account.retrieve_costcenter(
+            settings['account_code'])
 
         def _assemble_common_values(value):
             return {
