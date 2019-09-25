@@ -261,7 +261,7 @@ class StockPicking(models.Model):
         """
         return self.company_id.transsmart_enabled \
             and self.picking_type_id.code == 'outgoing' \
-            and self.booking_profile_id.carrier_id.partner_id.code
+            and self.booking_profile_id.carrier_id.code
 
     def _get_transsmart_connection(self):
         """
