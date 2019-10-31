@@ -11,3 +11,5 @@ from . import cost_center
 from . import res_partner
 from . import product_template
 from . import booking_profile
+# this one is basically for a single field ari needs for importing
+from . import sale_order
