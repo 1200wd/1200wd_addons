@@ -17,8 +17,6 @@
         'delivery',
         'product_harmonized_system',
         'web_readonly_bypass',
-        'ari_product',
-        'ari_intrastat',
     ],
     'data': [
         "security/ir.model.access.csv",
