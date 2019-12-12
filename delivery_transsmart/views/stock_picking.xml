@@ -83,9 +83,5 @@
             </field>
         </record>
 
-        <record id="stock.action_picking_tree" model="ir.actions.act_window">
-            <field name="context">{'readonly_by_pass': True}</field>
-        </record>
-
     </data>
 </openerp>

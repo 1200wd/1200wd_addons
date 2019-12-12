@@ -318,8 +318,7 @@ class StockPicking(models.Model):
                 account_code,
                 document)
             if not response.ok:
-                raise exceptions.ValidationError(_(
-                    response.json()))
+                raise exceptions.ValidationError(_(response.json()))
             rate_obj = sorted(
                 response.json()[0]['rates'],
                 key=lambda x: x['price'])[0]
