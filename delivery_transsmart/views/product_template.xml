@@ -12,13 +12,13 @@
                     <group name="transsmart">
                         <field name="package"/>
                         <field
-                            name="nr"
+                            name="transsmart_nr"
                             attrs="{'invisible': [('package', '=', False)]}"/>
                         <field
-                            name="code"
+                            name="transsmart_code"
                             attrs="{'invisible': [('package', '=', False)]}"/>
                         <field
-                            name="description"
+                            name="package_type"
                             attrs="{'invisible': [('package', '=', False)]}"/>
                     </group>
                 </xpath>

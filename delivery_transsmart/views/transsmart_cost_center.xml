@@ -8,8 +8,8 @@
                 <form string="Cost center">
                     <group col="4">
                         <field name="name" string="Name"/>
-                        <field name="code"/>
-                        <field name="description"/>
+                        <field name="transsmart_code"/>
+                        <field name="transsmart_nr"/>
                     </group>
                 </form>
             </field>
@@ -21,8 +21,8 @@
             <field name="arch" type="xml">
                 <tree string="Cost center">
                     <field name="name" string="Name"/>
-                    <field name="code"/>
-                    <field name="description"/>
+                    <field name="transsmart_code"/>
+                    <field name="transsmart_nr"/>
                 </tree>
             </field>
         </record>

@@ -9,21 +9,19 @@
                 <xpath expr="//field[@name='date']" position="after">
                     <field name="carrier"/>
                     <field
-                        name="code"
-                        attrs="
-                            {
-                                'invisible': [('carrier', '=', False)],
-                                'required': [('carrier', '!=', False)],
-                            }"/>
+                        name="transsmart_code"
+                        attrs="{'invisible': [('carrier', '=', False)],
+                                'required': [('carrier', '!=', False)]}"/>
                     <field
                         name="package_type_id"
                         domain="[('package', '=', True)]"
                         string="Package Type"
-                        attrs="
-                            {
-                                'invisible': [('carrier', '=', False)],
-                                'required': [('carrier', '!=', False)],
-                            }"/>
+                        attrs="{'invisible': [('carrier', '=', False)],
+                                'required': [('carrier', '!=', False)]}"/>
+                    <field
+                        name="transsmart_nr"
+                        attrs="{'invisible': [('carrier', '=', False)],
+                                'required': [('carrier', '!=', False)]}"/>
                 </xpath>
             </field>
         </record>

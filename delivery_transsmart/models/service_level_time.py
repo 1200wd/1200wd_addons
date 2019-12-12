@@ -11,11 +11,13 @@ class ServiceLevelTime(models.Model):
     """
     _name = 'service.level.time'
 
-    name = fields.Char(related='code')
-    nr = fields.Integer('Identifier')
-    code = fields.Char()
-    description = fields.Char()
+    transsmart_nr = fields.Integer('Identifier', index=True)
+    transsmart_code = fields.Char()
+    name = fields.Char()
     is_default = fields.Boolean()
 
     _sql_constraints = [
-        ('nr_unique', 'unique(nr)', 'Identifier field should be unique.')]
+        ('transsmart_nr_unique',
+         'unique(transsmart_nr)',
+         'Identifier field should be unique.')
+    ]

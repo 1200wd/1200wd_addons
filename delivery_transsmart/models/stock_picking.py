@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-# © 2016 1200 Web Development <http://1200wd.com/>
-# © 2017 Therp BV <http://therp.nl>
-# License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
+# Copyright 2016 1200 Web Development <https://1200wd.com/>
+# Copyright 2017-2019 Therp BV <https://therp.nl>
+# License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl.html).
 from openerp import api, fields, models, exceptions, _
 from transsmart.connection import Connection
 
@@ -10,7 +10,7 @@ class StockPicking(models.Model):
     _inherit = 'stock.picking'
 
     cost_center_id = fields.Many2one(
-        'cost.center',
+        'transsmart.cost.center',
         string='Delivery Cost Center',
     )
     delivery_cost = fields.Float('Delivery Cost', readonly=True, copy=False)
@@ -50,7 +50,7 @@ class StockPicking(models.Model):
     @api.onchange('booking_profile_id')
     def onchange_booking_profile_id(self):
         self.update({
-            'cost_center_id': self.booking_profile_id.costcenter_id.id,
+            'cost_center_id': self.booking_profile_id.cost_center_id.id,
             'service_level_time_id':
                 self.booking_profile_id.service_level_time_id.id,
             'service_level_other_id':
@@ -80,6 +80,7 @@ class StockPicking(models.Model):
         https://devdocs.transsmart.com/#_shipment_booking_only.
         """
         self.ensure_one()
+        package = self.package_type_id
         document = {
             'reference': self.name,
             'additionalReferences': [
@@ -118,12 +119,12 @@ class StockPicking(models.Model):
             'packages': [{
                 'measurements':
                     {
-                        'length': self.package_type_id.length,
-                        'width': self.package_type_id.width,
-                        'height': self.package_type_id.height,
-                        'weight': self.package_type_id.weight,
+                        'length': package.length,
+                        'width': package.width,
+                        'height': package.height,
+                        'weight': package.weight,
                     },
-                'packageType': self.package_type_id._type,
+                'packageType': package.package_type,
                 'quantity': 1,  # one package for everything
                 'deliveryNoteInfo': {
                     'deliveryNoteLines': [
@@ -147,8 +148,7 @@ class StockPicking(models.Model):
                             'reasonOfExport': self.reason_for_export,
                         } for line in self.move_lines],
                     }
-                }
-            ],
+                }],
             'carrier': self.booking_profile_id.carrier_id.code,
             'value': self.sale_id.amount_total,
             'valueCurrency': self.sale_id.currency_id.name,
@@ -194,7 +194,7 @@ class StockPicking(models.Model):
             'pickupDate',
             ]
         REQUIRED_PACKAGE_FIELDS = [
-            #'packageType',
+            # 'packageType',
             'quantity',
             ]
         for field in REQUIRED_FIELDS:

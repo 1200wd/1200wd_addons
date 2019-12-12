@@ -25,7 +25,7 @@
         "views/res_company.xml",
         "views/service_level_other.xml",
         "views/service_level_time.xml",
-        "views/cost_center.xml",
+        "views/transsmart_cost_center.xml",
         "views/res_partner.xml",
         "views/stock_picking.xml",
         "views/product_template.xml",

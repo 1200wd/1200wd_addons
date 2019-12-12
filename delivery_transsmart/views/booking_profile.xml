@@ -7,14 +7,14 @@
             <field name="model">booking.profile</field>
             <field name="arch" type="xml">
                 <tree string="Booking Profile">
+                    <field name="transsmart_code"/>
                     <field name="name" string="Name"/>
-                    <field name="code"/>
-                    <field name="description"/>
                     <field name="carrier_id"/>
                     <field name="service_level_time_id"/>
                     <field name="service_level_other_id"/>
                     <field name="incoterms_id"/>
-                    <field name="costcenter_id"/>
+                    <field name="cost_center_id"/>
+                    <field name="transsmart_nr"/>
                 </tree>
             </field>
         </record>
@@ -25,14 +25,14 @@
             <field name="arch" type="xml">
                 <form string="Booking Profile">
                     <group col="4">
+                        <field name="transsmart_code"/>
                         <field name="name" string="Name"/>
-                        <field name="code"/>
-                        <field name="description"/>
                         <field name="carrier_id"/>
                         <field name="service_level_time_id"/>
                         <field name="service_level_other_id"/>
                         <field name="incoterms_id"/>
-                        <field name="costcenter_id"/>
+                        <field name="cost_center_id"/>
+                        <field name="transsmart_nr"/>
                     </group>
                 </form>
             </field>

@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
-# Copyright 2018 Therp BV <https://therp.nl>
-# License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
-from openerp import models, fields, api, _
-from openerp.exceptions import ValidationError
+# Copyright 2018-2019 Therp BV <https://therp.nl>
+# License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl.html).
+import json
+
 from transsmart.connection import Connection
 from requests import HTTPError
-import json
+
+from openerp import _, api, fields, models
+from openerp.exceptions import ValidationError
 
 
 class TranssmartConfigSettings(models.TransientModel):
@@ -19,6 +21,7 @@ class TranssmartConfigSettings(models.TransientModel):
 
     @api.multi
     def get_default_transsmart(self):
+        """Get default Transsmart from configuration parameters."""
         ir_config_parameter = self.env['ir.config_parameter']
         demo = ir_config_parameter.get_param('transsmart_demo')
         username = ir_config_parameter.get_param('transsmart_username')
@@ -33,149 +36,170 @@ class TranssmartConfigSettings(models.TransientModel):
 
     @api.multi
     def set_transsmart_defaults(self):
-        """
-        Save the settings *and* synchronize the tables.
-        """
+        """Save the settings *and* synchronize the tables."""
         self.ensure_one()
         ir_config_parameter = self.env['ir.config_parameter']
         ir_config_parameter.set_param('transsmart_demo', self.demo)
         ir_config_parameter.set_param('transsmart_username', self.username)
         ir_config_parameter.set_param('transsmart_password', self.password)
-        ir_config_parameter.set_param(
-            'transsmart_account_code',
-            self.account_code,
-        )
+        ir_config_parameter.set_param('transsmart_account_code',self.account_code,)
         try:
             self.synchronize_models()
-        except HTTPError as e:
+        except HTTPError as exc:
             raise ValidationError(
-                _("Error: %s" % (e.response.json()['message'])))
+                _("Error: %s" % (exc.response.json()['message'])))
 
     @api.multi
     def synchronize_models(self):
-        """
-        This will be invoked when the user saves the settings and by the cron
-        job.
-        """
-        cost_center = self.env['cost.center']
-        service_level_other = self.env['service.level.other']
-        service_level_time = self.env['service.level.time']
-        product_template = self.env['product.template']
-        res_partner = self.env['res.partner']
-        booking_profile = self.env['booking.profile']
-        settings = self.get_default_transsmart()
-        connection = Connection().connect(
-            settings['username'],
-            settings['password'],
-            settings['demo'],
-        )
-        response = connection.Account.retrieve_costcenter(
-            settings['account_code'])
+        """This will be invoked when the user saves the settings and by the cron job."""
 
-        def _assemble_common_values(value):
-            return {
-                'nr': value['nr'],
-                'code': value['code'],
-                'description': value['description'],
-                'is_default': value['isDefault'],
-                }
-
-        for center in response.json():
-            value = json.loads(center['value'])
-            value.update({'nr': center['nr']})
-            value = _assemble_common_values(value)
-            cost_center = cost_center.search([('nr', '=', value['nr'])])
-            if not cost_center:
-                cost_center.create(value)
-            else:
-                cost_center.write(value)
-        response = connection.Account.retrieve_servicelevel_others(
-            self.account_code)
-        for service_other in response.json():
-            value = json.loads(service_other['value'])
-            value.update({'nr': service_other['nr']})
-            value = _assemble_common_values(value)
-            service_level_other = service_level_other.search([
-                ('nr', '=', value['nr'])])
-            if not service_level_other:
-                service_level_other.create(value)
-            else:
-                service_level_other.write(value)
-        response = connection.Account.retrieve_servicelevel_time(
-            self.account_code)
-        for service_time in response.json():
-            value = json.loads(service_time['value'])
-            value.update({'nr': service_time['nr']})
-            value = _assemble_common_values(value)
-            service_level_time = service_level_time.search([
-                ('nr', '=', value['nr'])])
-            if not service_level_time:
-                service_level_time.create(value)
-            else:
-                service_level_time.write(value)
-        response = connection.Account.retrieve_packages(self.account_code)
-        for package in response.json():
-            value = json.loads(package['value'])
-            value.update({'nr': package['nr']})
-            _type = value['type']
-            values = _assemble_common_values(value)
-            values.update({
-                'name': value['description'],
-                'type': 'service',
-                'package': True,
-                '_type': _type,
-                'sale_ok': False,
-                'purchase_ok': False,
-                'length': value['length'],
-                'width': value['width'],
-                'height': value['height'],
-                'weight': value['weight'],
-                })
-            product_template = product_template.search([
-                ('nr', '=', values['nr'])])
-            if not product_template:
-                product_template.create(values)
-            else:
-                product_template.write(values)
-        response = connection.Account.retrieve_carrier(self.account_code)
-        for carrier in response.json():
-            value = json.loads(carrier['value'])
-            package_type_id = product_template.search([
-                ('package', '=', True), ('is_default', '=', True)],
-                limit=1,
+        def get_connection():
+            """Get transsmart connection."""
+            return Connection().connect(
+                settings['username'],
+                settings['password'],
+                settings['demo'],
             )
-            value = {
-                'nr': carrier['nr'],
-                'code': value['code'],
-                'name': value['name'],
-                'carrier': True,
-                'customer': False,
-                'package_type_id': package_type_id.id,
-                }
-            res_partner_carrier = res_partner.search([
-                ('nr', '=', carrier['nr'])])
-            if not res_partner_carrier:
-                res_partner_carrier.create(value)
+
+        def get_json_vals(json_object):
+            """Get common values for Transsmart model from json object."""
+            transsmart_nr = json_object['nr']
+            json_value = json.loads(json_object['value'])
+            vals = {
+                'transsmart_nr': transsmart_nr,
+                'transsmart_code': json_value['code'],
+                'name': json_value['description'],
+                'is_default': json_value['isDefault'],
+            }
+            return (json_value, vals)
+
+        def create_or_write_transsmart(model, vals):
+            """Use transsmart_nr to create or update model linked to transsmart."""
+            record = model.search(
+                [('transsmart_nr', '=', vals['transsmart_nr'])]
+            )
+            if not record:
+                model.create(vals)
             else:
-                res_partner_carrier.write(value)
-        response = connection.Account.retrieve_bookingprofiles(
-            self.account_code)
-        for profile in response.json():
-            value = json.loads(profile['value'])
-            value = {
-                'nr': profile['nr'],
-                'code': value['code'],
-                'name': value['description'],
-                'carrier_id': value['carrier'],
-                'service_level_time_id': value['serviceLevelTime'],
-                'service_level_other_id': value['serviceLevelOther'],
-                'incoterms_id': value['incoterms'],
-                'costcenter_id': value['costCenter'],
-                'mailtype': value['mailType'],
-                }
-            booking_profile = booking_profile.search([
-                ('nr', '=', carrier['nr'])])
-            if not booking_profile:
-                booking_profile.create(value)
-            else:
-                booking_profile.write(value)
+                record.write(vals)
+
+        def get_cost_centers(connection):
+            """Get Transsmart cost_centers."""
+            response = connection.Account.retrieve_costcenter(settings['account_code'])
+            model = self.env['transsmart.cost.center']
+            for json_object in response.json():
+                dummy_json_value, vals = get_json_vals(json_object)
+                create_or_write_transsmart(model, vals)
+
+        def get_service_level_others(connection):
+            """Get Transsmart service level others."""
+            response = connection.Account.retrieve_servicelevel_others(
+                self.account_code)
+            model = self.env['service.level.other']
+            for json_object in response.json():
+                dummy_json_value, vals = get_json_vals(json_object)
+                create_or_write_transsmart(model, vals)
+
+        def get_service_level_times(connection):
+            """Get Transsmart service level time."""
+            response = connection.Account.retrieve_servicelevel_time(self.account_code)
+            model = self.env['service.level.time']
+            for json_object in response.json():
+                dummy_json_value, vals = get_json_vals(json_object)
+                create_or_write_transsmart(model, vals)
+
+        def get_product_templates(connection):
+            """Get Transsmart product templates."""
+            response = connection.Account.retrieve_packages(self.account_code)
+            model = self.env['product.template']
+            for json_object in response.json():
+                json_value, vals = get_json_vals(json_object)
+                vals.update({
+                    'default_code': vals['transsmart_code'],
+                    'description': vals['name'],
+                    'type': 'service',
+                    'package': True,
+                    'package_type': json_value['type'],
+                    'sale_ok': False,
+                    'purchase_ok': False,
+                    'length': json_value['length'],
+                    'width': json_value['width'],
+                    'height': json_value['height'],
+                    'weight': json_value['weight'],
+                })
+                create_or_write_transsmart(model, vals)
+
+        def get_default_package():
+            """Get product that is the default package."""
+            product_template_model = self.env['product.template']
+            return product_template_model.search([
+                ('package', '=', True), ('is_default', '=', True)], limit=1)
+
+        def get_carriers(connection):
+            """Get Transsmart carriers."""
+            response = connection.Account.retrieve_carrier(self.account_code)
+            model = self.env['res.partner']
+            default_package = get_default_package()
+            for json_object in response.json():
+                json_value, vals = get_json_vals(json_object)
+                vals.update({
+                    'ref': vals['transsmart_code'],
+                    'name': json_value['name'],
+                    'carrier': True,
+                    'customer': False,
+                    'package_type_id': default_package.id,
+                })
+                create_or_write_transsmart(model, vals)
+
+        def get_transsmart_record(model_name, transsmart_code, profile_name):
+            """Get transsmart record related to booking profile."""
+            model = self.env[model_name]
+            if not transsmart_code:
+                return model.browse([])  # Empty recordset.
+            record = model.search([('transsmart_code', '=', transsmart_code)], limit=1)
+            if not record:
+                raise ValidationError(
+                    _('Code %s not found in model %s for booking profile %s.') %
+                    (transsmart_code, model_name, profile_name)
+                )
+            return record
+
+        def get_booking_profiles(connection):
+            """Get Transsmart booking profiles."""
+            response = connection.Account.retrieve_bookingprofiles(self.account_code)
+            model = self.env['booking.profile']
+            for json_object in response.json():
+                json_value, vals = get_json_vals(json_object)
+                profile_name = vals['name']
+                carrier = get_transsmart_record(
+                    'res.partner', json_value['carrier_id'], profile_name)
+                service_level_time = get_transsmart_record(
+                    'service.level.time', json_value['serviceLevelTime'],
+                    profile_name)
+                service_level_other = get_transsmart_record(
+                    'service.level.other', json_value['serviceLevelOther'],
+                    profile_name)
+                incoterms = get_transsmart_record(
+                    'stock.incoterms', json_value['incoterms'],
+                    profile_name)
+                cost_center = get_transsmart_record(
+                    'transsmart.cost.center', json_value['costCenter'],
+                    profile_name)
+                vals.update({
+                    'carrier_id': carrier.id,
+                    'service_level_time_id': service_level_time.id,
+                    'service_level_other_id': service_level_other.id,
+                    'incoterms_id': incoterms.id,
+                    'cost_center_id': cost_center.id,
+                    'mailtype': json_value['mailType'],
+                })
+                create_or_write_transsmart(model, vals)
+
+        settings = self.get_default_transsmart()
+        connection = get_connection()
+        get_cost_centers(connection)
+        get_service_level_others(connection)
+        get_service_level_times(connection)
+        get_product_templates(connection)
+        get_carriers(connection)
+        get_booking_profiles(connection)

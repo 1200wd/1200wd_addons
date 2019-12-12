@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-# © 2015-2017 1200wd  <http://www.1200wd.com>
-# © 2017 Therp BV <http://therp.nl>
-# License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
+# Copyright 2015-2017 1200wd  <https://www.1200wd.com>
+# Copyright 2017-2019 Therp BV <https://therp.nl>
+# License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl.html).
 from openerp import fields, models
 
 

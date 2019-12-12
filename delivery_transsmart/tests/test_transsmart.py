@@ -48,7 +48,7 @@ MOCK_BOOKING_PROFILE.json.return_value = [{
 }]
 
 DATA = {
-    'costcenter': MOCK_COSTCENTER,
+    'cost_center': MOCK_COSTCENTER,
     'servicelevel_others': MOCK_SERVICELEVEL_OTHERS,
     'servicelevel_time': MOCK_SERVICELEVEL_TIME,
     'packages': MOCK_PACKAGE,
@@ -63,7 +63,7 @@ def get_connection():
     connection = Mock()
     mock_connected = Mock()
     mock_account = Mock()
-    mock_account.retrieve_costcenter.return_value = DATA['costcenter']
+    mock_account.retrieve_cost_center.return_value = DATA['cost_center']
     mock_account.retrieve_servicelevel_others.return_value = DATA[
         'servicelevel_others']
     mock_account.retrieve_servicelevel_time.return_value = DATA[
@@ -113,7 +113,7 @@ class TestTranssmart(TransactionCase):
         2) Create a customer
         3) Create a product of type `stock`.
         4) Create a picking of type `outgoing` with the appropriate values
-        needed in order for the picking to be sent successfully the first time.
+           needed in order for the picking to be sent successfully the first time.
         5) Make sure that the company is transsmart_enabled
         """
         super(TestTranssmart, self).setUp()
@@ -174,7 +174,7 @@ class TestTranssmart(TransactionCase):
         """ Verify that there is no transsmart related data on the system
         before synchronization.
         """
-        costcenters = self.env['cost.center'].search_count([])
+        cost_centers = self.env['cost.center'].search_count([])
         serviceleveltime = self.env['service.level.time'].search_count([])
         servicelevelother = self.env['service.level.other'].search_count([])
         packages = self.env['product.template'].search_count([
@@ -182,7 +182,7 @@ class TestTranssmart(TransactionCase):
         carriers = self.env['res.partner'].search_count([
             ('carrier', '=', True)])
         bookingprofiles = self.env['booking.profile'].search_count([])
-        self.assertFalse(costcenters)
+        self.assertFalse(cost_centers)
         self.assertFalse(serviceleveltime)
         self.assertFalse(servicelevelother)
         self.assertFalse(packages)
@@ -231,7 +231,7 @@ class TestTranssmart(TransactionCase):
         """ Verify that the data to be syncronized is fetched and inserted on
         the system
         """
-        costcenters = self.env['cost.center'].search_count([])
+        cost_centers = self.env['transsmart.cost.center'].search_count([])
         serviceleveltime = self.env['service.level.time'].search_count([])
         servicelevelother = self.env['service.level.other'].search_count([])
         packages = self.env['product.template'].search_count([
@@ -239,7 +239,7 @@ class TestTranssmart(TransactionCase):
         carriers = self.env['res.partner'].search_count([
             ('carrier', '=', True)])
         bookingprofiles = self.env['booking.profile'].search_count([])
-        self.assertTrue(costcenters)
+        self.assertTrue(cost_centers)
         self.assertTrue(serviceleveltime)
         self.assertTrue(servicelevelother)
         self.assertTrue(packages)
