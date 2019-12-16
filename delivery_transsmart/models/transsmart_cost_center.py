@@ -15,8 +15,13 @@ class TranssmartCostCenter(models.Model):
     _name = 'transsmart.cost.center'
     _description = "Transsmart Cost Center"
 
-    transsmart_nr = fields.Integer('Identifier', oldname='transsmart_id', index=True)
-    transsmart_code = fields.Char(oldname='code')
+    transsmart_nr = fields.Integer(
+        string='Identifier',
+        required=True,
+        index=True,
+        oldname='transsmart_id',
+    )
+    transsmart_code = fields.Char(required=True, index=True, oldname='code')
     name = fields.Char()
     is_default = fields.Boolean()
 

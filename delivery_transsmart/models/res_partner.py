@@ -11,7 +11,10 @@ class ResPartner(models.Model):
     transsmart_nr = fields.Integer('Identifier', index=True)
     transsmart_code = fields.Char()
     carrier = fields.Boolean()
-    package_type_id = fields.Many2one('product.template')
+    package_type_id = fields.Many2one(
+        comodel_name='delivery.package.type',
+        oldname='transsmart_package_type_id',
+    )
 
     _sql_constrains = [
         ('transsmart_nr_unique',

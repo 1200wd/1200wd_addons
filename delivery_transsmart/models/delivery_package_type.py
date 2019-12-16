@@ -4,20 +4,21 @@
 from openerp import fields, models
 
 
-class ProductTemplate(models.Model):
+class DeliveryPackageType(models.Model):
     """
     This model is used to hold the package types.
     https://devdocs.transsmart.com/#_packages_retrieval
     """
-    _inherit = 'product.template'
+    _name = 'delivery.package.type'
 
-    transsmart_nr = fields.Integer('Identifier', index=True)
-    transsmart_code = fields.Char()
-    package_type = fields.Char()
-    package = fields.Boolean()
+    transsmart_nr = fields.Integer('Identifier', required=True, index=True)
+    transsmart_code = fields.Char(required=True, index=True)
+    name = fields.Char()
+    package_type = fields.Char(required=True)
     length = fields.Float()
     width = fields.Float()
     height = fields.Float()
+    weight = fields.Float()
     is_default = fields.Boolean()
 
     _sql_constraints = [

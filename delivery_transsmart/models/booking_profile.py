@@ -9,9 +9,12 @@ class BookingProfile(models.Model):
     _name = 'booking.profile'
 
     transsmart_nr = fields.Integer('Identifier', index=True)
-    transsmart_code = fields.Char()
+    transsmart_code = fields.Char(index=True)
     name = fields.Char('Description')
-    carrier_id = fields.Many2one('res.partner', 'Carrier')
+    carrier_id = fields.Many2one(
+        comodel_name='res.partner',
+        string='Carrier',
+    )
     service_level_time_id = fields.Many2one(
         comodel_name='service.level.time',
         string='Service Level Time',
@@ -20,6 +23,13 @@ class BookingProfile(models.Model):
         comodel_name='service.level.other',
         string='Service Level Other',
     )
-    incoterms_id = fields.Many2one('stock.incoterms', 'Incoterms')
-    cost_center_id = fields.Many2one('transsmart.cost.center', 'Costcenter')
+    incoterm_id = fields.Many2one(
+        comodel_name='stock.incoterms',
+        string='Incoterms',
+        oldname='incoterms_id',
+    )
+    cost_center_id = fields.Many2one(
+        comodel_name='transsmart.cost.center',
+        string='Costcenter',
+    )
     mailtype = fields.Integer()

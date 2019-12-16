@@ -42,7 +42,7 @@ class TranssmartConfigSettings(models.TransientModel):
         ir_config_parameter.set_param('transsmart_demo', self.demo)
         ir_config_parameter.set_param('transsmart_username', self.username)
         ir_config_parameter.set_param('transsmart_password', self.password)
-        ir_config_parameter.set_param('transsmart_account_code',self.account_code,)
+        ir_config_parameter.set_param('transsmart_account_code', self.account_code,)
         try:
             self.synchronize_models()
         except HTTPError as exc:
@@ -68,9 +68,10 @@ class TranssmartConfigSettings(models.TransientModel):
             vals = {
                 'transsmart_nr': transsmart_nr,
                 'transsmart_code': json_value['code'],
-                'name': json_value['description'],
-                'is_default': json_value['isDefault'],
+                'name': json_value.get('description', json_value.get('name')),
             }
+            if 'isDefault' in json_value:
+                vals['is_default'] = json_value['isDefault']
             return (json_value, vals)
 
         def create_or_write_transsmart(model, vals):
@@ -108,20 +109,14 @@ class TranssmartConfigSettings(models.TransientModel):
                 dummy_json_value, vals = get_json_vals(json_object)
                 create_or_write_transsmart(model, vals)
 
-        def get_product_templates(connection):
-            """Get Transsmart product templates."""
+        def get_delivery_package_types(connection):
+            """Get Transsmart package types."""
             response = connection.Account.retrieve_packages(self.account_code)
-            model = self.env['product.template']
+            model = self.env['delivery.package.type']
             for json_object in response.json():
                 json_value, vals = get_json_vals(json_object)
                 vals.update({
-                    'default_code': vals['transsmart_code'],
-                    'description': vals['name'],
-                    'type': 'service',
-                    'package': True,
                     'package_type': json_value['type'],
-                    'sale_ok': False,
-                    'purchase_ok': False,
                     'length': json_value['length'],
                     'width': json_value['width'],
                     'height': json_value['height'],
@@ -131,9 +126,8 @@ class TranssmartConfigSettings(models.TransientModel):
 
         def get_default_package():
             """Get product that is the default package."""
-            product_template_model = self.env['product.template']
-            return product_template_model.search([
-                ('package', '=', True), ('is_default', '=', True)], limit=1)
+            package_type_model = self.env['delivery.package.type']
+            return package_type_model.search([('is_default', '=', True)], limit=1)
 
         def get_carriers(connection):
             """Get Transsmart carriers."""
@@ -151,6 +145,35 @@ class TranssmartConfigSettings(models.TransientModel):
                 })
                 create_or_write_transsmart(model, vals)
 
+        def get_booking_profiles(connection):
+            """Get Transsmart booking profiles."""
+            response = connection.Account.retrieve_bookingprofiles(self.account_code)
+            model = self.env['booking.profile']
+            for json_object in response.json():
+                json_value, vals = get_json_vals(json_object)
+                profile_name = vals['name']
+                carrier = get_transsmart_record(
+                    'res.partner', json_value['carrier'], profile_name)
+                service_level_time = get_transsmart_record(
+                    'service.level.time', json_value['serviceLevelTime'],
+                    profile_name)
+                service_level_other = get_transsmart_record(
+                    'service.level.other', json_value['serviceLevelOther'],
+                    profile_name)
+                incoterm = get_incoterm(json_value['incoterms'], profile_name)
+                cost_center = get_transsmart_record(
+                    'transsmart.cost.center', json_value['costCenter'],
+                    profile_name)
+                vals.update({
+                    'carrier_id': carrier.id,
+                    'service_level_time_id': service_level_time.id,
+                    'service_level_other_id': service_level_other.id,
+                    'incoterm_id': incoterm.id,
+                    'cost_center_id': cost_center.id,
+                    'mailtype': json_value['mailType'],
+                })
+                create_or_write_transsmart(model, vals)
+
         def get_transsmart_record(model_name, transsmart_code, profile_name):
             """Get transsmart record related to booking profile."""
             model = self.env[model_name]
@@ -164,42 +187,24 @@ class TranssmartConfigSettings(models.TransientModel):
                 )
             return record
 
-        def get_booking_profiles(connection):
-            """Get Transsmart booking profiles."""
-            response = connection.Account.retrieve_bookingprofiles(self.account_code)
-            model = self.env['booking.profile']
-            for json_object in response.json():
-                json_value, vals = get_json_vals(json_object)
-                profile_name = vals['name']
-                carrier = get_transsmart_record(
-                    'res.partner', json_value['carrier_id'], profile_name)
-                service_level_time = get_transsmart_record(
-                    'service.level.time', json_value['serviceLevelTime'],
-                    profile_name)
-                service_level_other = get_transsmart_record(
-                    'service.level.other', json_value['serviceLevelOther'],
-                    profile_name)
-                incoterms = get_transsmart_record(
-                    'stock.incoterms', json_value['incoterms'],
-                    profile_name)
-                cost_center = get_transsmart_record(
-                    'transsmart.cost.center', json_value['costCenter'],
-                    profile_name)
-                vals.update({
-                    'carrier_id': carrier.id,
-                    'service_level_time_id': service_level_time.id,
-                    'service_level_other_id': service_level_other.id,
-                    'incoterms_id': incoterms.id,
-                    'cost_center_id': cost_center.id,
-                    'mailtype': json_value['mailType'],
-                })
-                create_or_write_transsmart(model, vals)
+        def get_incoterm(incoterm_code, profile_name):
+            """Get transsmart record related to booking profile."""
+            incoterms_model = self.env['stock.incoterms']
+            if not incoterm_code:
+                return incoterms_model.browse([])  # Empty recordset.
+            record = incoterms_model.search([('code', '=', incoterm_code)], limit=1)
+            if not record:
+                raise ValidationError(
+                    _('Code %s not found in model %s for booking profile %s.') %
+                    (incoterm_code, 'stock.incoterms', profile_name)
+                )
+            return record
 
         settings = self.get_default_transsmart()
         connection = get_connection()
         get_cost_centers(connection)
         get_service_level_others(connection)
         get_service_level_times(connection)
-        get_product_templates(connection)
+        get_delivery_package_types(connection)
         get_carriers(connection)
         get_booking_profiles(connection)

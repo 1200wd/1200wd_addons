@@ -12,7 +12,7 @@
                     <field name="carrier_id"/>
                     <field name="service_level_time_id"/>
                     <field name="service_level_other_id"/>
-                    <field name="incoterms_id"/>
+                    <field name="incoterm_id"/>
                     <field name="cost_center_id"/>
                     <field name="transsmart_nr"/>
                 </tree>
@@ -30,7 +30,7 @@
                         <field name="carrier_id"/>
                         <field name="service_level_time_id"/>
                         <field name="service_level_other_id"/>
-                        <field name="incoterms_id"/>
+                        <field name="incoterm_id"/>
                         <field name="cost_center_id"/>
                         <field name="transsmart_nr"/>
                     </group>
@@ -61,7 +61,8 @@
         <menuitem
             action="action_delivery_booking_profile_form"
             id="menu_action_delivery_booking_profile_form"
-            parent="menu_transsmart_configuration"/>
+            parent="menu_transsmart_configuration"
+            />
 
     </data>
 </openerp>

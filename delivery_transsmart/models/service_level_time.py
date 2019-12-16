@@ -11,8 +11,8 @@ class ServiceLevelTime(models.Model):
     """
     _name = 'service.level.time'
 
-    transsmart_nr = fields.Integer('Identifier', index=True)
-    transsmart_code = fields.Char()
+    transsmart_nr = fields.Integer('Identifier', required=True, index=True)
+    transsmart_code = fields.Char(required=True, index=True)
     name = fields.Char()
     is_default = fields.Boolean()
 

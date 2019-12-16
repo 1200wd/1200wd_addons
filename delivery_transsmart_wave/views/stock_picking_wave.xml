@@ -12,14 +12,17 @@
                 </xpath>
                 <xpath
                     expr="//div[@class='oe_right oe_button_box']"
-                    position="inside">
+                    position="inside"
+                    >
                     <button
                         name="action_create_transsmart_document"
                         type="object"
-                        string="Create in Transsmart">
+                        string="Create in Transsmart"
+                        >
                     </button>
                 </xpath>
             </field>
         </record>
+         
     </data>
 </openerp>

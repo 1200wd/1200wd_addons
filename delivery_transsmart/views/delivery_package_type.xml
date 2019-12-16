@@ -1,0 +1,63 @@
+<openerp>
+    <data>
+
+        <record id="view_delivery_package_type_form" model="ir.ui.view">
+            <field name="name">Delivery Package Type</field>
+            <field name="model">delivery.package.type</field>
+            <field name="arch" type="xml">
+                <form string="Delivery Package Type">
+                    <group colspan="6" col="2">
+                        <field name="transsmart_code"/>
+                        <field name="name"/>
+                        <field name="package_type"/>
+                        <field name="length"/>
+                        <field name="width"/>
+                        <field name="height"/>
+                        <field name="weight"/>
+                        <field name="transsmart_nr"/>
+                    </group>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_delivery_package_type_tree" model="ir.ui.view">
+            <field name="name">Delivery Package Types</field>
+            <field name="model">delivery.package.type</field>
+            <field name="arch" type="xml">
+                <tree string="Delivery Package Types">
+                    <field name="transsmart_code"/>
+                    <field name="name"/>
+                    <field name="package_type"/>
+                    <field name="transsmart_nr"/>
+                </tree>
+            </field>
+        </record>
+
+        <record
+            id="action_show_packages"
+            model="ir.actions.act_window">
+            <field name="name">Packages</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">delivery.package.type</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+            <field name="help" type="html">
+                <p class="oe_view_nocontent_create">
+                    You cannot create Packages here.
+                </p>
+                <p>
+                    After you configure your connection to Transsmart,
+                    the packages will be automatically be fetched
+                    and kept synchronized.
+                </p>
+            </field>
+        </record>
+
+        <menuitem
+            id="menu_action_show_packages"
+            action="action_show_packages"
+            parent="menu_transsmart_configuration"
+            />
+
+    </data>
+</openerp>

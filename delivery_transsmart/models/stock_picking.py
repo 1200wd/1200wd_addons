@@ -6,15 +6,33 @@ from openerp import api, fields, models, exceptions, _
 from transsmart.connection import Connection
 
 
+def false_to_empty_string(document):
+    """
+    Apparently, when we sent False to transsmart, it is not handled
+    properly and we get a BAD_REQUEST.
+    So what this function does is replace every False value with an empty
+    string `''`.
+    """
+    if isinstance(document, dict):
+        for key, value in document.iteritems():
+            if isinstance(value, dict) or isinstance(value, list):
+                false_to_empty_string(value)
+            else:
+                if value is False:
+                    document[key] = ''
+    elif isinstance(document, list):
+        for index, value in enumerate(document):
+            if isinstance(value, dict) or isinstance(value, list):
+                false_to_empty_string(value)
+            else:
+                if value is False:
+                    document[index] = ''
+    return document
+
+
 class StockPicking(models.Model):
     _inherit = 'stock.picking'
 
-    cost_center_id = fields.Many2one(
-        'transsmart.cost.center',
-        string='Delivery Cost Center',
-    )
-    delivery_cost = fields.Float('Delivery Cost', readonly=True, copy=False)
-    delivery_cost_currency_id = fields.Many2one('res.currency')
     # Not all carrier's support all service level time ids
     # their frontend somehow knows which carriers support what.
     # the documentation does not mention a way/field for us to know
@@ -22,23 +40,53 @@ class StockPicking(models.Model):
     # in any case if the user selects an invalid service_level_time_id value
     # they will get an error message back.
     service_level_time_id = fields.Many2one(
-        'service.level.time',
+        comodel_name='service.level.time',
         string='Service Level Time',
+        oldname='delivery_service_level_time_id',
+    )
+    booking_profile_id = fields.Many2one(
+        comodel_name='booking.profile',
+        string='Booking Profile'
+    )
+    carrier_id = fields.Many2one(
+        comodel_name='res.partner',
+        string='Carrier',
+        related='booking_profile_id.carrier_id',
+        readonly=True,
+    )
+    cost_center_id = fields.Many2one(
+        comodel_name='transsmart.cost.center',
+        string='Delivery Cost Center',
+        related='booking_profile_id.cost_center_id',
+        readonly=True,
     )
     service_level_other_id = fields.Many2one(
-        'service.level.other',
+        comodel_name='service.level.other',
         string='Service Level Other',
+        related='booking_profile_id.service_level_other_id',
+        readonly=True,
     )
     incoterm_id = fields.Many2one(
-        'stock.incoterms',
+        comodel_name='stock.incoterms',
         string='Incoterm',
+        related='booking_profile_id.incoterm_id',
+        readonly=True,
     )
-    booking_profile_id = fields.Many2one('booking.profile', 'Booking Profile')
+    package_type_id = fields.Many2one(
+        comodel_name='delivery.package.type',
+        related='booking_profile_id.carrier_id.package_type_id',
+        readonly=True,
+    )
+    delivery_cost = fields.Float('Delivery Cost', readonly=True, copy=False)
+    delivery_cost_currency_id = fields.Many2one('res.currency')
     send_to_transsmart = fields.Boolean(
         compute='_compute_send_to_transsmart',
         store=True,
     )
-    package_type_id = fields.Many2one('product.template')
+    service = fields.Selection(
+        [('DOCS', 'DOCS'), ('NON-DOCS', 'NON-DOCS')],
+        default='NON-DOCS',
+    )
 
     @api.depends('company_id', 'picking_type_id')
     @api.multi
@@ -47,32 +95,16 @@ class StockPicking(models.Model):
                 lambda x: x.picking_type_id.code == 'outgoing'):
             rec.send_to_transsmart = rec._send_to_transsmart()
 
-    @api.onchange('booking_profile_id')
-    def onchange_booking_profile_id(self):
-        self.update({
-            'cost_center_id': self.booking_profile_id.cost_center_id.id,
-            'service_level_time_id':
-                self.booking_profile_id.service_level_time_id.id,
-            'service_level_other_id':
-                self.booking_profile_id.service_level_other_id.id,
-            'incoterm_id': self.booking_profile_id.incoterms_id.id,
-            'package_type_id':
-                self.booking_profile_id.carrier_id.package_type_id.id
-        })
-
-    service = fields.Selection(
-        [('DOCS', 'DOCS'), ('NON-DOCS', 'NON-DOCS')],
-        default='NON-DOCS',
-    )
-
     @api.multi
     def _get_invoice_name(self):
-        invoice_name = ''
         if self.sale_id.name:
-            invoice_name = self.env['account.invoice'].search([
-                ('origin', '=', self.sale_id.name),
-            ]).number
-        return invoice_name
+            invoice = self.env['account.invoice'].search(
+                [('origin', '=', self.sale_id.name)],
+                limit=1
+            )
+            if invoice:
+                return invoice.number
+        return ''
 
     def _transsmart_create_shipping(self):
         """
@@ -149,41 +181,17 @@ class StockPicking(models.Model):
                         } for line in self.move_lines],
                     }
                 }],
-            'carrier': self.booking_profile_id.carrier_id.code,
+            'carrier': self.booking_profile_id.carrier_id.transsmart_code,
             'value': self.sale_id.amount_total,
             'valueCurrency': self.sale_id.currency_id.name,
             'service': self.service,
-            'serviceLevelTime': self.service_level_time_id.code,
-            'serviceLevelOther': self.service_level_other_id.code,
+            'serviceLevelTime': self.service_level_time_id.transsmart_code,
+            'serviceLevelOther': self.service_level_other_id.transsmart_code,
             'incoterms': self.incoterm_id.code,
-            'costCenter': self.cost_center_id.code,
-            'pickupDate': fields.Datetime.from_string(
-                self.min_date).date().isoformat(),
+            'costCenter': self.cost_center_id.transsmart_code,
+            'pickupDate': fields.Datetime.from_string(self.min_date).date().isoformat(),
         }
         return [document]
-
-    def _false_to_empty_string(self, document):
-        """
-        Apparently, when we sent False to transsmart, it is not handled
-        properly and we get a BAD_REQUEST.
-        So what this function does is replace every False value with an empty
-        string `''`.
-        """
-        if isinstance(document, dict):
-            for key, value in document.iteritems():
-                if isinstance(value, dict) or isinstance(value, list):
-                    self._false_to_empty_string(value)
-                else:
-                    if value is False:
-                        document[key] = ''
-        elif isinstance(document, list):
-            for index, value in enumerate(document):
-                if isinstance(value, dict) or isinstance(value, list):
-                    self._false_to_empty_string(value)
-                else:
-                    if value is False:
-                        document[index] = ''
-        return document
 
     def _validate_create_booking_document(self, document):
         document = document[0]
@@ -236,17 +244,13 @@ class StockPicking(models.Model):
         ir_config_parameter = self.env['ir.config_parameter']
         account_code = ir_config_parameter.get_param('transsmart_account_code')
         for rec in self:
-            document = rec._false_to_empty_string(
-                rec._transsmart_create_shipping())
+            document = rec._transsmart_create_shipping()
+            document = false_to_empty_string(document)
             rec._validate_create_booking_document(document)
             connection = rec._get_transsmart_connection()
-            response = connection.Shipment.book(
-                account_code,
-                'BOOK',
-                document)
+            response = connection.Shipment.book(account_code, 'BOOK', document)
             if not response.ok:
-                raise exceptions.ValidationError(_(
-                    response.json()))
+                raise exceptions.ValidationError(response.text)
             response_json = response.json()[0]  # unpack
             data = {
                 'delivery_cost': response_json['price'],
@@ -261,7 +265,7 @@ class StockPicking(models.Model):
         """
         return self.company_id.transsmart_enabled \
             and self.picking_type_id.code == 'outgoing' \
-            and self.booking_profile_id.carrier_id.code
+            and self.booking_profile_id.carrier_id.transsmart_code
 
     def _get_transsmart_connection(self):
         """

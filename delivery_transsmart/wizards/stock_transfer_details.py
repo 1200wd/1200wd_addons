@@ -11,9 +11,7 @@ class StockTransferDetails(models.TransientModel):
 
     @api.multi
     def do_detailed_transfer(self):
-        """
-        Send the picking to transsmart if appropriate.
-        """
+        """Send the picking to transsmart if appropriate."""
         self.ensure_one()
         if self.send_to_transsmart:
             # TODO how will partial moves be taken care off?
