@@ -48,12 +48,6 @@ class StockPicking(models.Model):
         comodel_name='booking.profile',
         string='Booking Profile'
     )
-    carrier_id = fields.Many2one(
-        comodel_name='res.partner',
-        string='Carrier',
-        related='booking_profile_id.carrier_id',
-        readonly=True,
-    )
     cost_center_id = fields.Many2one(
         comodel_name='transsmart.cost.center',
         string='Delivery Cost Center',

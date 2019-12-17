@@ -57,19 +57,6 @@
             </field>
         </record>
 
-        <record id="view_picking_transsmart_out_tree" model="ir.ui.view">
-            <field name="name">transsmart.stock.picking.tree</field>
-            <field name="model">stock.picking</field>
-            <field name="inherit_id" ref="stock.vpicktree"/>
-            <field name="arch" type="xml">
-
-                <xpath expr="//field[@name='backorder_id']" position="after">
-                     <field name="carrier_id"/>
-                </xpath>
-
-            </field>
-        </record>
-
         <record
             id="view_picking_internal_search_transsmart" model="ir.ui.view">
             <field name="name">search.transssmart</field>
@@ -85,9 +72,9 @@
                     position="after"
                     >
                     <filter
-                        name="carrier_id"
-                        string="Carrier"
-                        context="{'group_by':'carrier_id'}"
+                        name="service_level_time_filter"
+                        string="Service Level Time"
+                        context="{'group_by':'service_level_time_id_id'}"
                         />
                 </xpath>
 
