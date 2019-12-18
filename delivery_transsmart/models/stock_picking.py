@@ -109,37 +109,15 @@ class StockPicking(models.Model):
         package = self.package_type_id
         document = {
             'reference': self.name,
+            'description': self.name,
             'additionalReferences': [
                 {'type': 'ORDER', 'value': self.sale_id.name},
                 {'type': 'OTHER', 'value': self._get_invoice_name()},
                 {'type': 'INVOICE', 'value': self._get_invoice_name()},
             ],
             'addresses': [
-                {
-                    'type': 'SEND',  # address of the sender
-                    'name': self.company_id.name,
-                    'addressLine1': self.company_id.street,
-                    'addressLine2': self.company_id.street2,
-                    'zipCode': self.company_id.zip,
-                    'city': self.company_id.city,
-                    'state': self.company_id.state_id.code,
-                    'country': self.company_id.country_id.code,
-                    'email': self.company_id.email,
-                    'telNo': self.company_id.phone,
-                },
-                {
-                    'type': 'RECV',  # address of the receiver
-                    'name': self.partner_id.name,
-                    'addressLine1': self.partner_id.street,
-                    'addressLine2': self.partner_id.street2,
-                    'zipCode': self.partner_id.zip,
-                    'city': self.partner_id.city,
-                    'state': self.partner_id.state_id.code,
-                    'country': self.partner_id.country_id.code,
-                    'contact': self.partner_id.name,
-                    'telNo': self.partner_id.phone,
-                    'email': self.partner_id.email,
-                },
+                self._get_address("SEND", self.company_id),
+                self._get_address("RECV", self.partner_id),
             ],
             # for now a single package that contains everything
             'packages': [{
@@ -181,11 +159,30 @@ class StockPicking(models.Model):
             'service': self.service,
             'serviceLevelTime': self.service_level_time_id.transsmart_code,
             'serviceLevelOther': self.service_level_other_id.transsmart_code,
-            'incoterms': self.incoterm_id.code,
+            'incoterms': self.incoterm_id.code or 'DAP',
             'costCenter': self.cost_center_id.transsmart_code,
             'pickupDate': fields.Datetime.from_string(self.min_date).date().isoformat(),
         }
         return [document]
+
+    def _get_address(self, address_type, record):
+        """Get address from partner, company or other record with address fields."""
+        address = {
+            'type': address_type,
+            'name': record.name,
+            'addressLine1': record.street,
+            'addressLine2': record.street2,
+            'zipCode': record.zip,
+            'city': record.city,
+            'country': record.country_id.code,
+        }
+        if record.state_id:
+            address['state'] = record.state_id.code
+        if record.email:
+            address['email'] = record.email
+        if record.phone:
+            address['telNo'] = record.phone
+        return address
 
     def _validate_create_booking_document(self, document):
         document = document[0]
