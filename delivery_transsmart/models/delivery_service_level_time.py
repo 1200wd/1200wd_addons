@@ -4,20 +4,16 @@
 from openerp import fields, models
 
 
-class DeliveryPackageType(models.Model):
+class DeliveryServiceLevelTime(models.Model):
     """
-    This model is used to hold the package types.
-    https://devdocs.transsmart.com/#_packages_retrieval
+    Used for keeping the Service Level Time records.
+    https://devdocs.transsmart.com/#_service_level_time_retrieval
     """
-    _name = 'delivery.package.type'
+    _name = 'delivery.service.level.time'
 
-    transsmart_code = fields.Char(required=True, index=True)
+    transsmart_code = fields.Char(required=True, index=True, oldname="code")
     name = fields.Char()
-    package_type = fields.Char(required=True)
-    length = fields.Float()
-    width = fields.Float()
-    height = fields.Float()
-    weight = fields.Float()
+    pre_book = fields.Boolean(help="Available for prebooking")
     is_default = fields.Boolean()
     active = fields.Boolean(default=True)
 

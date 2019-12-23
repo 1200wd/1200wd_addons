@@ -1,0 +1,60 @@
+<openerp>
+    <data>
+
+        <menuitem
+            id="menu_transsmart_configuration"
+            name="Transsmart"
+            parent="stock.menu_stock_configuration"
+            sequence="15"
+            />
+
+        <menuitem
+            id="menu_action_delivery_service_level_form"
+            action="action_delivery_service_level_form"
+            parent="menu_transsmart_configuration"
+            />
+
+        <menuitem
+            id="menu_action_delivery_service_level_time_form"
+            action="action_delivery_service_level_time_form"
+            parent="menu_transsmart_configuration"
+            />
+
+        <menuitem
+            id="menu_action_show_packages"
+            action="action_show_packages"
+            parent="menu_transsmart_configuration"
+            />
+
+        <menuitem
+            id="menu_delivery_web_service_settings"
+            name="Connections"
+            action="action_delivery_web_service_settings"
+            parent="menu_transsmart_configuration"
+            sequence="15"
+            />
+
+        <menuitem
+            id="menu_action_transsmart_carrier_form"
+            name="Carriers"
+            action="action_transsmart_carrier_form"
+            parent="menu_transsmart_configuration"
+            />
+
+        <menuitem
+            id="menu_action_transsmart_cost_center_form"
+            name="Cost centers"
+            action="action_transsmart_cost_center_form"
+            parent="menu_transsmart_configuration"
+            />
+
+        <menuitem
+            id="menu_http_request_log"
+            name="HTTP Request log"
+            action="action_http_request_log"
+            parent="menu_transsmart_configuration"
+            sequence="20"
+            />
+
+    </data>
+</openerp>

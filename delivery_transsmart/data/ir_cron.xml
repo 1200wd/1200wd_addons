@@ -7,7 +7,7 @@
             <field name="interval_number">1</field>
             <field name="interval_type">days</field>
             <field name="numbercall">-1</field>
-            <field name="model" eval="'transsmart.config.settings'"/>
+            <field name="model" eval="'transsmart.delivery_web.service'"/>
             <field name="function" eval="'synchronize_models'"/>
         </record>
 

@@ -15,17 +15,13 @@ class TranssmartCostCenter(models.Model):
     _name = 'transsmart.cost.center'
     _description = "Transsmart Cost Center"
 
-    transsmart_nr = fields.Integer(
-        string='Identifier',
-        required=True,
-        index=True,
-        oldname='transsmart_id',
-    )
     transsmart_code = fields.Char(required=True, index=True, oldname='code')
     name = fields.Char()
     is_default = fields.Boolean()
+    active = fields.Boolean(default=True)
 
     _sql_constraints = [
-        ('transsmart_nr_unique', 'unique(transsmart_nr)',
+        ('transsmart_code_unique',
+         'unique(transsmart_code)',
          'Identifier field should be unique.')
     ]

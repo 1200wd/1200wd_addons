@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright 2017-2019 Therp BV <https://therp.nl>
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl.html).
+# pylint: disable=too-many-arguments,invalid-name,missing-docstring
 import logging
 
 from openerp import api, fields, models, registry
@@ -9,12 +10,19 @@ from openerp import api, fields, models, registry
 _logger = logging.getLogger(__name__)
 
 
-class TranssmartRequestLog(models.Model):
-    _name = 'transsmart.request.log'
+class HTTPRequestLog(models.Model):
+    _name = 'http.request.log'
     _order = 'request_timestamp desc'
 
     request_timestamp = fields.Datetime(
         string='Date/time',
+        default=fields.datetime.now(),
+        required=True,
+        readonly=True,
+    )
+    request_type = fields.Char(
+        string='Type',
+        default='get',
         required=True,
         readonly=True,
     )
@@ -23,12 +31,21 @@ class TranssmartRequestLog(models.Model):
         required=True,
         readonly=True,
     )
+    request_headers = fields.Text(
+        string='Headers',
+        required=True,
+        readonly=True,
+    )
+    request_params = fields.Text(
+        string='Parameters',
+        readonly=True,
+    )
     request_payload = fields.Text(
         string='Payload',
         readonly=True,
     )
-    response_ok = fields.Boolean(
-        string='Request succesfull',
+    response_status_code = fields.Integer(
+        string='HTTP response code',
         required=True,
         readonly=True,
     )
@@ -38,7 +55,7 @@ class TranssmartRequestLog(models.Model):
     )
 
     @api.model
-    def append(self, request_url, document, response):
+    def append(self, request_type, request_url, request_headers, document, response):
         """Generic validation of Transsmart API response documents.
 
         Returns warnings and errors and takes care of logging.
@@ -48,9 +65,11 @@ class TranssmartRequestLog(models.Model):
         # use sudo() because it must always be possible to create a log
         log_line = self.create({
             'request_timestamp': fields.datetime.now(),
+            'request_type': request_type,
             'request_url': request_url,
+            'request_headers': str(request_headers),
             'request_payload': str(document),
-            'response_ok': response.ok,
+            'response_status_code': response.status_code,
             'response_data': response.text,
         })
         log_cr.commit()

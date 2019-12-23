@@ -11,7 +11,7 @@
     """,
     'author': "1200 Web Development| Therp B.V",
     'category': 'Warehouse',
-    'version': '8.0.3.3',
+    'version': '8.0.4.0',
     'depends': [
         'delivery',
         'product_harmonized_system',
@@ -21,21 +21,21 @@
     'data': [
         "security/ir.model.access.csv",
         "data/ir_cron.xml",
-        "views/transsmart_config_settings.xml",
-        "views/res_company.xml",
-        "views/transsmart_request_log.xml",
-        "views/sale_order.xml",
-        "views/service_level_other.xml",
-        "views/service_level_time.xml",
-        "views/transsmart_cost_center.xml",
-        "views/res_partner.xml",
-        "views/stock_picking.xml",
         "views/delivery_package_type.xml",
-        "views/booking_profile.xml",
+        "views/delivery_service_level.xml",
+        "views/delivery_service_level_time.xml",
+        "views/delivery_web_service.xml",
+        "views/http_request_log.xml",
+        "views/res_company.xml",
+        "views/sale_order.xml",
+        "views/stock_picking.xml",
+        "views/transsmart_cost_center.xml",
+        "views/transsmart_carrier.xml",
+        "views/menu.xml",
         "wizards/stock_transfer_details.xml",
     ],
     'application': True,
     'external_dependencies': {
-        'python': ['mock', 'transsmart']
+        'python': ['mock']
     },
 }

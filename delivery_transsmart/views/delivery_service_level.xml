@@ -3,26 +3,26 @@
     <data>
 
         <record id="view_delivery_service_level_tree" model="ir.ui.view">
-            <field name="name">service.level.tree</field>
-            <field name="model">service.level.other</field>
+            <field name="name">delivery.service.level.tree</field>
+            <field name="model">delivery.service.level</field>
             <field name="arch" type="xml">
                 <tree string="Service Level">
-                    <field name="name" string="Name"/>
                     <field name="transsmart_code"/>
-                    <field name="transsmart_nr"/>
+                    <field name="name"/>
+                    <field name="active"/>
                 </tree>
             </field>
         </record>
 
         <record id="view_delivery_service_level_form" model="ir.ui.view">
-            <field name="name">service.level.form</field>
-            <field name="model">service.level.other</field>
+            <field name="name">delivery.service.level.form</field>
+            <field name="model">delivery.service.level</field>
             <field name="arch" type="xml">
                 <form string="Service Level">
                     <group col="4">
-                        <field name="name" string="Name"/>
                         <field name="transsmart_code"/>
-                        <field name="transsmart_nr"/>
+                        <field name="name"/>
+                        <field name="active"/>
                     </group>
                 </form>
             </field>
@@ -33,9 +33,10 @@
             model="ir.actions.act_window">
             <field name="name">Service Levels</field>
             <field name="type">ir.actions.act_window</field>
-            <field name="res_model">service.level.other</field>
+            <field name="res_model">delivery.service.level</field>
             <field name="view_type">form</field>
             <field name="view_mode">tree,form</field>
+            <field name="context">{'active_test': False}</field>
             <field name="help" type="html">
                 <p class="oe_view_nocontent_create">
                     You cannot create Service Levels here.
@@ -47,11 +48,6 @@
                 </p>
             </field>
         </record>
-
-        <menuitem
-            action="action_delivery_service_level_form"
-            id="menu_action_delivery_service_level_form"
-            parent="menu_transsmart_configuration"/>
 
     </data>
 </openerp>

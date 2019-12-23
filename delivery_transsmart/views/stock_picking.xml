@@ -18,10 +18,10 @@
 
                 <xpath
                     expr="//field[@name='carrier_id']" position="after">
-                    <field name="service_level_time_id"/>
-                    <field name="booking_profile_id"/>
+                    <field name="delivery_service_level_time_id"/>
                     <field name="cost_center_id" readonly="1"/>
                     <field name="service_level_other_id" readonly="1"/>
+                    <field name="transsmart_carrier_id"/>
                     <field name="delivery_cost_currency_id" invisible="1" />
                     <field
                         name="delivery_cost"
@@ -41,8 +41,7 @@
                         string="Get Rates"
                         groups="stock.group_stock_manager"
                         attrs="{'invisible': [('picking_type_code','!=','outgoing')]}"
-                        >
-                    </button>
+                        />
                 </xpath>
 
                 <xpath
@@ -73,7 +72,7 @@
                     <filter
                         name="service_level_time_filter"
                         string="Service Level Time"
-                        context="{'group_by':'service_level_time_id_id'}"
+                        context="{'group_by':'delivery_service_level_time_id_id'}"
                         />
                 </xpath>
 
