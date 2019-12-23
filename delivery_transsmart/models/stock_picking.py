@@ -2,32 +2,27 @@
 # Copyright 2016 1200 Web Development <https://1200wd.com/>
 # Copyright 2017-2019 Therp BV <https://therp.nl>
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl.html).
-from openerp import api, fields, models, exceptions, _
+# pylint: disable=missing-docstring,no-self-use,protected-access
 from transsmart.connection import Connection
 
+from openerp import api, fields, models, exceptions, _
 
-def false_to_empty_string(document):
-    """
-    Apparently, when we sent False to transsmart, it is not handled
-    properly and we get a BAD_REQUEST.
-    So what this function does is replace every False value with an empty
-    string `''`.
-    """
-    if isinstance(document, dict):
-        for key, value in document.iteritems():
-            if isinstance(value, dict) or isinstance(value, list):
-                false_to_empty_string(value)
-            else:
-                if value is False:
-                    document[key] = ''
-    elif isinstance(document, list):
-        for index, value in enumerate(document):
-            if isinstance(value, dict) or isinstance(value, list):
-                false_to_empty_string(value)
-            else:
-                if value is False:
-                    document[index] = ''
-    return document
+
+def clean_empty(in_object):
+    """Remove recursively empty elements from nested dict/list object."""
+    if not isinstance(in_object, (dict, list)):
+        return in_object
+    if isinstance(in_object, list):
+        return [
+            value for value in (clean_empty(value) for value in in_object) if value
+        ]
+    return {
+        key: value
+        for key, value in (
+            (key, clean_empty(value)) for key, value in in_object.items()
+        )
+        if value
+    }
 
 
 class StockPicking(models.Model):
@@ -73,21 +68,19 @@ class StockPicking(models.Model):
     )
     delivery_cost = fields.Float('Delivery Cost', readonly=True, copy=False)
     delivery_cost_currency_id = fields.Many2one('res.currency')
-    send_to_transsmart = fields.Boolean(
-        compute='_compute_send_to_transsmart',
-        store=True,
-    )
     service = fields.Selection(
         [('DOCS', 'DOCS'), ('NON-DOCS', 'NON-DOCS')],
         default='NON-DOCS',
     )
 
-    @api.depends('company_id', 'picking_type_id')
-    @api.multi
-    def _compute_send_to_transsmart(self):
-        for rec in self.filtered(
-                lambda x: x.picking_type_id.code == 'outgoing'):
-            rec.send_to_transsmart = rec._send_to_transsmart()
+    @api.onchange('service_level_time_id')
+    def _onchange_service_level_time_id(self):
+        return {
+            'domain': {
+                'booking_profile_id':
+                    [('service_level_time_id', '=', self.service_level_time_id.id)]
+            }
+        }
 
     @api.multi
     def _get_invoice_name(self):
@@ -101,12 +94,11 @@ class StockPicking(models.Model):
         return ''
 
     def _transsmart_create_shipping(self):
-        """
-        This assembles and returns the payload to be sent to Transsmart on
-        https://devdocs.transsmart.com/#_shipment_booking_only.
+        """Assemble and returns the payload to be sent to Transsmart.
+
+        See docs on: https://devdocs.transsmart.com/#_shipment_booking_only.
         """
         self.ensure_one()
-        package = self.package_type_id
         document = {
             'reference': self.name,
             'description': self.name,
@@ -120,39 +112,7 @@ class StockPicking(models.Model):
                 self._get_address("RECV", self.partner_id),
             ],
             # for now a single package that contains everything
-            'packages': [{
-                'measurements':
-                    {
-                        'length': package.length,
-                        'width': package.width,
-                        'height': package.height,
-                        'weight': package.weight,
-                    },
-                'packageType': package.package_type,
-                'quantity': 1,  # one package for everything
-                'deliveryNoteInfo': {
-                    'deliveryNoteLines': [
-                        {
-                            'hsCode':
-                                line.product_id.hs_code_id.hs_code or
-                                line.product_id.category_hs_code_id.hs_code,
-                            'hsCodeDescription':
-                                line.product_id.hs_code_id.description or
-                                line.product_id.category_hs_code_id \
-                                .description,
-                            'description': line.name,
-                            'price': line.product_id.lst_price,
-                            'currency': self.sale_id.currency_id.name,
-                            'quantity': line.product_uom_qty,
-                            'countryOrigin':
-                                line.product_id.origin_country_id.code,
-                            'articleId': self.product_id.default_code,
-                            'articleName': self.product_id.name,
-                            'articleEanCode': self.product_id.ean13,
-                            'reasonOfExport': self.reason_for_export,
-                        } for line in self.move_lines],
-                    }
-                }],
+            'packages': [self._get_package()],
             'carrier': self.booking_profile_id.carrier_id.transsmart_code,
             'value': self.sale_id.amount_total,
             'valueCurrency': self.sale_id.currency_id.name,
@@ -167,22 +127,58 @@ class StockPicking(models.Model):
 
     def _get_address(self, address_type, record):
         """Get address from partner, company or other record with address fields."""
-        address = {
+        return {
             'type': address_type,
             'name': record.name,
             'addressLine1': record.street,
             'addressLine2': record.street2,
             'zipCode': record.zip,
+            'state': record.state_id.code,
             'city': record.city,
             'country': record.country_id.code,
+            'email': record.email,
+            'telNo': record.phone,
         }
-        if record.state_id:
-            address['state'] = record.state_id.code
-        if record.email:
-            address['email'] = record.email
-        if record.phone:
-            address['telNo'] = record.phone
-        return address
+
+    def _get_package(self):
+        """Get package for shipment. For the moment hardcoded 1 package for all."""
+        package = self.package_type_id
+        return {
+            'measurements':
+                {
+                    'length': package.length,
+                    'width': package.width,
+                    'height': package.height,
+                    'weight': package.weight,
+                },
+            'packageType': package.package_type,
+            'quantity': 1,  # one package for everything
+            'deliveryNoteInfo': {
+                'deliveryNoteLines':
+                    [self._get_delivery_line(line) for line in self.move_lines],
+                }
+            }
+
+    def _get_delivery_line(self, line):
+        """Get delivery line from stock move line."""
+        return {
+            'hsCode':
+                line.product_id.hs_code_id.hs_code or
+                line.product_id.category_hs_code_id.hs_code,
+            'hsCodeDescription':
+                line.product_id.hs_code_id.description or
+                line.product_id.category_hs_code_id.description,
+            'description': line.name,
+            'price': line.product_id.lst_price,
+            'currency': self.sale_id.currency_id.name,
+            'quantity': line.product_uom_qty,
+            'countryOrigin':
+                line.product_id.origin_country_id.code,
+            'articleId': self.product_id.default_code,
+            'articleName': self.product_id.name,
+            'articleEanCode': self.product_id.ean13,
+            'reasonOfExport': self.reason_for_export,
+        }
 
     def _validate_create_booking_document(self, document):
         document = document[0]
@@ -204,8 +200,8 @@ class StockPicking(models.Model):
         for address in document.get('addresses'):
             for key in address.keys():
                 if not address[key] and key not in ['addressLine2', 'state']:
-                    raise exceptions.ValidationError(_(
-                        "Field %s on address on %s needs to have a value.") %
+                    raise exceptions.ValidationError(
+                        _("Field %s on address on %s needs to have a value.") %
                         (key, self.name))
         for package in document.get('packages'):
             for key in package.get('measurements').keys():
@@ -217,12 +213,10 @@ class StockPicking(models.Model):
                         "are filled.") % (self.name))
             for field in REQUIRED_PACKAGE_FIELDS:
                 if not package.get(field):
-                    raise exceptions.ValidationError(_(
-                        "Make sure that %s field of the Package Type %s has a "
-                        "value.") % (
-                            field,
-                            self.package_type_id.name,
-                        )
+                    raise exceptions.ValidationError(
+                        _("Make sure that %s field of the Package Type %s has a "
+                          "value.") %
+                        (field, self.package_type_id.name)
                     )
 
     @api.multi
@@ -236,7 +230,7 @@ class StockPicking(models.Model):
         account_code = ir_config_parameter.get_param('transsmart_account_code')
         for rec in self:
             document = rec._transsmart_create_shipping()
-            document = false_to_empty_string(document)
+            document = clean_empty(document)
             rec._validate_create_booking_document(document)
             connection = rec._get_transsmart_connection()
             response = connection.Shipment.book(account_code, 'BOOK', document)
@@ -248,15 +242,6 @@ class StockPicking(models.Model):
                 'carrier_tracking_ref': response_json['trackingUrl'],
             }
             rec.write(data)
-
-    def _send_to_transsmart(self):
-        """
-        Not all stock pickings can/should be sent to Transsmart.
-        Figure this out here.
-        """
-        return self.company_id.transsmart_enabled \
-            and self.picking_type_id.code == 'outgoing' \
-            and self.booking_profile_id.carrier_id.transsmart_code
 
     def _get_transsmart_connection(self):
         """
@@ -306,21 +291,28 @@ class StockPicking(models.Model):
         account_code = ir_config_parameter.get_param('transsmart_account_code')
         for rec in self:
             connection = rec._get_transsmart_connection()
-            document = rec._false_to_empty_string(
-                rec._transsmart_create_shipping())
+            document = clean_empty(rec._transsmart_create_shipping())
             self._validate_get_rates_document(document)
             response = connection.Rate.calculate(
                 account_code,
                 document)
             if not response.ok:
-                raise exceptions.ValidationError(_(response.json()))
-            rate_obj = sorted(
-                response.json()[0]['rates'],
-                key=lambda x: x['price'])[0]
+                raise exceptions.ValidationError(response.text)
+            response_dict = response.json()[0]
+            if 'rates' not in response_dict:
+                if 'errors' in response_dict and \
+                        'description' in response_dict['errors']:
+                    raise exceptions.ValidationError(
+                        response_dict['errors']['description']
+                    )
+                raise exceptions.ValidationError(response.text)
+            # Get lowest rate.
+            rate_obj = sorted(response_dict['rates'], key=lambda x: x['price'])[0]
             rec.write({
                 'delivery_cost': rate_obj['price'],
                 'delivery_cost_currency_id': self.env['res.currency'].search(
-                    [('name', '=', rate_obj['currency'])]).id})
+                    [('name', '=', rate_obj['currency'])]).id
+            })
 
     @api.model
     def create(self, vals):
@@ -329,6 +321,8 @@ class StockPicking(models.Model):
         the rates.
         """
         result = super(StockPicking, self).create(vals)
-        if result._send_to_transsmart():
+        if self.company_id.transsmart_enabled \
+                and self.picking_type_id.code == 'outgoing' \
+                and self.booking_profile_id.carrier_id.transsmart_code:
             result.transsmart_get_rates()
         return result
