@@ -226,14 +226,16 @@ class StockPicking(models.Model):
         the picking locally.
         https://devdocs.transsmart.com/#_shipment_booking_only
         """
-        ir_config_parameter = self.env['ir.config_parameter']
-        account_code = ir_config_parameter.get_param('transsmart_account_code')
+        log_model = self.env['transsmart.request.log']
+        parameter_model = self.env['ir.config_parameter']
+        account_code = parameter_model.get_param('transsmart_account_code')
         for rec in self:
             document = rec._transsmart_create_shipping()
             document = clean_empty(document)
             rec._validate_create_booking_document(document)
             connection = rec._get_transsmart_connection()
             response = connection.Shipment.book(account_code, 'BOOK', document)
+            log_model.append('Shipment.book', document, response)
             if not response.ok:
                 raise exceptions.ValidationError(response.text)
             response_json = response.json()[0]  # unpack
@@ -287,6 +289,7 @@ class StockPicking(models.Model):
         Attention: Only the lowest rate is saved.
         https://devdocs.transsmart.com/#_calculating_rates
         """
+        log_model = self.env['transsmart.request.log']
         ir_config_parameter = self.env['ir.config_parameter']
         account_code = ir_config_parameter.get_param('transsmart_account_code')
         for rec in self:
@@ -296,6 +299,7 @@ class StockPicking(models.Model):
             response = connection.Rate.calculate(
                 account_code,
                 document)
+            log_model.append('Rate.calculate', document, response)
             if not response.ok:
                 raise exceptions.ValidationError(response.text)
             response_dict = response.json()[0]

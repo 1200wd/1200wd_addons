@@ -23,6 +23,7 @@
         "data/ir_cron.xml",
         "views/transsmart_config_settings.xml",
         "views/res_company.xml",
+        "views/transsmart_request_log.xml",
         "views/sale_order.xml",
         "views/service_level_other.xml",
         "views/service_level_time.xml",

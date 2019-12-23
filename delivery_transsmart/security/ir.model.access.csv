@@ -4,3 +4,4 @@ access_delivery_transsmart_002,service_level_time_user,model_service_level_time,
 access_delivery_transsmart_003,transsmart_cost_center_user,model_transsmart_cost_center,stock.group_stock_user,1,0,0,0
 access_delivery_transsmart_004,booking_profile_user,model_booking_profile,stock.group_stock_user,1,0,0,0
 access_delivery_transsmart_005,booking_profile_user,model_booking_profile,stock.group_stock_user,1,0,0,0
+access_transsmart_request_log_stock_user,access.transsmart_request_log.stock_user,model_transsmart_request_log,stock.group_stock_user,1,0,0,0
