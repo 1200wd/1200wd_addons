@@ -36,10 +36,6 @@ class HTTPRequestLog(models.Model):
         required=True,
         readonly=True,
     )
-    request_params = fields.Text(
-        string='Parameters',
-        readonly=True,
-    )
     request_payload = fields.Text(
         string='Payload',
         readonly=True,
@@ -55,7 +51,7 @@ class HTTPRequestLog(models.Model):
     )
 
     @api.model
-    def append(self, request_type, request_url, request_headers, document, response):
+    def append(self, response, payload=None):
         """Generic validation of Transsmart API response documents.
 
         Returns warnings and errors and takes care of logging.
@@ -63,12 +59,17 @@ class HTTPRequestLog(models.Model):
         log_cr = registry(self.env.cr.dbname).cursor()
         self = self.sudo().with_env(self.env(cr=log_cr))
         # use sudo() because it must always be possible to create a log
+        request = response.request  # This is the prepared request.
+        purged_headers = str({
+            key: value for key, value in request.headers.items()
+            if key != 'Authorization'
+        }) if request.headers else False
         log_line = self.create({
             'request_timestamp': fields.datetime.now(),
-            'request_type': request_type,
-            'request_url': request_url,
-            'request_headers': str(request_headers),
-            'request_payload': str(document),
+            'request_type': request.method,
+            'request_url': request.url,  # Contains also params.
+            'request_headers': purged_headers,
+            'request_payload': payload and str(payload) or False,
             'response_status_code': response.status_code,
             'response_data': response.text,
         })

@@ -13,7 +13,6 @@
                         <field name="request_url"/>
                         <field name="response_status_code"/>
                         <field name="request_headers"/>
-                        <field name="request_params"/>
                         <field name="request_payload"/>
                         <field name="response_data"/>
                     </group>

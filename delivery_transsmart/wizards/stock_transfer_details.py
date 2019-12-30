@@ -15,5 +15,5 @@ class StockTransferDetails(models.TransientModel):
         self.ensure_one()
         if self.send_to_transsmart:
             # TODO how will partial moves be taken care off?
-            self.picking_id.action_create_transsmart_document()
+            self.picking_id.action_transsmart_book_shipping()
         return super(StockTransferDetails, self).do_detailed_transfer()

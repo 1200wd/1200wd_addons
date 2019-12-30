@@ -11,6 +11,16 @@
                 />
             <field name="arch" type="xml">
 
+                <xpath expr="//header//field[@name='state']" position="before">
+                    <button
+                        type="object"
+                        name="action_transsmart_get_rates"
+                        string="Get Rates"
+                        groups="stock.group_stock_manager"
+                        attrs="{'invisible': [('picking_type_code','!=','outgoing')]}"
+                        />
+                </xpath>
+
                 <xpath expr="//field[@name='carrier_id']" position="attributes">
                     <attribute name="invisible">1</attribute>
                     <attribute name="string">Delivery Method</attribute>
@@ -19,8 +29,8 @@
                 <xpath
                     expr="//field[@name='carrier_id']" position="after">
                     <field name="delivery_service_level_time_id"/>
-                    <field name="cost_center_id" readonly="1"/>
-                    <field name="service_level_other_id" readonly="1"/>
+                    <field name="cost_center_id"/>
+                    <field name="service_level_other_id"/>
                     <field name="transsmart_carrier_id"/>
                     <field name="delivery_cost_currency_id" invisible="1" />
                     <field
@@ -29,19 +39,9 @@
                         widget="monetary"
                         options="{'currency_field': 'delivery_cost_currency_id'}"
                         />
-                        <field name="incoterm_id" readonly="1"/>
-                        <field name="service"/>
-                        <field name="package_type_id" string="Package Type"/>
-                </xpath>
-
-                <xpath expr="//header//field[@name='state']" position="before">
-                    <button
-                        type="object"
-                        name="transsmart_get_rates"
-                        string="Get Rates"
-                        groups="stock.group_stock_manager"
-                        attrs="{'invisible': [('picking_type_code','!=','outgoing')]}"
-                        />
+                    <field name="incoterm_id"/>
+                    <field name="service"/>
+                    <field name="package_type_id"/>
                 </xpath>
 
                 <xpath

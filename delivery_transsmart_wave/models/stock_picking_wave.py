@@ -23,6 +23,6 @@ class StockPickingWave(models.Model):
                 rec.transsmart_confirmed = False
 
     @api.multi
-    def action_create_transsmart_document(self):
+    def action_transsmart_book_shipping(self):
         for rec in self:
-            rec.picking_ids.action_create_transsmart_document()
+            rec.picking_ids.action_transsmart_book_shipping()
