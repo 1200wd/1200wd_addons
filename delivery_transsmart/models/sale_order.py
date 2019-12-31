@@ -22,8 +22,14 @@ class SaleOrder(models.Model):
         """Set transsmart information on picking from service level and cost center."""
         result = super(SaleOrder, self).action_ship_create()
         for this in self:
-            this.picking_ids.write({
-                'delivery_service_level_time_id': this.delivery_service_level_time.id,
+            pickings = this.picking_ids
+            pickings.write({
+                'delivery_service_level_time_id':
+                    this.delivery_service_level_time_id.id,
                 'cost_center_id': this.cost_center_id.id,
             })
+            try:
+                pickings.action_transsmart_get_rates()
+            except Exception:  # pylint: disable=broad-except
+                pass  # Ignore not being able to get rates now.
         return result

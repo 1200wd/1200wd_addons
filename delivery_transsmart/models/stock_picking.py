@@ -39,18 +39,6 @@ class StockPicking(models.Model):
     delivery_cost = fields.Float('Delivery Cost', readonly=True, copy=False)
     delivery_cost_currency_id = fields.Many2one('res.currency')
 
-    @api.model
-    def create(self, vals):
-        """
-        When a stock picking is created *and* can be sent to transsmart, get
-        the rates.
-        """
-        result = super(StockPicking, self).create(vals)
-        if self.company_id.transsmart_enabled \
-                and self.picking_type_id.code == 'outgoing':
-            result.transsmart_get_rates()
-        return result
-
     @api.multi
     def action_transsmart_get_rates(self):
         """Get rates/offers from transsmart for the current picking.
