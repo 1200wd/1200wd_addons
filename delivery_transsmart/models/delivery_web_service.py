@@ -177,8 +177,8 @@ class DeliveryWebService(models.Model):
         return self._return_response(response)
 
     @api.multi
-    def action_check_headers(self):
-        """Check headers."""
+    def action_check_connection(self):
+        """Check connection by getting headers (does login)."""
         self.ensure_one()
         self._get_headers()
 
