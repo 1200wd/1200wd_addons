@@ -3,13 +3,10 @@
     <data>
          
         <record id="view_picking_wave_form" model="ir.ui.view">
-            <field name="name">transsmart_confirmed_picking_wave</field>
+            <field name="name">Stock Picking Wave Form Transsmart</field>
             <field name="model">stock.picking.wave</field>
             <field name="inherit_id" ref="stock_picking_wave.view_picking_wave_form"/>
             <field name="arch" type="xml">
-                <xpath expr="//field[@name='user_id']" position="after">
-                    <field name="transsmart_confirmed"/>
-                </xpath>
                 <xpath
                     expr="//div[@class='oe_right oe_button_box']"
                     position="inside"
