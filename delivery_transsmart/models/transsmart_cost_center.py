@@ -15,14 +15,14 @@ class TranssmartCostCenter(models.Model):
     _name = 'transsmart.cost.center'
     _description = "Transsmart Cost Center"
 
-    transsmart_code = fields.Char(required=True, index=True, oldname='code')
+    code = fields.Char(required=True, index=True)
     name = fields.Char()
     is_default = fields.Boolean()
     active = fields.Boolean(default=True)
 
     _sql_constraints = [
-        ('transsmart_code_unique',
-         'unique(transsmart_code)',
+        ('code_unique',
+         'unique(code)',
          'Identifier field should be unique.')
     ]
 
@@ -33,7 +33,7 @@ class TranssmartCostCenter(models.Model):
         for this in self:
             name = super(TranssmartCostCenter, this).name_get()[0][1]
             if not name:
-                result.append((this.id, this.transsmart_code))
+                result.append((this.id, this.code))
             else:
-                result.append((this.id, " -  ".join([this.transsmart_code, name])))
+                result.append((this.id, " -  ".join([this.code, name])))
         return result

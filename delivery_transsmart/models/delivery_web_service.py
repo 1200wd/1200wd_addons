@@ -40,7 +40,7 @@ def get_json_vals(json_object):
     """Get common values for Transsmart model from json object."""
     json_value = json.loads(json_object['value'])
     vals = {
-        'transsmart_code': json_value['code'],
+        'code': json_value['code'],
         'name': json_value.get('description', json_value.get('name')),
     }
     if 'isDefault' in json_value:
@@ -264,18 +264,18 @@ class DeliveryWebService(models.Model):
     def create_or_write_transsmart(self, model, vals):
         """Use transsmart code to create or update model linked to transsmart."""
         vals['active'] = True  # Reactivate if needed.
-        record = self.get_transsmart_record(model, vals['transsmart_code'])
+        record = self.get_transsmart_record(model, vals['code'])
         if not record:
             model.create(vals)
         else:
-            vals.pop('transsmart_code')  # Can not and should change.
+            vals.pop('code')  # Can not and should change.
             record.write(vals)
 
     @api.model
-    def get_transsmart_record(self, model, transsmart_code):
+    def get_transsmart_record(self, model, code):
         """Return appropriate record if present, else an empty recordset."""
         return model.with_context(active_test=False).search(
-            [('transsmart_code', '=', transsmart_code)]
+            [('code', '=', code)]
         )
 
     @api.multi

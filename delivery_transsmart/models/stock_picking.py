@@ -102,9 +102,9 @@ class StockPicking(models.Model):
             'numberOfPackages': 1,
             'packages': [self._get_package()],
             'service': self.service,
-            'serviceLevelTime': self.delivery_service_level_time_id.transsmart_code,
+            'serviceLevelTime': self.delivery_service_level_time_id.code,
             'incoterms': self.incoterm_id.code or 'DAP',
-            'costCenter': self.cost_center_id.transsmart_code,
+            'costCenter': self.cost_center_id.code,
             'pickupDate': fields.Datetime.from_string(self.min_date).date().isoformat(),
         }
         return document
@@ -147,11 +147,11 @@ class StockPicking(models.Model):
             'value': self.sale_id.amount_total,
             'valueCurrency': self.sale_id.currency_id.name,
             'service': self.service,
-            'serviceLevelTime': self.delivery_service_level_time_id.transsmart_code,
-            'serviceLevelOther': self.service_level_other_id.transsmart_code,
+            'serviceLevelTime': self.delivery_service_level_time_id.code,
+            'serviceLevelOther': self.service_level_other_id.code,
             'incoterms': self.incoterm_id.code or 'DAP',
-            'carrier': self.transsmart_carrier_id.transsmart_code,
-            'costCenter': self.cost_center_id.transsmart_code,
+            'carrier': self.transsmart_carrier_id.code,
+            'costCenter': self.cost_center_id.code,
             'pickupDate': fields.Datetime.from_string(self.min_date).date().isoformat(),
         }
         return document
@@ -184,7 +184,11 @@ class StockPicking(models.Model):
 
     def _get_package(self):
         """Get package for shipment. For the moment hardcoded 1 package for all."""
-        package = self.package_type_id
+        if self.package_type_id:
+            package = self.package_type_id
+        else:
+            package_model = self.env['delivery.package.type']
+            package = package_model.get_default()
         return {
             'measurements':
                 {

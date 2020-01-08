@@ -7,7 +7,7 @@
             <field name="arch" type="xml">
                 <form string="Cost center">
                     <group col="4">
-                        <field name="transsmart_code"/>
+                        <field name="code"/>
                         <field name="name" string="Name"/>
                         <field name="active"/>
                     </group>
@@ -20,7 +20,7 @@
             <field name="model">transsmart.cost.center</field>
             <field name="arch" type="xml">
                 <tree string="Cost center">
-                    <field name="transsmart_code"/>
+                    <field name="code"/>
                     <field name="name" string="Name"/>
                     <field name="active"/>
                 </tree>

@@ -7,7 +7,7 @@
             <field name="arch" type="xml">
                 <form string="Carrier">
                     <group col="4">
-                        <field name="transsmart_code"/>
+                        <field name="code"/>
                         <field name="name"/>
                         <field name="active"/>
                     </group>
@@ -20,7 +20,7 @@
             <field name="model">transsmart.carrier</field>
             <field name="arch" type="xml">
                 <tree string="Carriers">
-                    <field name="transsmart_code"/>
+                    <field name="code"/>
                     <field name="name"/>
                     <field name="active"/>
                 </tree>

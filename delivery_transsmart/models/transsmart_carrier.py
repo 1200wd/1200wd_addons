@@ -9,13 +9,13 @@ class TranssmartCarrier(models.Model):
     _name = 'transsmart.carrier'
     _description = "Transsmart Carrier"
 
-    transsmart_code = fields.Char(required=True, index=True)
+    code = fields.Char(required=True, index=True)
     name = fields.Char()
     active = fields.Boolean(default=True)
 
     _sql_constraints = [
-        ('transsmart_code_unique',
-         'unique(transsmart_code)',
+        ('code_unique',
+         'unique(code)',
          'Identifier field should be unique.')
     ]
 
@@ -26,7 +26,7 @@ class TranssmartCarrier(models.Model):
         for this in self:
             name = super(TranssmartCarrier, this).name_get()[0][1]
             if not name:
-                result.append((this.id, this.transsmart_code))
+                result.append((this.id, this.code))
             else:
-                result.append((this.id, " -  ".join([this.transsmart_code, name])))
+                result.append((this.id, " -  ".join([this.code, name])))
         return result

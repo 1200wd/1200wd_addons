@@ -7,9 +7,10 @@
             <field name="arch" type="xml">
                 <form string="Delivery Package Type">
                     <group colspan="6" col="2">
-                        <field name="transsmart_code"/>
+                        <field name="code"/>
                         <field name="name"/>
                         <field name="package_type"/>
+                        <field name="is_default"/>
                         <field name="length"/>
                         <field name="width"/>
                         <field name="height"/>
@@ -25,9 +26,10 @@
             <field name="model">delivery.package.type</field>
             <field name="arch" type="xml">
                 <tree string="Delivery Package Types">
-                    <field name="transsmart_code"/>
+                    <field name="code"/>
                     <field name="name"/>
                     <field name="package_type"/>
+                    <field name="is_default"/>
                     <field name="active"/>
                 </tree>
             </field>

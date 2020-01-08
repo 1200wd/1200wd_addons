@@ -6,7 +6,7 @@
             <field name="model">delivery.service.level.time</field>
             <field name="arch" type="xml">
                 <tree string="Service Level Time">
-                    <field name="transsmart_code"/>
+                    <field name="code"/>
                     <field name="name"/>
                     <field name="pre_book"/>
                     <field name="active"/>
@@ -20,7 +20,7 @@
             <field name="arch" type="xml">
                 <form string="Service Level Time">
                     <group col="4">
-                        <field name="transsmart_code"/>
+                        <field name="code"/>
                         <field name="name"/>
                         <field name="pre_book"/>
                         <field name="active"/>

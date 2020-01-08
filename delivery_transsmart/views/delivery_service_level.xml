@@ -7,7 +7,7 @@
             <field name="model">delivery.service.level</field>
             <field name="arch" type="xml">
                 <tree string="Service Level">
-                    <field name="transsmart_code"/>
+                    <field name="code"/>
                     <field name="name"/>
                     <field name="active"/>
                 </tree>
@@ -20,7 +20,7 @@
             <field name="arch" type="xml">
                 <form string="Service Level">
                     <group col="4">
-                        <field name="transsmart_code"/>
+                        <field name="code"/>
                         <field name="name"/>
                         <field name="active"/>
                     </group>
