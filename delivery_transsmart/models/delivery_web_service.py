@@ -118,6 +118,7 @@ class DeliveryWebService(models.Model):
     instance_user = fields.Char(
         string="OS instance user",
         required=True,
+        copy=False,
         help="The os user onder which Odoo is running.\n"
              "This makes it easy to keep environments separate,"
              " even with copied databases.",
