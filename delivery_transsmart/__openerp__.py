@@ -5,11 +5,7 @@
 {
     'name': "Transsmart Integration",
     'summary': """Transsmart Integration for Odoo""",
-    'description': """
-    Transsmart Integration for Odoo.
-    Exchange delivery information between Odoo and Transsmart.
-    """,
-    'author': "1200 Web Development| Therp B.V",
+    'author': "1200 Web Development, Therp B.V",
     'category': 'Warehouse',
     'version': '8.0.4.0',
     'depends': [
@@ -35,7 +31,4 @@
         "wizards/stock_transfer_details.xml",
     ],
     'application': True,
-    'external_dependencies': {
-        'python': ['mock']
-    },
 }

@@ -30,8 +30,4 @@ class SaleOrder(models.Model):
                 'cost_center_id': this.cost_center_id.id,
                 'package_type_id': default_package.id,
             })
-            try:
-                pickings.action_transsmart_get_rates()
-            except Exception:  # pylint: disable=broad-except
-                pass  # Ignore not being able to get rates now.
         return result

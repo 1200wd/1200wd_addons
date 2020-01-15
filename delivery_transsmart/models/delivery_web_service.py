@@ -127,12 +127,12 @@ class DeliveryWebService(models.Model):
     url = fields.Char(
         string="URL",
         required=True,
-        default="https://connect.test.api.transwise.eu/Api/"
+        default="https://api.transsmart.com"
     )
     username = fields.Char(required=True)
     password = fields.Char(required=True)
     account = fields.Char(required=True)
-    synchronization_time = fields.Datetime()
+    synchronization_time = fields.Datetime(readonly=True)
 
     _sql_constraints = [
         ('instance_user_unique',
@@ -289,15 +289,23 @@ class DeliveryWebService(models.Model):
         deprecated_records.write({'active': False})
 
     @api.multi
-    def get_rates(self, document):
-        """Get rates for document from stock.picking."""
+    def get_prebooking(self, document):
+        """Get rates for document from stock.picking using business rules."""
+        return self.get_rates(document, action='preBooking')
+
+    @api.multi
+    def get_rates(self, document, action='calculate'):
+        """Get rates for document from stock.picking.
+
+        By default all possible rates are returned.
+        """
         self.ensure_one()
         document = clean_empty(document)
         validate_get_rates_document(document)
         endpoint = \
             "/v2/rates/%s" % self.account
         response = self.post(
-            endpoint, payload=[document], params={'action': 'preBooking'}
+            endpoint, payload=[document], params={'action': action}
             # endpoint, payload=[document]
         )
         return response

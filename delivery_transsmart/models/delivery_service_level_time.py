@@ -5,10 +5,7 @@ from openerp import api, fields, models
 
 
 class DeliveryServiceLevelTime(models.Model):
-    """
-    Used for keeping the Service Level Time records.
-    https://devdocs.transsmart.com/#_service_level_time_retrieval
-    """
+    """Used for keeping the Service Level Time records."""
     _name = 'delivery.service.level.time'
 
     code = fields.Char(required=True, index=True)
@@ -34,3 +31,22 @@ class DeliveryServiceLevelTime(models.Model):
             else:
                 result.append((this.id, " -  ".join([this.code, name])))
         return result
+
+    @api.model
+    def name_search(self, name, args=None, operator='ilike', limit=100):
+        """Search also on code."""
+        args = args or []
+        if name:
+            # First search on code.
+            records = self.search([('code', '=ilike', name + "%")] + args, limit=limit)
+            if records:
+                if limit and len(records) >= limit:
+                    return records.name_get()
+                # Get extra records if limit not reached.
+                limit = limit if limit == 0 else limit - len(records)
+                records = records | self.search(
+                    [('name', operator, name)] + args, limit=limit)
+                return records.name_get()
+        #  If no code search, or nothing found, just call super.
+        return super(DeliveryServiceLevelTime, self).name_search(
+            name, args=args, operator=operator, limit=limit)

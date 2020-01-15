@@ -16,6 +16,13 @@
                         type="object"
                         name="action_transsmart_get_rates"
                         string="Get Rates"
+                        groups="base.group_system"
+                        attrs="{'invisible': [('picking_type_code','!=','outgoing')]}"
+                        />
+                    <button
+                        type="object"
+                        name="action_transsmart_prebooking"
+                        string="Prebooking"
                         groups="stock.group_stock_manager"
                         attrs="{'invisible': [('picking_type_code','!=','outgoing')]}"
                         />

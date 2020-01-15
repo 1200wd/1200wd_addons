@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-# Copyright 20182019 Therp BV <https://therp.nl>
-# Copyright 2015-2016 1200 Web Development <https://1200wd.com>
 # Copyright 2015 ONESTEiN BV <https://onestein.nl>
+# Copyright 2015-2016 1200 Web Development <https://1200wd.com>
+# Copyright 2018-2020 Therp BV <https://therp.nl>
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl.html).
 from openerp import models
 

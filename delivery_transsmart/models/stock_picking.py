@@ -3,7 +3,23 @@
 # Copyright 2017-2019 Therp BV <https://therp.nl>
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl.html).
 # pylint: disable=missing-docstring,no-self-use,protected-access,invalid-name
+import logging
+
 from openerp import _, api, exceptions, fields, models
+
+
+_logger = logging.getLogger(__name__)
+
+
+def validate_rates_response(response):
+    """Check wether response actually contains rates."""
+    if 'rates' not in response:
+        if 'errors' in response and \
+                'message' in response['errors']:
+            raise exceptions.ValidationError(
+                response['errors']['message']
+            )
+        raise exceptions.ValidationError(str(response))
 
 
 class StockPicking(models.Model):
@@ -39,32 +55,46 @@ class StockPicking(models.Model):
     delivery_cost = fields.Float('Delivery Cost', readonly=True, copy=False)
     delivery_cost_currency_id = fields.Many2one('res.currency')
 
+    # reason_for_export UI will be provided by customer modules.
+    reason_for_export = fields.Selection([
+        ('sale', 'Sale'),
+        ('sample', 'Sample'),
+        ('gift_repair', 'Repair or Gift')],
+        'Reason for Export',
+        default='sale',
+    )
+
+    @api.multi
+    def action_transsmart_prebooking(self):
+        """Get rates/offers from transsmart for the current picking.
+
+        Attention: Only the lowest rate is saved.
+        """
+        service = self._get_transsmart_service()
+        for this in self:
+            document = this.get_transsmart_rates_document()
+            response = service.get_prebooking(document)[0]
+            validate_rates_response(response)
+            this._update_rate_fields(response)
+
     @api.multi
     def action_transsmart_get_rates(self):
         """Get rates/offers from transsmart for the current picking.
 
         Attention: Only the lowest rate is saved.
         """
-        service_model = self.env['delivery.web.service']
-        service = service_model.get_current_service()
+        service = self._get_transsmart_service()
         for this in self:
             document = this.get_transsmart_rates_document()
-            # document = this.get_transsmart_shipping_document()
             response = service.get_rates(document)[0]
-            if 'rates' not in response:
-                if 'errors' in response and \
-                        'message' in response['errors']:
-                    raise exceptions.ValidationError(
-                        response['errors']['message']
-                    )
-                raise exceptions.ValidationError(str(response))
-            this._update_rate_fields(response)
+            validate_rates_response(response)
+            for rate in response['rates']:
+                _logger.debug("%s", rate)
 
     @api.multi
     def _update_rate_fields(self, transsmart_response):
         """Update rate, but also selected carrier and service level time."""
-        service_model = self.env['delivery.web.service']
-        service = service_model.get_current_service()
+        service = self._get_transsmart_service()
         currency_model = self.env['res.currency']
         # Get lowest rate.
         rate_obj = sorted(transsmart_response['rates'], key=lambda x: x['price'])[0]
@@ -82,7 +112,7 @@ class StockPicking(models.Model):
             self.env['delivery.service.level'],
             rate_obj['serviceLevelOther']
         ).id
-        vals['carrier_id'] = service.get_transsmart_record(
+        vals['transsmart_carrier_id'] = service.get_transsmart_record(
             self.env['transsmart.carrier'],
             rate_obj['carrier']
         ).id
@@ -91,6 +121,7 @@ class StockPicking(models.Model):
     def get_transsmart_rates_document(self):
         """Assemble and returns the payload to be sent to Transsmart to get rates."""
         self.ensure_one()
+        carrier_code = self.transsmart_carrier_id.code or 'AUT'
         document = {
             'reference': self.name,
             'description': self.name,
@@ -104,6 +135,7 @@ class StockPicking(models.Model):
             'service': self.service,
             'serviceLevelTime': self.delivery_service_level_time_id.code,
             'incoterms': self.incoterm_id.code or 'DAP',
+            'carrier': carrier_code,
             'costCenter': self.cost_center_id.code,
             'pickupDate': fields.Datetime.from_string(self.min_date).date().isoformat(),
         }
@@ -112,8 +144,7 @@ class StockPicking(models.Model):
     @api.multi
     def action_transsmart_book_shipping(self):
         """This creates the shipping on Transsmart."""
-        service_model = self.env['delivery.web.service']
-        service = service_model.get_current_service()
+        service = self._get_transsmart_service()
         for this in self:
             document = this.get_transsmart_shipping_document()
             response = service.create_shipping(document)[0]
@@ -155,6 +186,12 @@ class StockPicking(models.Model):
             'pickupDate': fields.Datetime.from_string(self.min_date).date().isoformat(),
         }
         return document
+
+    @api.model
+    def _get_transsmart_service(self):
+        """Return the right transsmart service record."""
+        service_model = self.env['delivery.web.service']
+        return service_model.get_current_service()
 
     @api.multi
     def _get_invoice_name(self):
@@ -225,5 +262,5 @@ class StockPicking(models.Model):
             'articleId': self.product_id.default_code,
             'articleName': self.product_id.name,
             'articleEanCode': self.product_id.ean13,
-            'reasonOfExport': self.reason_for_export,
+            'reasonOfExport': self.reason_for_export or '',
         }
