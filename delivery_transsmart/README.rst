@@ -17,18 +17,22 @@ Usage
 =====
 
 When the module is setup succesfully, some support data will be fetched from
-Transsmart's environment and the module will be ready for usage. As an end user
-the two functionalities that are available to you are "get rate" and
-"create document".
+Transsmart's environment and the module will be ready for usage.
 
-What get rate does is for a single delivery order you can ask Transsmart for
-rates. Transsmart will return a couple of rates/offers from companies for your
-picking and what we do is fetch the lowest rate of all the rates and save it on
-the Delivery Cost field. You can fetch rates by clicking the Get Rates button
-on the stock picking.
+The implemented solution pre-supposes that routing rules have been uploaded to
+Transsmart, to pick a carrier and other information based on priority and delivery
+address.
 
-What create document does is taking the values of the stock picking and
-creating the picking in transsmart's server.
+Sending a package to Transsmart will automatically invoke the routing rules, and then
+create a booking.
+
+The user is able to verify the routing rules by manually using the "Prebooking" button
+on the stock picking. This will invoke the routing rules ahead of time and update
+the stock picking.
+
+For debugging purposes it is also possible for the system administrator to use the
+"Get Rates" button. This will show the rates for all carriers for the selected
+address and package, regardless of routing rules.
 
 Credits
 =======

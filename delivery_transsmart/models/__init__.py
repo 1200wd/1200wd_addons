@@ -7,6 +7,7 @@ from . import delivery_web_service
 from . import http_request_log
 from . import res_company
 from . import sale_order
+from . import stock_picking_rate
 from . import stock_picking
 from . import transsmart_carrier
 from . import transsmart_cost_center

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright 2016 1200 Web Development <https://1200wd.com/>
-# Copyright 2017-2019 Therp BV <https://therp.nl>
+# Copyright 2017-2020 Therp BV <https://therp.nl>
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl.html).
 # pylint: disable=missing-docstring,no-self-use,protected-access,invalid-name
 import logging
@@ -64,11 +64,18 @@ class StockPicking(models.Model):
         default='sale',
     )
 
+    # Show possible rates for debugging purposes.
+    rate_line_ids = fields.One2many(
+        comodel_name="stock.picking.rate",
+        inverse_name="picking_id",
+        readonly=True,
+    )
+
     @api.multi
     def action_transsmart_prebooking(self):
-        """Get rates/offers from transsmart for the current picking.
+        """Pick carrier and other attributes using routing rules.
 
-        Attention: Only the lowest rate is saved.
+        Using routing rules uploaded to Transsmart.
         """
         service = self._get_transsmart_service()
         for this in self:
@@ -81,15 +88,21 @@ class StockPicking(models.Model):
     def action_transsmart_get_rates(self):
         """Get rates/offers from transsmart for the current picking.
 
-        Attention: Only the lowest rate is saved.
+        Possible rates are shown on the rates tab of the stock picking form.
         """
+        rate_model = self.env["stock.picking.rate"]
         service = self._get_transsmart_service()
         for this in self:
             document = this.get_transsmart_rates_document()
             response = service.get_rates(document)[0]
             validate_rates_response(response)
+            this.rate_line_ids.unlink()
             for rate in response['rates']:
-                _logger.debug("%s", rate)
+                rate_model.create({
+                    "picking_id": this.id,
+                    "name": rate['description'],
+                    "price": rate['price'],
+                })
 
     @api.multi
     def _update_rate_fields(self, transsmart_response):
@@ -146,6 +159,9 @@ class StockPicking(models.Model):
         """This creates the shipping on Transsmart."""
         service = self._get_transsmart_service()
         for this in self:
+            if not this.transsmart_carrier_id:
+                # Automatically do prebooking, if not done before.
+                this.action_transsmart_prebooking()
             document = this.get_transsmart_shipping_document()
             response = service.create_shipping(document)[0]
             data = {

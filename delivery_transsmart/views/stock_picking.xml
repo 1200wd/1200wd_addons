@@ -59,6 +59,24 @@
                     <attribute name="readonly">1</attribute>
                 </xpath>
 
+                <xpath expr="//notebook" position="inside">
+                    <page
+                        id="page_transsmart_rates"
+                        string="Rates"
+                        groups="base.group_system"
+                        >
+                        <group id="group_transsmart_rates" colspan="6" col="1">
+                            <separator string="Rates" />
+                            <field name="rate_line_ids" nolabel="1">
+                                <tree>
+                                    <field name="name" />
+                                    <field name="price" />
+                                </tree>
+                            </field>
+                        </group>
+                    </page>
+                </xpath>
+
             </field>
         </record>
 
