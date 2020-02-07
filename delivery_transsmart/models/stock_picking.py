@@ -3,6 +3,7 @@
 # Copyright 2017-2020 Therp BV <https://therp.nl>
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl.html).
 # pylint: disable=missing-docstring,no-self-use,protected-access,invalid-name
+from datetime import datetime
 import logging
 
 from openerp import _, api, exceptions, fields, models
@@ -79,7 +80,7 @@ class StockPicking(models.Model):
         """
         service = self._get_transsmart_service()
         for this in self:
-            document = this.get_transsmart_rates_document()
+            document = this.get_transsmart_document()
             response = service.get_prebooking(document)[0]
             validate_rates_response(response)
             this._update_rate_fields(response)
@@ -93,7 +94,7 @@ class StockPicking(models.Model):
         rate_model = self.env["stock.picking.rate"]
         service = self._get_transsmart_service()
         for this in self:
-            document = this.get_transsmart_rates_document()
+            document = this.get_transsmart_document()
             response = service.get_rates(document)[0]
             validate_rates_response(response)
             this.rate_line_ids.unlink()
@@ -103,6 +104,70 @@ class StockPicking(models.Model):
                     "name": rate['description'],
                     "price": rate['price'],
                 })
+
+    @api.multi
+    def action_transsmart_book_shipping(self):
+        """This creates the shipping on Transsmart."""
+        service = self._get_transsmart_service()
+        for this in self:
+            if not this.transsmart_carrier_id:
+                # Automatically do prebooking, if not done before.
+                this.action_transsmart_prebooking()
+            document = this.get_transsmart_document()
+            document.update(self.get_shipping_fields())
+            response = service.create_shipping(document)[0]
+            data = {
+                'delivery_cost': response['price'],
+                'carrier_tracking_ref': response['trackingUrl'],
+            }
+            this.write(data)
+
+    def get_transsmart_document(self):
+        """Assemble and returns the payload to be sent to Transsmart to get rates."""
+        self.ensure_one()
+
+        def iso_date(in_date):
+            """Give isodate - ccyy-mm-dd - format for input date."""
+            return in_date.date().isoformat()
+
+        carrier_code = self.transsmart_carrier_id.code or 'AUT'
+        pickup_date_iso = iso_date(datetime.today())
+        if self.min_date:
+            min_date_iso = iso_date(fields.Datetime.from_string(self.min_date))
+            if min_date_iso > pickup_date_iso:
+                pickup_date_iso = min_date_iso
+        document = {
+            'reference': self.name,
+            'description': self.name,
+            'addresses': [
+                self._get_address("SEND", self.company_id),
+                self._get_address("RECV", self.partner_id),
+            ],
+            # for now a single package that contains everything
+            'numberOfPackages': 1,
+            'packages': [self._get_package()],
+            'service': self.service,
+            'serviceLevelTime': self.delivery_service_level_time_id.code,
+            'serviceLevelOther': self.service_level_other_id.code,
+            'incoterms': self.incoterm_id.code or 'DAP',
+            'carrier': carrier_code,
+            'costCenter': self.cost_center_id.code,
+            'pickupDate': pickup_date_iso,
+        }
+        return document
+
+    def get_shipping_fields(self):
+        """Additional info for shipping document."""
+        self.ensure_one()
+        return {
+            'additionalReferences': [
+                {'type': 'ORDER', 'value': self.sale_id.name},
+                {'type': 'OTHER', 'value': self._get_invoice_name()},
+                {'type': 'INVOICE', 'value': self._get_invoice_name()},
+            ],
+            'value': self.sale_id.amount_total,
+            'valueCurrency': self.sale_id.currency_id.name,
+        }
 
     @api.multi
     def _update_rate_fields(self, transsmart_response):
@@ -130,78 +195,6 @@ class StockPicking(models.Model):
             rate_obj['carrier']
         ).id
         self.write(vals)
-
-    def get_transsmart_rates_document(self):
-        """Assemble and returns the payload to be sent to Transsmart to get rates."""
-        self.ensure_one()
-        carrier_code = self.transsmart_carrier_id.code or 'AUT'
-        document = {
-            'reference': self.name,
-            'description': self.name,
-            'addresses': [
-                self._get_address("SEND", self.company_id),
-                self._get_address("RECV", self.partner_id),
-            ],
-            # for now a single package that contains everything
-            'numberOfPackages': 1,
-            'packages': [self._get_package()],
-            'service': self.service,
-            'serviceLevelTime': self.delivery_service_level_time_id.code,
-            'incoterms': self.incoterm_id.code or 'DAP',
-            'carrier': carrier_code,
-            'costCenter': self.cost_center_id.code,
-            'pickupDate': fields.Datetime.from_string(self.min_date).date().isoformat(),
-        }
-        return document
-
-    @api.multi
-    def action_transsmart_book_shipping(self):
-        """This creates the shipping on Transsmart."""
-        service = self._get_transsmart_service()
-        for this in self:
-            if not this.transsmart_carrier_id:
-                # Automatically do prebooking, if not done before.
-                this.action_transsmart_prebooking()
-            document = this.get_transsmart_shipping_document()
-            response = service.create_shipping(document)[0]
-            data = {
-                'delivery_cost': response['price'],
-                'carrier_tracking_ref': response['trackingUrl'],
-            }
-            this.write(data)
-
-    def get_transsmart_shipping_document(self):
-        """Assemble and returns the payload to be sent to Transsmart.
-
-        See docs on: https://devdocs.transsmart.com/#_shipment_booking_only.
-        """
-        self.ensure_one()
-        document = {
-            'reference': self.name,
-            'description': self.name,
-            'additionalReferences': [
-                {'type': 'ORDER', 'value': self.sale_id.name},
-                {'type': 'OTHER', 'value': self._get_invoice_name()},
-                {'type': 'INVOICE', 'value': self._get_invoice_name()},
-            ],
-            'addresses': [
-                self._get_address("SEND", self.company_id),
-                self._get_address("RECV", self.partner_id),
-            ],
-            # for now a single package that contains everything
-            'numberOfPackages': 1,
-            'packages': [self._get_package()],
-            'value': self.sale_id.amount_total,
-            'valueCurrency': self.sale_id.currency_id.name,
-            'service': self.service,
-            'serviceLevelTime': self.delivery_service_level_time_id.code,
-            'serviceLevelOther': self.service_level_other_id.code,
-            'incoterms': self.incoterm_id.code or 'DAP',
-            'carrier': self.transsmart_carrier_id.code,
-            'costCenter': self.cost_center_id.code,
-            'pickupDate': fields.Datetime.from_string(self.min_date).date().isoformat(),
-        }
-        return document
 
     @api.model
     def _get_transsmart_service(self):
@@ -243,6 +236,8 @@ class StockPicking(models.Model):
             package_model = self.env['delivery.package.type']
             package = package_model.get_default()
         return {
+            'lineNo': 1,
+            'description': self.name,  # as we only have one package!
             'measurements':
                 {
                     'length': package.length,

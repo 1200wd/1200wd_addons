@@ -7,8 +7,9 @@ from openerp import models
 class StockPicking(models.Model):
     _inherit = 'stock.picking'
 
-    def get_transsmart_shipping_document(self):
-        document = super(StockPicking, self).get_transsmart_shipping_document()
+    def get_transsmart_document(self):
+        """Use address fields from stock picking."""
+        document = super(StockPicking, self).get_transsmart_document()
         document['addresses'][1].update({
             "name": self.partner_id.name or '',
             "addressLine1": self.shipping_partner_street or '',

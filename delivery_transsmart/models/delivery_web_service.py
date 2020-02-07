@@ -48,7 +48,7 @@ def get_json_vals(json_object):
     return (json_value, vals)
 
 
-def validate_get_rates_document(document):
+def validate_transsmart_document(document):
     """Check validity of document used to ask for a rate."""
     if not document.get('reference'):
         raise exceptions.ValidationError(_(
@@ -301,7 +301,7 @@ class DeliveryWebService(models.Model):
         """
         self.ensure_one()
         document = clean_empty(document)
-        validate_get_rates_document(document)
+        validate_transsmart_document(document)
         endpoint = \
             "/v2/rates/%s" % self.account
         response = self.post(
